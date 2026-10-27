@@ -222,7 +222,7 @@ export const SCENES: SceneDef[] = [
   {
     id: "knowledge",
     title: "AI 不了解院內資料",
-    short: "AI 資料大腦",
+    short: "Plasma 大腦",
     pain: "資料庫欄位多為代碼，AI 不了解其意義，回答容易出錯。",
     fix: "匯入資料字典與系統文件，Plasma 成為最了解院內資料的大腦，AI 的答案最精準。",
     nodes: { ...dbCol(260), "app-ai": { x: 1340, y: MID } },
