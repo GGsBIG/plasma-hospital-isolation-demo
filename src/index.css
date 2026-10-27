@@ -159,8 +159,10 @@ html, body, #root { min-height: 100%; }
 }
 
 /* uiarc 元件(src/components/arc)用到的設計變數。uiarc 的 --foreground 等是完整顏色值,
-   本專案的同名變數是 HSL 三元組,所以只在 .arc 容器內覆寫,不影響其他元件 */
-.arc {
+   本專案的同名變數是 HSL 三元組,所以只在 .arc 容器內覆寫,不影響其他元件。
+   提示框(tooltip)由 Radix 掛到 body 底下,不在 .arc 裡,所以它的外層(popper wrapper)也套同一組變數 */
+.arc,
+[data-radix-popper-content-wrapper] {
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
@@ -187,9 +189,20 @@ html, body, #root { min-height: 100%; }
   --text-muted: hsl(0 0% 42%);
   --danger: hsl(0 72% 51%);
   --shadow-resting: 0 1px 2px rgb(0 0 0 / 0.08);
+  --text-xs: 12px;
+  --font-body: inherit;
+  --tracking-body: 0;
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --control-on: hsl(0 0% 9%);
+  --surface-raised: hsl(0 0% 100%);
+  --shadow-raised: 0 2px 8px rgb(0 0 0 / 0.12);
+  --shadow-floating: 0 8px 24px rgb(0 0 0 / 0.10), 0 2px 6px rgb(0 0 0 / 0.06);
+}
+.arc {
   display: inline-flex;
 }
-.dark .arc {
+.dark .arc,
+.dark [data-radix-popper-content-wrapper] {
   --foreground: hsl(0 0% 93%);
   --background: hsl(0 0% 8%);
   --surface: hsl(0 0% 11%);
@@ -200,6 +213,10 @@ html, body, #root { min-height: 100%; }
   --text-muted: hsl(0 0% 58%);
   --danger: hsl(0 84% 66%);
   --shadow-resting: 0 1px 2px rgb(0 0 0 / 0.4);
+  --control-on: hsl(0 0% 93%);
+  --surface-raised: hsl(0 0% 13%);
+  --shadow-raised: 0 2px 8px rgb(0 0 0 / 0.5);
+  --shadow-floating: 0 8px 24px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
 }
 
 /* 主題切換的 reveal:新主題以圓形從按鈕位置展開(動畫由 ThemeToggle 驅動) */
@@ -338,15 +355,3 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 
 /* 分頁在背景時暫停所有 CSS 持續動畫(SVG 光點由 App 呼叫 pauseAnimations 暫停) */
 .page-hidden *, .page-hidden *::before, .page-hidden *::after { animation-play-state: paused !important; }
-
-/* 「導入 Plasma 後」還沒按過時輕輕發光,提示可以切換 */
-@keyframes plasma-hint {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--ok) / 0); }
-  50% { box-shadow: 0 0 0 4px hsl(var(--ok) / 0.18); }
-}
-.plasma-hint {
-  animation: plasma-hint 2.4s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .plasma-hint { animation: none; }
-}
