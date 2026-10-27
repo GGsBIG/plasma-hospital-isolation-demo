@@ -1,3 +1,4 @@
+import { Fragment } from "react"
 import type { Callout, NodeDef } from "../types"
 import { sizeOf, NODE_SCALE } from "../geometry"
 import { Platform } from "./Iso"
@@ -68,17 +69,34 @@ export function Node({
           <Platform kind={node.kind} hot={hot} />
         </div>
 
-        {/* 問答泡泡:在平台上方、靠右對齊節點右緣(左邊是 Plasma,不往那邊擋) */}
+        {/* 小卡:預設在平台上方、靠右對齊節點右緣(左邊常是 Plasma,不往那邊擋);side=left 時在節點左側、上下置中 */}
         {callout && (
           <div
-            key={`${callout.tone}-${callout.a}`}
+            key={`${callout.tone}-${callout.q}-${callout.a}`}
             className={`callout-in absolute whitespace-nowrap border bg-card leading-snug shadow-[0_6px_20px_rgb(0_0_0/0.08)] ${s.bubble}
-              ${callout.tone === "ok" ? "border-ok/40" : "border-danger/40"}`}
+              ${callout.tone === "ok" ? "border-ok/40" : "border-danger/40"} ${callout.side === "left" ? "-translate-y-1/2" : ""}`}
             // 手機版往右多推一點(仍在節點外框內),不碰到左邊疊在 Plasma 上的知識庫
-            style={{ right: compact ? -a - 40 : -a, bottom: a / 2 + 56 * NODE_SCALE }}
+            style={callout.side === "left" ? { right: a + 70 * NODE_SCALE, top: 0 } : { right: compact ? -a - 40 : -a, bottom: a / 2 + 56 * NODE_SCALE }}
           >
-            <div className="text-muted-foreground">問：{callout.q}</div>
-            <div className={`font-medium ${callout.tone === "ok" ? "text-ok" : "text-danger"}`}>答：{callout.a}</div>
+            {callout.code ? (
+              <>
+                <div className="text-muted-foreground">{callout.q}</div>
+                <div className="mt-1 grid grid-cols-[auto_auto] gap-x-4">
+                  {callout.code.map(([db, sql]) => (
+                    <Fragment key={db}>
+                      <span className="text-muted-foreground">{db}</span>
+                      <code className={`font-mono ${callout.tone === "ok" ? "text-ok" : "text-foreground"}`}>{sql}</code>
+                    </Fragment>
+                  ))}
+                </div>
+                {callout.a && <div className={`mt-1 font-medium ${callout.tone === "ok" ? "text-ok" : "text-danger"}`}>{callout.a}</div>}
+              </>
+            ) : (
+              <>
+                <div className="text-muted-foreground">問：{callout.q}</div>
+                <div className={`font-medium ${callout.tone === "ok" ? "text-ok" : "text-danger"}`}>答：{callout.a}</div>
+              </>
+            )}
           </div>
         )}
 

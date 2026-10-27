@@ -114,19 +114,29 @@ export const SCENES: SceneDef[] = [
     id: "api",
     title: "API 串接蜘蛛網化",
     short: "API 串接",
-    pain: "每個應用各自以 API 串接五套資料庫，錯綜複雜難以管理，大量查詢更消耗正式資料庫資源。",
-    fix: "所有應用透過 Plasma 單一入口取得資料，集中管理，正式資料庫不再被重複查詢。",
+    pain: "每個應用各自串接五套資料庫，各家 SQL 語法不同、錯綜複雜難以管理，大量查詢更消耗正式資料庫資源。",
+    fix: "所有應用透過 Plasma 單一入口，用一種標準 SQL 查詢所有資料庫，集中管理，不再重複查詢。",
     nodes: { ...dbCol(260), ...appCol(1340) },
     active: [...appIds, ...dbIds],
     edges: appIds.flatMap((app) => dbIds.map((db) => ({ from: db, to: app, state: "risk" as const }))),
     loads: HIGH,
     badges: Object.fromEntries(appIds.map((id) => [id, { tone: "danger" as const, text: "串接 5 套 API" }])),
+    // 同一個需求,各家資料庫寫法都不同
+    callouts: {
+      "app-bi": {
+        tone: "danger", side: "left", q: "同一需求：取前 10 筆",
+        code: [["Oracle", "WHERE ROWNUM <= 10"], ["MS SQL", "SELECT TOP 10"], ["MySQL／PG", "LIMIT 10"], ["Informix", "SELECT FIRST 10"]],
+      },
+    },
     plasma: {
       nodes: { ...dbCol(260), plasma: PLASMA_POS, ...appCol(1340) },
       active: [...appIds, "plasma", ...dbIds],
       edges: viaPlasma(appIds),
       loads: NORMAL,
-      badges: { plasma: { tone: "ok", text: "單一入口 · 集中管理" } },
+      badges: { plasma: { tone: "ok", text: "單一入口 · 統一 SQL" } },
+      callouts: {
+        plasma: { tone: "ok", q: "同一需求：取前 10 筆", code: [["Plasma", "SELECT … LIMIT 10"]], a: "一種 SQL 查詢 5 套資料庫" },
+      },
     },
   },
 

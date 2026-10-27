@@ -41,11 +41,14 @@ export interface SceneState {
   dimOpacity?: number              // 本狀態非重點節點的透明度,預設 0.28
 }
 
-// 節點旁的一問一答小泡泡,用同一個問題對照導入前後的回答
+// 節點旁的小卡,用同一個問題/需求對照導入前後:
+//   一問一答(q、a),或語法對照(q 為需求、code 為「資料庫 → 寫法」幾行、a 為結論)
 export interface Callout {
   tone: "ok" | "danger"
   q: string
-  a: string
+  a?: string
+  code?: [string, string][]
+  side?: "top" | "left"            // 放在節點上方(預設)或左側
 }
 
 // 一頁 = 一個痛點。畫面本身是「導入前」;有 plasma 的頁面右上角可切換到「導入 Plasma 後」
