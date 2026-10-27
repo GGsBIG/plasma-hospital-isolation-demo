@@ -198,7 +198,7 @@ export const SCENES: SceneDef[] = [
   {
     id: "ai-risk",
     title: "AI 的資安與效能風險",
-    short: "AI 資安",
+    short: "資安風險",
     pain: "AI 頻繁大量查詢，資料庫負載過高；串接後，誰能透過 AI 取用機敏資料也難以掌控。",
     fix: "AI 只透過 Plasma 存取，依角色控管權限、遮罩機敏欄位，正式資料庫不受衝擊。",
     nodes: { ...dbCol(260), "app-ai": { x: 1340, y: MID } },
