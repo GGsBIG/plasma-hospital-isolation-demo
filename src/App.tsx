@@ -264,8 +264,8 @@ export function App() {
         </aside>
 
         {/* 舞台固定在畫面上,不隨頁面捲動 */}
-        {/* 上方留一列給「導入前｜導入 Plasma 後」切換(在進度條下方),舞台從切換列下面開始,不會被擋住 */}
-        <div className="sticky top-[var(--header-h)] flex h-[var(--stage-h)] min-w-0 flex-1 pt-[72px] pp:order-1 pp:w-full pp:flex-none pp:pb-1.5 pp:pt-[66px] pl:pt-[64px]">
+        {/* 上方留一列給「導入前｜導入 Plasma 後」切換(在進度條遮罩帶下方,不被切到),舞台從切換列下面開始,不會被擋住 */}
+        <div className="sticky top-[var(--header-h)] flex h-[var(--stage-h)] min-w-0 flex-1 pt-[84px] pp:order-1 pp:w-full pp:flex-none pp:pb-1.5 pp:pt-[66px] pl:pt-[64px]">
           <div className="relative min-h-0 min-w-0 flex-1">
             <Stage />
             <div className="absolute bottom-full right-0 z-10 mb-2 pp:mb-1.5 pl:mb-1">
