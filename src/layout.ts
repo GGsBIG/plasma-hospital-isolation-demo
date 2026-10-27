@@ -75,6 +75,12 @@ const SLOT: Record<string, { y: number; b: boolean }> = {
   "ds-ward": { y: APP_ROW[1], b: false },
   "ds-admin": { y: APP_ROW[2], b: false },
   "ds-lab": { y: APP_ROW[3], b: false },
+  // 情境 4 的三個院區:同一欄,和 A 欄的源頭資料庫同高
+  "campus-main": { y: ROW_A[0], b: false },
+  "campus-north": { y: ROW_A[1], b: false },
+  "campus-south": { y: ROW_A[2], b: false },
+  // 情境 6 的資訊室:在 Plasma 的位置
+  "ds-it": { y: ROW_A[1], b: false },
 }
 const APP_SLOT: Record<string, number> = { "app-ap": APP_ROW[0], "app-fhir": APP_ROW[1], "app-bi": APP_ROW[2], "app-ai": APP_ROW[3] }
 
@@ -94,8 +100,8 @@ function compactPos(id: string, p: Pos): Pos {
   if (id === "plasma") return { x: PAD_L + FLOW_PLASMA, y: ROW_A[1] }
   if (id === "kb" || id === "serving-pg") return { x: PAD_L + FLOW_PLASMA, y: SIDE_Y }
   if (id in APP_SLOT) {
-    // 情境 6 只有 AI 一個應用,和 Plasma 同一列:放在 Plasma 正右方
-    const y = id === "app-ai" && p.y === PLASMA_ROW ? ROW_A[1] : APP_SLOT[id]
+    // 只有單一應用的頁面,應用和 Plasma 同一列:放在 Plasma 正右方
+    const y = p.y === PLASMA_ROW ? ROW_A[1] : APP_SLOT[id]
     return { x: PAD_L + FLOW_APP, y }
   }
   const slot = SLOT[id]

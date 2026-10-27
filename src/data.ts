@@ -11,12 +11,21 @@ export const DBS: NodeDef[] = [
   { id: "db-informix", kind: "db", label: "Informix",   sub: "LIS 檢驗資訊系統",   icon: "database" },
 ]
 
+// 情境 4:不同院區各有一套 HIS
+export const CAMPUSES: NodeDef[] = [
+  { id: "campus-main",  kind: "db", label: "總院",     sub: "HIS 醫療資訊系統", icon: "database" },
+  { id: "campus-north", kind: "db", label: "北區分院", sub: "HIS 醫療資訊系統", icon: "database" },
+  { id: "campus-south", kind: "db", label: "南區分院", sub: "HIS 醫療資訊系統", icon: "database" },
+]
+
 // 下方既有使用端
 export const DOWNSTREAM: NodeDef[] = [
   { id: "ds-clinic", kind: "downstream", label: "門診工作站", icon: "stethoscope" },
   { id: "ds-ward",   kind: "downstream", label: "護理站",     icon: "heart-pulse" },
   { id: "ds-admin",  kind: "downstream", label: "行政批價",   icon: "receipt" },
   { id: "ds-lab",    kind: "downstream", label: "檢驗室",     icon: "flask-conical" },
+  // 情境 6:沒有 Plasma 時,報表要靠資訊室人工撈
+  { id: "ds-it",     kind: "downstream", label: "資訊室",     icon: "users" },
 ]
 
 // 上方新應用
@@ -32,7 +41,7 @@ export const PLASMA: NodeDef = { id: "plasma", kind: "plasma", label: "Plasma", 
 export const SERVING_PG: NodeDef = { id: "serving-pg", kind: "serving", label: "PostgreSQL", sub: "整理後資料 · 服務資料庫", icon: "database" }
 export const KB: NodeDef = { id: "kb", kind: "kb", label: "知識庫", sub: "文件／技術文件", icon: "book-open" }
 
-export const ALL_NODES: NodeDef[] = [...DBS, ...DOWNSTREAM, ...APPS, PLASMA, SERVING_PG, KB]
+export const ALL_NODES: NodeDef[] = [...DBS, ...CAMPUSES, ...DOWNSTREAM, ...APPS, PLASMA, SERVING_PG, KB]
 export const NODE_BY_ID: Record<string, NodeDef> =
   Object.fromEntries(ALL_NODES.map((n) => [n.id, n]))
 

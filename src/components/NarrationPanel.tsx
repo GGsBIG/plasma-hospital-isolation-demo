@@ -4,6 +4,7 @@ import type { SceneDef } from "../types"
 import { clamp01, clampProgress } from "../timeline"
 import { useScrollEffect, useScrollSelector } from "../scroll"
 import { isCompact } from "../layout"
+import { plasmaMix } from "../plasma"
 
 // 英數連成一個單位(避免單字被拆行),其餘逐字;句讀黏在前一個字上,避免標點落在行首
 const tokens = (text: string) => text.match(/(?:[\x21-\x7E]+|.)[，。、；：！？）」』]*/gu) ?? []
@@ -11,8 +12,16 @@ const tokens = (text: string) => text.match(/(?:[\x21-\x7E]+|.)[，。、；：�
 // 逐字浮現的柔邊寬度(同時在過渡中的字數)
 const SOFT = 6
 
-// 每段的字數(標題 + 內文),用來把 reveal 0~1 換算成「浮現到第幾個字」
-const TOTALS = SCENES.map((s) => [s.title, ...s.bullets].reduce((n, t) => n + tokens(t).length, 0))
+// 有／沒有 Plasma 兩段的小標
+const PAIN_LABEL = "沒有 Plasma"
+const FIX_LABEL = "有 Plasma"
+
+// 每段依畫面順序出現的文字:標題,然後是開場說明,或「痛點 + 解法」(含小標)
+const texts = (s: SceneDef) =>
+  [s.title, ...(s.bullets ?? []), ...(s.pain ? [PAIN_LABEL, s.pain] : []), ...(s.fix ? [FIX_LABEL, s.fix] : [])]
+
+// 每段的字數,用來把 reveal 0~1 換算成「浮現到第幾個字」
+const TOTALS = SCENES.map((s) => texts(s).reduce((n, t) => n + tokens(t).length, 0))
 const TITLE_LENS = SCENES.map((s) => tokens(s.title).length)
 
 // 捲動驅動的 text reveal:每個字是一個 .rv span,浮現程度由 NarrationPanel 直接寫進 style,
@@ -28,6 +37,8 @@ const Section = memo(function Section({
   onSelect: (i: number) => void
 }) {
   const title = tokens(scene.title)
+  const body = "text-[16px] leading-relaxed text-muted-foreground transition-colors duration-200 hover:text-foreground pl:text-[13.5px] pl:leading-normal pp:text-[16px] pp:leading-relaxed ps:text-[14.5px] ps:leading-normal"
+  const label = "mb-1 text-[13px] font-medium pl:mb-0.5 pl:text-[12px] ps:mb-0.5 ps:text-[12px]"
   const word = (text: string, key: number) => (
     <span key={key} className="rv">
       {text}
@@ -62,11 +73,24 @@ const Section = memo(function Section({
         </h2>
         <div className="rv-line mt-4 h-px w-12 origin-left bg-foreground/30 cp:mt-2" />
         <div className="mt-4 space-y-3 cp:mt-2 pl:space-y-1.5 pp:space-y-3 ps:space-y-1.5">
-          {scene.bullets.map((b, j) => (
-            <p key={j} className="text-[16px] leading-relaxed text-muted-foreground transition-colors duration-200 hover:text-foreground pl:text-[13.5px] pl:leading-normal pp:text-[16px] pp:leading-relaxed ps:text-[14.5px] ps:leading-normal">
+          {scene.bullets?.map((b, j) => (
+            <p key={j} className={body}>
               {tokens(b).map(word)}
             </p>
           ))}
+          {/* 痛點與解法:目前切到哪一邊,那段就亮、另一段變淡(亮度由 NarrationPanel 依切換進度寫入) */}
+          {scene.pain && (
+            <div className="pain-block">
+              <div className={`${label} text-danger`}>{tokens(PAIN_LABEL).map(word)}</div>
+              <p className={body}>{tokens(scene.pain).map(word)}</p>
+            </div>
+          )}
+          {scene.fix && (
+            <div className="fix-block" style={{ opacity: 0.35 }}>
+              <div className={`${label} text-ok`}>{tokens(FIX_LABEL).map(word)}</div>
+              <p className={body}>{tokens(scene.fix).map(word)}</p>
+            </div>
+          )}
         </div>
       </div>
     </section>
@@ -81,12 +105,18 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
   const current = useScrollSelector((p) => Math.round(clampProgress(p)))
   const listRef = useRef<HTMLDivElement>(null)
   // 每張卡片:元素、所有字的 span、分隔線,以及上次寫入的浮現位置與亮度(沒變就不寫)
-  type Card = { el: HTMLDivElement; spans: HTMLElement[]; line: HTMLElement | null; head: number | null; e: string }
+  type Card = {
+    el: HTMLDivElement; spans: HTMLElement[]; line: HTMLElement | null; head: number | null; e: string
+    pain: HTMLElement | null; fix: HTMLElement | null; m: number
+  }
   const cards = useRef<(Card | null)[]>([])
   const setCard = (i: number, el: HTMLDivElement | null) => {
     if (!el) return
     if (cards.current[i]?.el === el) return
-    cards.current[i] = { el, spans: [...el.querySelectorAll<HTMLElement>(".rv")], line: el.querySelector(".rv-line"), head: null, e: "" }
+    cards.current[i] = {
+      el, spans: [...el.querySelectorAll<HTMLElement>(".rv")], line: el.querySelector(".rv-line"), head: null, e: "",
+      pain: el.querySelector(".pain-block"), fix: el.querySelector(".fix-block"), m: 0,
+    }
   }
   // 欄位高與段高快取,只在尺寸改變時重量(捲動中讀版面尺寸會逼瀏覽器當場重算版面)
   const dims = useRef({ view: 0, section: 0 })
@@ -133,6 +163,12 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
         }
         if (card.line) card.line.style.transform = `scaleX(${clamp01((head - TITLE_LENS[i]) / SOFT)})`
         card.head = head
+      }
+      const m = plasmaMix(i)
+      if (m !== card.m) {
+        if (card.pain) card.pain.style.opacity = `${1 - 0.65 * m}`
+        if (card.fix) card.fix.style.opacity = `${0.35 + 0.65 * m}`
+        card.m = m
       }
       const e = (1 - 0.7 * clamp01(Math.abs(p - i))).toFixed(2)
       if (e !== card.e) {

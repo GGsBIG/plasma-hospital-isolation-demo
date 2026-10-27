@@ -338,3 +338,15 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 
 /* 分頁在背景時暫停所有 CSS 持續動畫(SVG 光點由 App 呼叫 pauseAnimations 暫停) */
 .page-hidden *, .page-hidden *::before, .page-hidden *::after { animation-play-state: paused !important; }
+
+/* 「有 Plasma」還沒按過時輕輕發光,提示可以切換 */
+@keyframes plasma-hint {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--ok) / 0); }
+  50% { box-shadow: 0 0 0 4px hsl(var(--ok) / 0.18); }
+}
+.plasma-hint {
+  animation: plasma-hint 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .plasma-hint { animation: none; }
+}

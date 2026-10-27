@@ -5,12 +5,14 @@ const LINE: Record<EdgeDef["state"], string> = {
   normal: "var(--edge-normal)",
   overload: "var(--edge-overload)",
   isolated: "var(--edge-isolated)",
+  risk: "var(--edge-overload)",
 }
 
 const DOT: Record<EdgeDef["state"], string> = {
   normal: "var(--dot-normal)",
   overload: "var(--dot-overload)",
   isolated: "var(--dot-isolated)",
+  risk: "var(--dot-overload)",
 }
 
 // 每秒移動的 px:過載時資料流明顯更急
@@ -18,6 +20,7 @@ const SPEED: Record<EdgeDef["state"], number> = {
   normal: 110,
   overload: 320,
   isolated: 150,
+  risk: 110,
 }
 
 // 每 px 的光點密度
@@ -25,6 +28,8 @@ const DENSITY: Record<EdgeDef["state"], number> = {
   normal: 1 / 170,
   overload: 1 / 55,
   isolated: 1 / 140,
+  // 有風險的直連常常一次很多條(蜘蛛網),光點要稀
+  risk: 1 / 320,
 }
 
 // 連線 + 沿線流動的光點(SMIL animateMotion 跟著 path 走,path 變形時光點會跟著)。
@@ -52,6 +57,8 @@ export function Edge({ id, gRef, length, state, highlight, faded }: {
           id={id}
           className="transition-[stroke-width] duration-300"
           style={{ stroke: highlight ? DOT[state] : LINE[state], strokeWidth: (state === "overload" ? 1.6 : 1.3) * lw * (highlight ? 2 : 1) }}
+          // 有風險的直連畫成虛線
+          strokeDasharray={state === "risk" ? `${8 * lw} ${6 * lw}` : undefined}
           fill="none"
         />
         {Array.from({ length: count }, (_, i) => (

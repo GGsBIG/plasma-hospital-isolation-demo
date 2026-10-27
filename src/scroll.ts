@@ -14,6 +14,10 @@ export const scrollStore = {
     progress = p
     listeners.forEach((fn) => fn(p))
   },
+  // 進度沒變但畫面要重算(例如有／沒有 Plasma 的切換動畫)
+  notify() {
+    listeners.forEach((fn) => fn(progress))
+  },
   subscribe(fn: Listener) {
     listeners.add(fn)
     return () => {

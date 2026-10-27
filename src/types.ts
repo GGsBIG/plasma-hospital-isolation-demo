@@ -9,7 +9,8 @@ export interface NodeDef {
   logo?: { light: string; dark: string }   // 有 logo 時取代文字名稱,依主題切換
 }
 
-export type EdgeState = "normal" | "overload" | "isolated"
+// risk:有風險、雜亂的直連(紅色虛線,光點稀疏),和負載過高的 overload 區分
+export type EdgeState = "normal" | "overload" | "isolated" | "risk"
 
 export interface EdgeDef {
   from: string
@@ -19,17 +20,33 @@ export interface EdgeDef {
 
 export interface Pos { x: number; y: number }   // 舞台座標 px(見 layout.ts 的 stageSize)
 
-export interface SceneDef {
-  id: string
-  title: string
-  short: string                    // 下方進度列的短標籤
-  bullets: string[]
-  nodes: Record<string, Pos>       // 本情境出現的節點 id -> 位置
+// 情境自訂的節點徽章(取代依連線推算的預設徽章);stat 是徽章下方的一行說明
+export interface BadgeOverride {
+  tone: "ok" | "warn" | "danger" | "idle"
+  text: string
+  stat?: string
+}
+
+// 一個畫面狀態:出現哪些節點、在哪、哪些連線
+export interface SceneState {
+  nodes: Record<string, Pos>       // 本狀態出現的節點 id -> 位置
   active: string[]                 // 全亮的節點;其餘出現但變暗
   edges: EdgeDef[]
   loads?: Record<string, number>   // db id -> 負載 0~100
+  badges?: Record<string, BadgeOverride>
   showAgent?: boolean
-  dimOpacity?: number              // 本情境非重點節點的透明度,預設 0.28
+  dimOpacity?: number              // 本狀態非重點節點的透明度,預設 0.28
+}
+
+// 一頁 = 一個痛點。畫面本身是「沒有 Plasma」;有 plasma 的頁面右上角可切換到「有 Plasma」
+export interface SceneDef extends SceneState {
+  id: string
+  title: string
+  short: string                    // 下方進度列的短標籤
+  bullets?: string[]               // 開場頁的說明
+  pain?: string                    // 沒有 Plasma 的痛點
+  fix?: string                     // 有 Plasma 之後
+  plasma?: SceneState
 }
 
 export interface AgentTurn {

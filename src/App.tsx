@@ -10,6 +10,8 @@ import { Stage } from "./components/Stage"
 import { NarrationPanel } from "./components/NarrationPanel"
 import { AgentChat } from "./components/AgentChat"
 import { ThemeToggle } from "./components/ThemeToggle"
+import { PlasmaToggle } from "./components/PlasmaToggle"
+import { plasmaOn, setPlasma } from "./plasma"
 import logo from "./assets/brobridge-logo.png"
 import logoDark from "./assets/brobridge-logo-dark.png"
 
@@ -186,6 +188,10 @@ export function App() {
         const next = cur + (e.key === "ArrowRight" ? 1 : -1)
         // 在最後一個情境按 →:捲到對話播完
         goTo(next > LAST ? LAST + CHAT_SPAN : next)
+      } else if ((e.key === "p" || e.key === "P") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // P:切換目前這頁有／沒有 Plasma
+        const cur = Math.round(clampProgress(scrollStore.get()))
+        setPlasma(cur, !plasmaOn(cur))
       }
     }
     window.addEventListener("keydown", onKey)
@@ -207,7 +213,7 @@ export function App() {
         <div className="flex items-center gap-4">
           <span className="font-mono text-xs tabular-nums text-muted-foreground">
             {String(current + 1).padStart(2, "0")} / {String(SCENES.length).padStart(2, "0")}
-            <span className="ml-3 hidden sm:inline">捲動或 ← → 切換</span>
+            <span className="ml-3 hidden sm:inline">捲動或 ← → 換頁，P 切換 Plasma</span>
           </span>
           <ThemeToggle />
         </div>
@@ -231,9 +237,13 @@ export function App() {
         </aside>
 
         {/* 舞台固定在畫面上,不隨頁面捲動 */}
-        <div className="sticky top-[var(--header-h)] flex h-[var(--stage-h)] min-w-0 flex-1 pt-6 pp:order-1 pp:w-full pp:flex-none pp:pb-1.5 pp:pt-7 pl:pt-7">
+        {/* 上方留一列給「有／沒有 Plasma」切換(在進度條下方),舞台從切換列下面開始,不會被擋住 */}
+        <div className="sticky top-[var(--header-h)] flex h-[var(--stage-h)] min-w-0 flex-1 pt-[72px] pp:order-1 pp:w-full pp:flex-none pp:pb-1.5 pp:pt-[66px] pl:pt-[64px]">
           <div className="relative min-h-0 min-w-0 flex-1">
             <Stage />
+            <div className="absolute bottom-full right-0 z-10 mb-2 pp:mb-1.5 pl:mb-1">
+              <PlasmaToggle />
+            </div>
           </div>
 
           <AgentPanel />

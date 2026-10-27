@@ -1,9 +1,9 @@
 import { useLayoutEffect, useRef, useState } from "react"
-import type { SceneDef } from "../types"
-import { NODE_BY_ID, DOC_FILES } from "../data"
+import type { SceneState } from "../types"
+import { NODE_BY_ID } from "../data"
 import { sceneBox, stageSize, useLayoutMode, type Box } from "../layout"
-import { SCENES } from "../scenes"
-import { frameAt, loadsAt, segmentAt, segmentIndex, stageKey, structureAt } from "../timeline"
+import { dominantStates, frameAt, loadsAt, segmentAt, segmentIndex, stageKey, statesAt, structureAt } from "../timeline"
+import { plasmaMix } from "../plasma"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
 import { Node, type Badge } from "./Node"
 import { Edge } from "./Edge"
@@ -17,14 +17,19 @@ function loadBadge(v: number): Badge {
   return { tone: "ok", text: "負載", load: v }
 }
 
-// 依情境的連線狀態推出每個節點的狀態徽章與統計列;負載用過場中漸變的數值
-function describe(scene: SceneDef, loads: Record<string, number>, id: string): { badge?: Badge; stat?: string; hot: boolean } {
+// 依畫面狀態的連線推出每個節點的狀態徽章;負載用過場中漸變的數值。
+// 畫面保持精簡:預設不加統計列,只有情境自訂徽章(badges)時才帶一行說明
+function describe(scene: SceneState, loads: Record<string, number>, id: string): { badge?: Badge; stat?: string; hot: boolean } {
   const node = NODE_BY_ID[id]
+  const custom = scene.badges?.[id]
+  if (custom) return { badge: { tone: custom.tone, text: custom.text }, stat: custom.stat, hot: false }
   const touching = scene.edges.filter((e) => e.from === id || e.to === id)
   const load = loads[id]
   switch (node.kind) {
     case "db":
-      return { badge: load === undefined ? undefined : loadBadge(load), hot: (load ?? 0) >= HOT }
+      // 這個狀態沒有負載數字就不顯示徽章(負載只在講負載的頁面出現)
+      if (load === undefined || scene.loads?.[id] === undefined) return { hot: false }
+      return { badge: loadBadge(load), hot: load >= HOT }
     case "downstream": {
       const src = touching.find((e) => e.to === id)?.from
       const slow = src !== undefined && (loads[src] ?? 0) >= HOT
@@ -32,26 +37,18 @@ function describe(scene: SceneDef, loads: Record<string, number>, id: string): {
     }
     case "app": {
       const direct = touching.filter((e) => e.state === "overload").length
-      if (direct) return { badge: { tone: "danger", text: "直連源頭資料庫" }, stat: `${direct} 條直連查詢`, hot: false }
+      if (direct) return { badge: { tone: "danger", text: "直連源頭資料庫" }, hot: false }
       if (touching.some((e) => NODE_BY_ID[e.from].kind === "serving"))
         return { badge: { tone: "ok", text: "經由 PostgreSQL" }, hot: false }
       if (touching.length) return { badge: { tone: "ok", text: "經由 Plasma" }, hot: false }
       return { badge: { tone: "idle", text: "待接入" }, hot: false }
     }
-    case "plasma": {
-      const sources = touching.filter((e) => e.to === id && NODE_BY_ID[e.from].kind === "db").length
-      const out = touching.filter((e) => e.from === id).map((e) => NODE_BY_ID[e.to].kind)
-      const apps = out.filter((k) => k === "app").length
-      const serving = out.filter((k) => k === "serving").length
-      const stat = `${sources} 個源頭資料庫 → ${apps} 個應用` + (serving ? ` + ${serving} 個服務庫` : "")
-      return { badge: { tone: "ok", text: "隔離中 · 源頭資料庫零直連" }, stat, hot: false }
-    }
-    case "serving": {
-      const users = touching.filter((e) => e.from === id).map((e) => NODE_BY_ID[e.to].label)
-      return { badge: { tone: "ok", text: "資料已落地" }, stat: users.length ? `供 ${users.join("、")} 使用` : undefined, hot: false }
-    }
+    case "plasma":
+      return { badge: { tone: "ok", text: "隔離中 · 源頭資料庫零直連" }, hot: false }
+    case "serving":
+      return { badge: { tone: "ok", text: "資料已落地" }, hot: false }
     case "kb":
-      return { badge: { tone: "ok", text: "語意已載入" }, stat: `${DOC_FILES.length} 份文件`, hot: false }
+      return { badge: { tone: "ok", text: "文件已上傳" }, hot: false }
   }
 }
 
@@ -95,13 +92,13 @@ function useFit(w: number, h: number, compact: boolean) {
   return { ref, innerRef, setBox }
 }
 
-// 每個情境的內容外框,依版面快取
+// 每個畫面狀態的內容外框,依版面快取
 const boxCache = new Map<string, Box>()
-function boxOf(i: number, mode: string): Box {
-  const k = `${i}|${mode}`
+function boxOf(key: string, s: SceneState, mode: string): Box {
+  const k = `${key}|${mode}`
   let b = boxCache.get(k)
   if (!b) {
-    b = sceneBox(SCENES[i].nodes, (id) => NODE_BY_ID[id].kind)
+    b = sceneBox(s.nodes, (id) => NODE_BY_ID[id].kind)
     boxCache.set(k, b)
   }
   return b
@@ -115,9 +112,10 @@ export function Stage() {
   // 只在離散狀態改變時重繪:換段、徽章文字改用另一端情境、負載跨過門檻
   useScrollSelector(stageKey)
   const p = scrollStore.get()
-  const { a, b, nodeIds, edges } = structureAt(segmentIndex(p))
-  const near = segmentAt(p).t < 0.5 ? a : b
-  const other = near === a ? b : a
+  const { nodeIds, edges } = structureAt(segmentIndex(p))
+  // 依權重排序的畫面狀態;第一個是「目前看起來最像」的那個
+  const ranked = dominantStates(p).map((x) => x.s)
+  const near = ranked[0]
   const loads = loadsAt(p)
 
   // 滑鼠停在哪個節點:它與直接相連的節點、連線保持清楚,其餘淡化
@@ -138,20 +136,25 @@ export function Stage() {
   const lastKey = useRef("")
   // 重繪後可能有新節點/連線還沒套樣式,下一次一定要完整套一次
   lastKey.current = ""
-  // 手機版鏡頭:兩個情境外框依過場進度內插
+  // 手機版鏡頭:各畫面狀態的外框依權重內插
   useScrollEffect((p) => {
     if (!compact) return
-    const { t } = segmentAt(p)
-    const i = segmentIndex(p)
-    const a = boxOf(i, mode)
-    const b = boxOf(i + 1, mode)
-    const mix = (u: number, v: number) => u + (v - u) * t
-    setBox({ x0: mix(a.x0, b.x0), y0: mix(a.y0, b.y0), x1: mix(a.x1, b.x1), y1: mix(a.y1, b.y1) })
+    const box = { x0: 0, y0: 0, x1: 0, y1: 0 }
+    for (const { s, key, w } of statesAt(p)) {
+      if (!w) continue
+      const b = boxOf(key, s, mode)
+      box.x0 += b.x0 * w
+      box.y0 += b.y0 * w
+      box.x1 += b.x1 * w
+      box.y1 += b.y1 * w
+    }
+    setBox(box)
   }, [compact, mode])
 
   useScrollEffect((p) => {
     // 過場前後的停留區畫面完全不變,整格略過
-    const key = `${segmentIndex(p)}|${segmentAt(p).t.toFixed(4)}`
+    const i = segmentIndex(p)
+    const key = `${i}|${segmentAt(p).t.toFixed(4)}|${plasmaMix(i).toFixed(4)}|${plasmaMix(i + 1).toFixed(4)}`
     if (key === lastKey.current) return
     lastKey.current = key
     const f = frameAt(p)
@@ -215,8 +218,8 @@ export function Stage() {
 
         {/* 節點層 */}
         {nodeIds.map((id) => {
-          // 只出現在另一個情境的節點,徽章依它所在的那個情境計算
-          const info = describe(id in near.nodes ? near : other, loads, id)
+          // 不在目前狀態的節點,徽章依「有它、權重最高」的那個狀態計算
+          const info = describe(ranked.find((s) => id in s.nodes) ?? near, loads, id)
           return (
             <Node
               key={id}

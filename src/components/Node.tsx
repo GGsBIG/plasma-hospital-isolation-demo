@@ -100,8 +100,8 @@ export function Node({
               )}
             </div>
             {node.sub && !compact && <span className={`mt-0.5 font-mono ${s.meta} text-muted-foreground`}>{node.sub}</span>}
-            {/* 緊湊版時應用、服務庫的統計列省略(會撞到下一排);Plasma、知識庫保留 */}
-            {stat && (!compact || node.kind === "plasma" || node.kind === "kb") && (
+            {/* 說明列只在情境自訂徽章時出現;手機版字大、會撞到旁邊的節點,省略(左側文字已說明) */}
+            {stat && !compact && (
               <span className={`mt-1 ${s.meta} tabular-nums text-muted-foreground`}>{stat}</span>
             )}
           </div>
