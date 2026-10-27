@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plasma 醫院資料隔離 Demo</title>
+    <script>
+      // 在畫面繪製前套用上次選的主題,避免先閃一下淺色
+      try {
+        if (localStorage.getItem("theme") === "dark") document.documentElement.classList.add("dark")
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

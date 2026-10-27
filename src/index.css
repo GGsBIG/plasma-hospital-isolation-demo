@@ -1,0 +1,340 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { min-height: 100%; }
+
+/* 捲動版面:header、底部按鈕列固定,舞台高度 = 視窗扣掉兩者;左側每段說明也同高 */
+:root {
+  /* 頂部進度條左右對齊頁面內容(桌機為 main 的左右內距) */
+  --bar-x: 24px;
+  --header-h: 48px;
+  --footer-h: 73px;
+  --stage-h: calc(100vh - var(--header-h) - var(--footer-h));
+  /* 固定在畫面上的區域高度:桌機是舞台(說明欄在旁邊);手機是舞台 + 下方說明區 */
+  --pin-h: var(--stage-h);
+  /* 兩個情境之間要捲多少距離(越大過場越慢) */
+  --scroll-step: calc(var(--stage-h) * 1);
+  /* 左側說明段落在畫面上的間距(越小,上下相鄰段落露出越多);與捲動距離無關 */
+  --section-h: calc(var(--stage-h) * 0.6);
+}
+
+/* 手機/平板直拿(寬 < 1024,與 src/layout.ts、tailwind 的 pp 一致):上舞台 55%、下說明 45%。
+   圖以寬度為上限填滿(左右留白和說明文字一樣),舞台多出的高度平均留在圖的上下,沒有底部情境切換列。
+   用 svh(不含網址列的高度),捲動時網址列伸縮不會讓版面跳動 */
+@media (max-width: 1023px) and (orientation: portrait) {
+  :root {
+    --header-h: 44px;
+    --footer-h: 0px;
+    --view-h: calc(100svh - var(--header-h));
+    --gutter: 24px;
+    --bar-x: var(--gutter);
+    --stage-h: calc(var(--view-h) * 0.55);
+    --narr-h: calc(var(--view-h) - var(--stage-h));
+    --section-h: var(--narr-h);
+    --pin-h: var(--view-h);
+    --scroll-step: calc(var(--view-h) * 0.7);
+  }
+}
+/* 手機橫拿(pl):左說明、右舞台(舞台在右側區域內置中、盡量放大),標題列變矮,沒有底部情境切換列 */
+@media (max-height: 500px) and (orientation: landscape) {
+  :root {
+    --header-h: 40px;
+    --footer-h: 0px;
+    --stage-h: calc(100svh - var(--header-h));
+    --narr-w: 28vw;
+    --bar-x: 12px;
+    --section-h: calc(var(--stage-h) * 0.8);
+    --pin-h: var(--stage-h);
+    --scroll-step: calc(var(--stage-h) * 1.3);
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --primary: 0 0% 12%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 42%;
+    --accent: 0 0% 95%;
+    --accent-foreground: 0 0% 9%;
+    --border: 0 0% 87%;
+    --ring: 0 0% 30%;
+    --glow: 0 0% 60%;
+    --ok: 142 64% 38%;
+    --warn: 32 95% 44%;
+    --danger: 0 72% 51%;
+    --radius: 0.9rem;
+
+    /* 舞台 SVG 用色 */
+    --iso-top: #f4f4f5;
+    --iso-left: #dcdce0;
+    --iso-right: #c4c4cc;
+    --iso-line: #85858e;
+    --iso-hot: #dc2626;
+    --iso-raised: #ffffff;
+    --iso-cyl-top: #fafafa;
+    --iso-cyl-top-hot: #fecaca;
+    --iso-pad: #c4c4cc;
+    --iso-ring-track: #c4c4cc;
+    --iso-ring: #27272a;
+    --iso-glow: #71717a;
+    --iso-glow-opacity: 0.08;
+    --edge-normal: #85858e;
+    --edge-overload: #f87171;
+    --edge-isolated: #5c5c66;
+    --dot-normal: #52525b;
+    --dot-overload: #dc2626;
+    --dot-isolated: #18181b;
+  }
+
+  .dark {
+    --background: 0 0% 8%;
+    --foreground: 0 0% 93%;
+    --card: 0 0% 11%;
+    --card-foreground: 0 0% 93%;
+    --primary: 0 0% 90%;
+    --primary-foreground: 0 0% 8%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 58%;
+    --accent: 0 0% 17%;
+    --accent-foreground: 0 0% 93%;
+    --border: 0 0% 20%;
+    --ring: 0 0% 85%;
+    --glow: 0 0% 60%;
+    --ok: 142 65% 58%;
+    --warn: 38 92% 56%;
+    --danger: 0 84% 66%;
+
+    --iso-top: #2a2a2a;
+    --iso-left: #222222;
+    --iso-right: #1b1b1b;
+    --iso-line: #4d4d4d;
+    --iso-hot: #f87171;
+    --iso-raised: #3a3a3a;
+    --iso-cyl-top: #303030;
+    --iso-cyl-top-hot: #4a2323;
+    --iso-pad: #1d1d1d;
+    --iso-ring-track: #3f3f3f;
+    --iso-ring: #e5e5e5;
+    --iso-glow: #ffffff;
+    --iso-glow-opacity: 0.05;
+    --edge-normal: #5c5c5c;
+    --edge-overload: #b94a4a;
+    --edge-isolated: #6e6e6e;
+    --dot-normal: #bdbdbd;
+    --dot-overload: #f87171;
+    --dot-isolated: #f2f2f2;
+  }
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground;
+    font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  /* Agent 對話面板 */
+  .glass {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+  }
+}
+
+/* 過載平台底下的紅色光暈 */
+@keyframes hot-pulse {
+  0%, 100% { opacity: 0.18; }
+  50% { opacity: 0.42; }
+}
+.hot-pulse { animation: hot-pulse 1.2s ease-in-out infinite; }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .hot-pulse { animation: none; }
+}
+
+/* uiarc 元件(src/components/arc)用到的設計變數。uiarc 的 --foreground 等是完整顏色值,
+   本專案的同名變數是 HSL 三元組,所以只在 .arc 容器內覆寫,不影響其他元件 */
+.arc {
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --text-sm: 14px;
+  --leading-body: 1.5;
+  --radius-control: 999px;
+  --control-height-sm: 32px;
+  --control-height-md: 38px;
+  --control-height-lg: 44px;
+  --duration-instant: 0.12s;
+  --duration-fast: 0.16s;
+  --duration-spring: 0.42s;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --foreground: hsl(0 0% 9%);
+  --background: hsl(0 0% 100%);
+  --surface: hsl(0 0% 100%);
+  --surface-muted: hsl(0 0% 95%);
+  --border: hsl(0 0% 87%);
+  --border-strong: hsl(0 0% 70%);
+  --text-secondary: hsl(0 0% 30%);
+  --text-muted: hsl(0 0% 42%);
+  --danger: hsl(0 72% 51%);
+  --shadow-resting: 0 1px 2px rgb(0 0 0 / 0.08);
+  display: inline-flex;
+}
+.dark .arc {
+  --foreground: hsl(0 0% 93%);
+  --background: hsl(0 0% 8%);
+  --surface: hsl(0 0% 11%);
+  --surface-muted: hsl(0 0% 17%);
+  --border: hsl(0 0% 20%);
+  --border-strong: hsl(0 0% 35%);
+  --text-secondary: hsl(0 0% 75%);
+  --text-muted: hsl(0 0% 58%);
+  --danger: hsl(0 84% 66%);
+  --shadow-resting: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+
+/* 主題切換的 reveal:新主題以圓形從按鈕位置展開(動畫由 ThemeToggle 驅動) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* 底部情境切換 bar */
+.liquid-bar {
+  background: hsl(var(--muted) / 0.7);
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), inset 0 1px 0 rgb(255 255 255 / 0.6);
+}
+.dark .liquid-bar {
+  background: hsl(var(--card) / 0.8);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+/* liquid glass 指示器:中央透明不糊字,靠邊緣高光、內陰影與底下內容的飽和/提亮做出玻璃感 */
+.liquid-glass {
+  background:
+    radial-gradient(140% 100% at 50% -20%, rgb(255 255 255 / 0.45), rgb(255 255 255 / 0) 55%),
+    rgb(255 255 255 / 0.06);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow:
+    0 6px 18px rgb(0 0 0 / 0.12),
+    0 1px 2px rgb(0 0 0 / 0.08),
+    inset 0 1px 1px rgb(255 255 255 / 0.9),
+    inset 0 -2px 4px rgb(0 0 0 / 0.06),
+    inset 0 0 0 1px rgb(255 255 255 / 0.25);
+  -webkit-backdrop-filter: saturate(1.8) brightness(1.04) contrast(1.05);
+  backdrop-filter: saturate(1.8) brightness(1.04) contrast(1.05);
+}
+.dark .liquid-glass {
+  background:
+    radial-gradient(140% 100% at 50% -20%, rgb(255 255 255 / 0.18), rgb(255 255 255 / 0) 55%),
+    rgb(255 255 255 / 0.03);
+  border-color: rgb(255 255 255 / 0.22);
+  box-shadow:
+    0 6px 18px rgb(0 0 0 / 0.5),
+    inset 0 1px 1px rgb(255 255 255 / 0.35),
+    inset 0 -2px 4px rgb(0 0 0 / 0.3),
+    inset 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+/* 滑鼠停在舞台節點上:平台投影(淺色)/ 光暈(深色) */
+.node-platform { filter: drop-shadow(0 0 0 rgb(0 0 0 / 0)); }
+.node-platform[data-hovered] { filter: drop-shadow(0 18px 16px rgb(0 0 0 / 0.16)); }
+.dark .node-platform[data-hovered] { filter: drop-shadow(0 0 18px rgb(255 255 255 / 0.18)); }
+
+/* 左側說明卡片的 hover。--hover-mix 用 @property 註冊才能做 transition;
+   透明度 = 捲動亮度 --e 往 1 拉近 --hover-mix 的比例,捲動部分不受 transition 拖慢 */
+@property --hover-mix {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+/* --e 每格都在變;註冊成不繼承,才不會連帶讓卡片裡每個字重算樣式 */
+@property --e {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+.narration-card {
+  --hover-mix: 0;
+  opacity: calc(var(--e) + (1 - var(--e)) * var(--hover-mix));
+  transition: --hover-mix 0.3s ease, background-color 0.3s ease;
+}
+@media (hover: hover) {
+  .narration-card:hover {
+    --hover-mix: 0.75;
+    background-color: hsl(var(--foreground) / 0.035);
+  }
+  .narration-card:hover .narration-accent { transform: scaleY(1); }
+  .narration-card:hover .narration-title { transform: translateX(6px); }
+}
+.narration-card:focus-visible {
+  --hover-mix: 0.75;
+  background-color: hsl(var(--foreground) / 0.035);
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.5);
+}
+.narration-accent {
+  transform: scaleY(0);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.narration-card:focus-visible .narration-accent { transform: scaleY(1); }
+.narration-title { transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .narration-card, .narration-accent, .narration-title { transition: none; }
+}
+
+/* 隱藏捲軸(頁面右側、Agent 對話列表),仍可正常捲動 */
+html, .no-scrollbar { scrollbar-width: none; }
+html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Agent 對話的 loading 動畫:這些是持續的小動畫;進行到哪個階段由捲動決定 */
+.shimmer-text {
+  background: linear-gradient(90deg, hsl(var(--muted-foreground)) 0%, hsl(var(--foreground)) 50%, hsl(var(--muted-foreground)) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+.typing-dot { animation: typing-dot 1s ease-in-out infinite; }
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+
+.caret { animation: caret 1s steps(1) infinite; }
+@keyframes caret { 50% { opacity: 0; } }
+
+.skeleton {
+  background: linear-gradient(90deg, hsl(var(--muted)) 0%, hsl(var(--accent) / 0.6) 50%, hsl(var(--muted)) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-text, .typing-dot, .caret, .skeleton { animation: none; }
+  .shimmer-text { color: hsl(var(--muted-foreground)); background: none; }
+}
+
+/* 左側說明的捲動 text reveal:每個字一個 span,浮現程度(透明度/位移/模糊)由 NarrationPanel 直接寫入,
+   每格只改浮現邊緣附近幾個字 */
+.rv {
+  display: inline-block;
+  white-space: pre;
+}
+.rv-line { transform: scaleX(0); }
+
+/* 分頁在背景時暫停所有 CSS 持續動畫(SVG 光點由 App 呼叫 pauseAnimations 暫停) */
+.page-hidden *, .page-hidden *::before, .page-hidden *::after { animation-play-state: paused !important; }
