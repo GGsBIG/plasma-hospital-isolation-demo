@@ -7,7 +7,8 @@ import { isCompact } from "../layout"
 import { plasmaMix } from "../plasma"
 
 // 英數連成一個單位(避免單字被拆行),其餘逐字;句讀黏在前一個字上,避免標點落在行首
-const tokens = (text: string) => text.match(/(?:[\x21-\x7E]+|.)[，。、；：！？）」』]*/gu) ?? []
+// 空白黏在前一個單位後面,換行時才不會出現在行首
+const tokens = (text: string) => text.match(/(?:[\x21-\x7E]+|[^ ])[，。、；：！？）」』]* */gu) ?? []
 
 // 逐字浮現的柔邊寬度(同時在過渡中的字數)
 const SOFT = 6

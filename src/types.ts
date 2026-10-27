@@ -34,8 +34,17 @@ export interface SceneState {
   edges: EdgeDef[]
   loads?: Record<string, number>   // db id -> 負載 0~100
   badges?: Record<string, BadgeOverride>
+  callouts?: Record<string, Callout> // 節點旁的問答泡泡
+  brain?: boolean                  // 知識庫與 Plasma 合體:外圍光暈 =「資料大腦」
   showAgent?: boolean
   dimOpacity?: number              // 本狀態非重點節點的透明度,預設 0.28
+}
+
+// 節點旁的一問一答小泡泡,用同一個問題對照導入前後的回答
+export interface Callout {
+  tone: "ok" | "danger"
+  q: string
+  a: string
 }
 
 // 一頁 = 一個痛點。畫面本身是「導入前」;有 plasma 的頁面右上角可切換到「導入 Plasma 後」

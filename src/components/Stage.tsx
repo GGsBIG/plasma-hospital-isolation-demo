@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react"
 import type { SceneState } from "../types"
 import { NODE_BY_ID } from "../data"
-import { sceneBox, stageSize, useLayoutMode, type Box } from "../layout"
+import { iconScale, sceneBox, stageSize, useLayoutMode, type Box } from "../layout"
 import { dominantStates, frameAt, loadsAt, segmentAt, segmentIndex, stageKey, statesAt, structureAt } from "../timeline"
 import { plasmaMix } from "../plasma"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
@@ -131,6 +131,8 @@ export function Stage() {
 
   // 每格的位置、透明度、連線形狀、負載數字直接寫進 DOM。
   // DOM 參照在掛上時就存好(每格不再 querySelector);每個值記住上次寫入的內容,沒變就不寫
+  // 知識庫與 Plasma 合體時的「資料大腦」光暈:跟著兩者的位置走,濃淡依各狀態的 brain 權重
+  const auraRef = useRef<HTMLDivElement>(null)
   const nodeEls = useRef(new Map<string, { el: HTMLDivElement; num: Element | null; last: string; load: string }>())
   const edgeEls = useRef(new Map<string, { g: SVGGElement; path: SVGPathElement | null; last: string; d: string }>())
   const lastKey = useRef("")
@@ -176,6 +178,21 @@ export function Stage() {
         rec.num.textContent = `${load}%`
       }
     }
+    const aura = auraRef.current
+    if (aura) {
+      const brain = statesAt(p).reduce((n, x) => n + (x.s.brain ? x.w : 0), 0)
+      const plasma = f.nodes.find((n) => n.id === "plasma")
+      const kb = f.nodes.find((n) => n.id === "kb")
+      if (brain > 0.001 && plasma) {
+        // 光暈中心在 Plasma 與疊在上面的知識庫之間
+        const cy = kb ? (plasma.pos.y + kb.pos.y) / 2 : plasma.pos.y
+        aura.style.transform = `translate3d(${plasma.pos.x}px, ${cy}px, 0)`
+        aura.style.opacity = `${brain}`
+        aura.style.display = ""
+      } else {
+        aura.style.display = "none"
+      }
+    }
     for (const e of f.edges) {
       const rec = edgeEls.current.get(e.key)
       if (!rec) continue
@@ -216,10 +233,19 @@ export function Stage() {
           ))}
         </svg>
 
+        {/* 資料大腦光暈:在連線之上、節點之下 */}
+        <div ref={auraRef} aria-hidden className="pointer-events-none absolute left-0 top-0 h-0 w-0" style={{ display: "none" }}>
+          <div
+            className="brain-aura absolute rounded-full"
+            style={{ width: 620 * iconScale("plasma"), height: 500 * iconScale("plasma"), left: -310 * iconScale("plasma"), top: -250 * iconScale("plasma") }}
+          />
+        </div>
+
         {/* 節點層 */}
         {nodeIds.map((id) => {
           // 不在目前狀態的節點,徽章依「有它、權重最高」的那個狀態計算
-          const info = describe(ranked.find((s) => id in s.nodes) ?? near, loads, id)
+          const owner = ranked.find((s) => id in s.nodes) ?? near
+          const info = describe(owner, loads, id)
           return (
             <Node
               key={id}
@@ -232,6 +258,7 @@ export function Stage() {
               hot={info.hot}
               badge={info.badge}
               stat={info.stat}
+              callout={owner.callouts?.[id]}
               hovered={hover === id}
               faded={hover !== null && !linked.has(id)}
               onHover={setHover}

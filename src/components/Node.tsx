@@ -1,4 +1,4 @@
-import type { NodeDef } from "../types"
+import type { Callout, NodeDef } from "../types"
 import { sizeOf, NODE_SCALE } from "../geometry"
 import { Platform } from "./Iso"
 
@@ -22,7 +22,7 @@ const SPRING = "ease-[cubic-bezier(0.34,1.56,0.64,1)]"
 // 位置與透明度每格由 Stage 直接寫進外層 div(elRef),這裡不帶這兩個值,捲動時不重繪;
 // hovered / faded 是滑鼠互動,放在內層用 CSS transition,跟捲動驅動的外層互不干擾
 export function Node({
-  node, elRef, compact, hot, badge, stat, hovered, faded, onHover,
+  node, elRef, compact, hot, badge, stat, callout, hovered, faded, onHover,
 }: {
   node: NodeDef
   elRef: (el: HTMLDivElement | null) => void
@@ -30,6 +30,7 @@ export function Node({
   hot: boolean
   badge?: Badge
   stat?: string
+  callout?: Callout
   hovered: boolean
   faded: boolean
   onHover: (id: string | null) => void
@@ -37,13 +38,14 @@ export function Node({
   const { a, t } = sizeOf(node.kind)
   // 知識庫在 Plasma 正上方,標籤放右側避免擋到往下的連線
   const side = !compact && node.kind === "kb"
-  // 服務資料庫的連線從左下進、往右出,標籤放平台上方才不會被線穿過
-  const above = !compact && node.kind === "serving"
+  // 服務資料庫的連線從左下進、往右出,標籤放平台上方才不會被線穿過;
+  // 手機版知識庫疊在 Plasma 上方,標籤放下面會蓋住 Plasma,也改放上方
+  const above = compact ? node.kind === "kb" : node.kind === "serving"
   // 手機緊湊版:連線可能穿過節點下方的標籤,所以標籤加底色蓋住線;
   // 字放大(手機上舞台縮得比較小)、徽章疊在名稱下方、省略副標題
   const s = compact
-    ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", logo: "h-[100px]" }
-    : { name: "text-[26px]", badge: "text-[20px] px-3 py-1", meta: "text-[20px]", logo: "h-[64px]" }
+    ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", logo: "h-[100px]", bubble: "text-[28px] px-5 py-3 rounded-[24px]" }
+    : { name: "text-[26px]", badge: "text-[20px] px-3 py-1", meta: "text-[20px]", logo: "h-[64px]", bubble: "text-[19px] px-4 py-2.5 rounded-2xl" }
 
   const labelStyle = side
     ? { left: a + 22, top: -30 }
@@ -65,6 +67,20 @@ export function Node({
         >
           <Platform kind={node.kind} hot={hot} />
         </div>
+
+        {/* 問答泡泡:在平台上方、靠右對齊節點右緣(左邊是 Plasma,不往那邊擋) */}
+        {callout && (
+          <div
+            key={`${callout.tone}-${callout.a}`}
+            className={`callout-in absolute whitespace-nowrap border bg-card leading-snug shadow-[0_6px_20px_rgb(0_0_0/0.08)] ${s.bubble}
+              ${callout.tone === "ok" ? "border-ok/40" : "border-danger/40"}`}
+            // 手機版往右多推一點(仍在節點外框內),不碰到左邊疊在 Plasma 上的知識庫
+            style={{ right: compact ? -a - 40 : -a, bottom: a / 2 + 56 * NODE_SCALE }}
+          >
+            <div className="text-muted-foreground">問：{callout.q}</div>
+            <div className={`font-medium ${callout.tone === "ok" ? "text-ok" : "text-danger"}`}>答：{callout.a}</div>
+          </div>
+        )}
 
         {/* 標籤跟著稍微上移 */}
         <div

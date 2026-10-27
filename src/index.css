@@ -355,3 +355,25 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 
 /* 分頁在背景時暫停所有 CSS 持續動畫(SVG 光點由 App 呼叫 pauseAnimations 暫停) */
 .page-hidden *, .page-hidden *::before, .page-hidden *::after { animation-play-state: paused !important; }
+
+/* 知識庫與 Plasma 合體的「資料大腦」光暈:柔和、緩慢呼吸 */
+.brain-aura {
+  background: radial-gradient(closest-side, rgb(37 132 235 / 0.16), rgb(37 132 235 / 0.07) 55%, rgb(37 132 235 / 0) 100%);
+  animation: brain-breathe 4s ease-in-out infinite;
+}
+.dark .brain-aura {
+  background: radial-gradient(closest-side, rgb(80 160 255 / 0.20), rgb(80 160 255 / 0.08) 55%, rgb(80 160 255 / 0) 100%);
+}
+@keyframes brain-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+/* 問答泡泡換內容時淡入 */
+.callout-in { animation: callout-in 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes callout-in {
+  from { opacity: 0; translate: 0 8px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brain-aura, .callout-in { animation: none; }
+}

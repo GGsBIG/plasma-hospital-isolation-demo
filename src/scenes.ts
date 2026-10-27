@@ -17,6 +17,10 @@ const DS_Y: Record<string, number> = {
 // Plasma 出現後(情境 3 起)固定在同一位置,切換時只有周邊節點移動
 // (情境 6 的 Agent 面板會擠窄舞台,整個舞台縮小左移,這是刻意的)
 const PLASMA_POS = { x: 800, y: 525 }
+// 知識庫與 Plasma 合體時,知識庫疊在 Plasma 正上方(兩者之間不再有連線)
+const KB_DOCK = { x: 800, y: 400 }
+const BRAIN_BADGE = { tone: "ok" as const, text: "資料大腦 · 理解所有表與欄位" }
+const ASK = "上月心臟內科住院幾人？"
 
 const col = (ys: Record<string, number>, x: number) =>
   Object.fromEntries(Object.entries(ys).map(([id, y]) => [id, { x, y }]))
@@ -144,22 +148,25 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 5. AI 直連源頭資料庫 → Plasma 隔離 + 知識庫
+  // 5. AI 不了解院內資料 → 知識庫與 Plasma 合體成資料大腦,AI 答得準
   {
     id: "knowledge",
-    title: "AI 存取資料的安全疑慮",
+    title: "AI 不了解院內資料",
     short: "AI 與知識庫",
-    pain: "AI 直接連線正式資料庫，可能誤刪或修改病歷資料；資料庫欄位多為代碼，AI 也無法理解其意義。",
-    fix: "AI 透過 Plasma 以唯讀方式存取資料，與正式資料庫隔離；匯入資料字典建立知識庫，讓 AI 理解每個欄位的意義。",
+    pain: "AI 直接連線正式資料庫，可能誤刪或修改資料；欄位多為代碼，AI 不了解其意義，回答容易出錯。",
+    fix: "匯入資料字典與系統文件後，Plasma 成為最了解院內所有資料庫與系統的資料大腦；AI 透過 Plasma 唯讀查詢，答案最精準。",
     nodes: { ...dbCol(260), "app-ai": { x: 1340, y: PLASMA_POS.y } },
     active: [...dbIds, "app-ai"],
     edges: dbIds.map((id) => ({ from: id, to: "app-ai", state: "risk" as const })),
-    badges: { "app-ai": { tone: "danger", text: "具寫入權限", stat: "無法理解欄位代碼" } },
+    badges: { "app-ai": { tone: "danger", text: "回答不準確" } },
+    callouts: { "app-ai": { tone: "danger", q: ASK, a: "無法判斷 DEPT_C 欄位意義" } },
     plasma: {
-      nodes: { ...dbCol(260), kb: { x: 800, y: 180 }, plasma: PLASMA_POS, "app-ai": { x: 1340, y: PLASMA_POS.y } },
+      nodes: { ...dbCol(260), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1340, y: PLASMA_POS.y } },
       active: ["plasma", "kb", "app-ai"],
-      edges: [...viaPlasma(["app-ai"]), { from: "kb", to: "plasma", state: "isolated" }],
-      badges: { "app-ai": { tone: "ok", text: "唯讀存取", stat: "DEPT_C：科別、DX_CD：診斷碼" } },
+      edges: viaPlasma(["app-ai"]),
+      brain: true,
+      badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "回答精準" } },
+      callouts: { "app-ai": { tone: "ok", q: ASK, a: "312 人" } },
     },
   },
 
@@ -175,10 +182,11 @@ export const SCENES: SceneDef[] = [
     edges: dbIds.map((id) => ({ from: id, to: "ds-it", state: "risk" as const })),
     badges: { "ds-it": { tone: "warn", text: "人工處理 · 需數天" } },
     plasma: {
-      nodes: { ...dbCol(260), kb: { x: 800, y: 180 }, plasma: PLASMA_POS, "app-ai": { x: 1340, y: PLASMA_POS.y } },
+      nodes: { ...dbCol(260), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1340, y: PLASMA_POS.y } },
       active: ["plasma", "kb", "app-ai"],
-      edges: [...viaPlasma(["app-ai"]), { from: "kb", to: "plasma", state: "isolated" }],
-      badges: { "app-ai": { tone: "ok", text: "數分鐘產出報表" } },
+      edges: viaPlasma(["app-ai"]),
+      brain: true,
+      badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "數分鐘產出報表" } },
       showAgent: true,
     },
   },

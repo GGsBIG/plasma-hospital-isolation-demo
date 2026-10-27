@@ -95,9 +95,13 @@ function flowX(x: number): number {
 
 const PLASMA_ROW = 525 // 情境資料裡 Plasma 那一列的桌機 y
 const SIDE_Y = 130 // 知識庫、落地 PostgreSQL:放在 Plasma 正上方
+const KB_DOCK_MIN = 300 // 情境資料裡知識庫 y 大於此值 = 與 Plasma 合體
+const KB_DOCK_DY = 180 // 合體時知識庫在 Plasma 上方多少(緊湊版圖示較大)
 
 function compactPos(id: string, p: Pos): Pos {
   if (id === "plasma") return { x: PAD_L + FLOW_PLASMA, y: ROW_A[1] }
+  // 知識庫與 Plasma 合體時(情境資料的 y 在 Plasma 上方不遠):疊在 Plasma 正上方
+  if (id === "kb" && p.y > KB_DOCK_MIN) return { x: PAD_L + FLOW_PLASMA, y: ROW_A[1] - KB_DOCK_DY }
   if (id === "kb" || id === "serving-pg") return { x: PAD_L + FLOW_PLASMA, y: SIDE_Y }
   if (id in APP_SLOT) {
     // 只有單一應用的頁面,應用和 Plasma 同一列:放在 Plasma 正右方
@@ -136,7 +140,7 @@ const EXTENT: Record<NodeKind, { half: number; top: number; bottom: number }> = 
   downstream: { half: 100, top: 41, bottom: 205 },
   app: { half: 140, top: 54, bottom: 214 },
   plasma: { half: 259, top: 98, bottom: 363 },
-  kb: { half: 107, top: 48, bottom: 257 },
+  kb: { half: 107, top: 215, bottom: 70 }, // 標籤在上方(疊在 Plasma 上時)
 }
 
 export interface Box { x0: number; y0: number; x1: number; y1: number }
