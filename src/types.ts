@@ -38,14 +38,14 @@ export interface SceneState {
   dimOpacity?: number              // 本狀態非重點節點的透明度,預設 0.28
 }
 
-// 一頁 = 一個痛點。畫面本身是「沒有 Plasma」;有 plasma 的頁面右上角可切換到「有 Plasma」
+// 一頁 = 一個痛點。畫面本身是「導入前」;有 plasma 的頁面右上角可切換到「導入 Plasma 後」
 export interface SceneDef extends SceneState {
   id: string
   title: string
   short: string                    // 下方進度列的短標籤
   bullets?: string[]               // 開場頁的說明
-  pain?: string                    // 沒有 Plasma 的痛點
-  fix?: string                     // 有 Plasma 之後
+  pain?: string                    // 導入前的痛點
+  fix?: string                     // 導入 Plasma 後
   plasma?: SceneState
 }
 

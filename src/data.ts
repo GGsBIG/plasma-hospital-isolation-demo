@@ -24,7 +24,7 @@ export const DOWNSTREAM: NodeDef[] = [
   { id: "ds-ward",   kind: "downstream", label: "護理站",     icon: "heart-pulse" },
   { id: "ds-admin",  kind: "downstream", label: "行政批價",   icon: "receipt" },
   { id: "ds-lab",    kind: "downstream", label: "檢驗室",     icon: "flask-conical" },
-  // 情境 6:沒有 Plasma 時,報表要靠資訊室人工撈
+  // 情境 6:導入前,報表要靠資訊室人工撈
   { id: "ds-it",     kind: "downstream", label: "資訊室",     icon: "users" },
 ]
 
@@ -62,7 +62,7 @@ export const AGENT_SCRIPT: AgentTurn[] = [
   { role: "user", text: "幫我做這個月的住院計費彙總報表，依科別分組。" },
   { role: "tool", text: "呼叫 Plasma MCP · list_tables → 找到 計費（MS SQL）、就診主檔（Oracle HIS）" },
   { role: "tool", text: "呼叫 describe_columns → 由知識庫補上欄位語意（DEPT_C=科別、DX_CD=診斷碼…）" },
-  { role: "tool", text: "呼叫 query → 跨 Oracle×MS SQL 聚合，Plasma 已降載並整合" },
+  { role: "tool", text: "呼叫 query → 由 Plasma 跨 Oracle、MS SQL 彙整，不影響正式資料庫" },
   { role: "assistant", text: "完成。本月住院計費彙總（依科別）：新陳代謝 NT$1.82M、心臟內科 NT$2.41M、腎臟科 NT$0.96M。報表已產出。" },
 ]
 

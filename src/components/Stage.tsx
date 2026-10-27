@@ -37,18 +37,18 @@ function describe(scene: SceneState, loads: Record<string, number>, id: string):
     }
     case "app": {
       const direct = touching.filter((e) => e.state === "overload").length
-      if (direct) return { badge: { tone: "danger", text: "直連源頭資料庫" }, hot: false }
+      if (direct) return { badge: { tone: "danger", text: "直接存取資料庫" }, hot: false }
       if (touching.some((e) => NODE_BY_ID[e.from].kind === "serving"))
         return { badge: { tone: "ok", text: "經由 PostgreSQL" }, hot: false }
       if (touching.length) return { badge: { tone: "ok", text: "經由 Plasma" }, hot: false }
       return { badge: { tone: "idle", text: "待接入" }, hot: false }
     }
     case "plasma":
-      return { badge: { tone: "ok", text: "隔離中 · 源頭資料庫零直連" }, hot: false }
+      return { badge: { tone: "ok", text: "已隔離正式資料庫" }, hot: false }
     case "serving":
-      return { badge: { tone: "ok", text: "資料已落地" }, hot: false }
+      return { badge: { tone: "ok", text: "資料已同步" }, hot: false }
     case "kb":
-      return { badge: { tone: "ok", text: "文件已上傳" }, hot: false }
+      return { badge: { tone: "ok", text: "已匯入資料字典" }, hot: false }
   }
 }
 

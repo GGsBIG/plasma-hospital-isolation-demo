@@ -12,16 +12,34 @@ const tokens = (text: string) => text.match(/(?:[\x21-\x7E]+|.)[，。、；：�
 // 逐字浮現的柔邊寬度(同時在過渡中的字數)
 const SOFT = 6
 
-// 有／沒有 Plasma 兩段的小標
-const PAIN_LABEL = "沒有 Plasma"
-const FIX_LABEL = "有 Plasma"
+// 導入前／導入後兩段的小標
+const PAIN_LABEL = "導入前"
+const FIX_LABEL = "導入 Plasma 後"
 
-// 每段依畫面順序出現的文字:標題,然後是開場說明,或「痛點 + 解法」(含小標)
-const texts = (s: SceneDef) =>
-  [s.title, ...(s.bullets ?? []), ...(s.pain ? [PAIN_LABEL, s.pain] : []), ...(s.fix ? [FIX_LABEL, s.fix] : [])]
+// 捲動浮現的文字:標題,然後是開場說明,或「導入前」那段。
+// 「導入後」那段同一時間只顯示一種:切換時舊的淡出、新的再逐字浮現(由切換進度驅動,不是捲動)
+const texts = (s: SceneDef) => [s.title, ...(s.bullets ?? []), ...(s.pain ? [PAIN_LABEL, s.pain] : [])]
 
 // 每段的字數,用來把 reveal 0~1 換算成「浮現到第幾個字」
 const TOTALS = SCENES.map((s) => texts(s).reduce((n, t) => n + tokens(t).length, 0))
+
+// 切換進度 m 0~1:前 30% 舊的那段淡出,之後新的那段逐字浮現;切回來時倒著播
+const SWAP = 0.3
+
+// 把一串字的浮現位置從 prev 移到 head:第 k 個字的浮現程度 v 只在 head - SOFT < k < head 之間介於 0~1,
+// 所以只有新舊位置之間的字需要改,其餘不動
+function paint(spans: HTMLElement[], prev: number | null, head: number, lite: boolean, blur: boolean) {
+  const n = spans.length
+  const from = prev === null ? 0 : Math.max(0, Math.floor(Math.min(prev, head) - SOFT))
+  const to = prev === null ? n - 1 : Math.min(n - 1, Math.ceil(Math.max(prev, head)))
+  for (let k = from; k <= to; k++) {
+    const v = clamp01((head - k) / SOFT)
+    const st = spans[k].style
+    st.opacity = `${v}`
+    st.transform = lite || v === 1 || v === 0 ? "" : `translateY(${(1 - v) * 6}px)`
+    st.filter = blur && v > 0 && v < 1 ? `blur(${(1 - v) * 6}px)` : ""
+  }
+}
 const TITLE_LENS = SCENES.map((s) => tokens(s.title).length)
 
 // 捲動驅動的 text reveal:每個字是一個 .rv span,浮現程度由 NarrationPanel 直接寫進 style,
@@ -68,7 +86,7 @@ const Section = memo(function Section({
         <div className="font-mono text-[15px] tabular-nums text-muted-foreground transition-colors duration-300 group-hover:text-foreground">
           {String(index + 1).padStart(2, "0")}
         </div>
-        <h2 className="narration-title mt-2 text-[26px] font-semibold leading-snug tracking-tight text-foreground cp:mt-1 pl:text-[19px] pp:text-[22px] ps:text-[19px]">
+        <h2 className="narration-title mt-2 text-balance text-[26px] font-semibold leading-snug tracking-tight text-foreground cp:mt-1 pl:text-[19px] pp:text-[22px] ps:text-[19px]">
           {title.map(word)}
         </h2>
         <div className="rv-line mt-4 h-px w-12 origin-left bg-foreground/30 cp:mt-2" />
@@ -78,17 +96,19 @@ const Section = memo(function Section({
               {tokens(b).map(word)}
             </p>
           ))}
-          {/* 痛點與解法:目前切到哪一邊,那段就亮、另一段變淡(亮度由 NarrationPanel 依切換進度寫入) */}
+          {/* 導入前／導入後疊在同一格(高度取較長的那段,切換時版面不跳),同時只顯示一段 */}
           {scene.pain && (
-            <div className="pain-block">
-              <div className={`${label} text-danger`}>{tokens(PAIN_LABEL).map(word)}</div>
-              <p className={body}>{tokens(scene.pain).map(word)}</p>
-            </div>
-          )}
-          {scene.fix && (
-            <div className="fix-block" style={{ opacity: 0.35 }}>
-              <div className={`${label} text-ok`}>{tokens(FIX_LABEL).map(word)}</div>
-              <p className={body}>{tokens(scene.fix).map(word)}</p>
+            <div className="grid">
+              <div className="pain-block [grid-area:1/1]">
+                <div className={`${label} text-danger`}>{tokens(PAIN_LABEL).map(word)}</div>
+                <p className={body}>{tokens(scene.pain).map(word)}</p>
+              </div>
+              {scene.fix && (
+                <div className="fix-block [grid-area:1/1]">
+                  <div className={`${label} text-ok`}>{tokens(FIX_LABEL).map(word)}</div>
+                  <p className={body}>{tokens(scene.fix).map(word)}</p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -107,15 +127,17 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
   // 每張卡片:元素、所有字的 span、分隔線,以及上次寫入的浮現位置與亮度(沒變就不寫)
   type Card = {
     el: HTMLDivElement; spans: HTMLElement[]; line: HTMLElement | null; head: number | null; e: string
-    pain: HTMLElement | null; fix: HTMLElement | null; m: number
+    pain: HTMLElement | null; fixSpans: HTMLElement[]; fixHead: number | null; m: number
   }
   const cards = useRef<(Card | null)[]>([])
   const setCard = (i: number, el: HTMLDivElement | null) => {
     if (!el) return
     if (cards.current[i]?.el === el) return
+    const fix = el.querySelector(".fix-block")
+    const all = [...el.querySelectorAll<HTMLElement>(".rv")]
     cards.current[i] = {
-      el, spans: [...el.querySelectorAll<HTMLElement>(".rv")], line: el.querySelector(".rv-line"), head: null, e: "",
-      pain: el.querySelector(".pain-block"), fix: el.querySelector(".fix-block"), m: 0,
+      el, spans: all.filter((s) => !fix?.contains(s)), line: el.querySelector(".rv-line"), head: null, e: "",
+      pain: el.querySelector(".pain-block"), fixSpans: all.filter((s) => fix?.contains(s)), fixHead: null, m: -1,
     }
   }
   // 欄位高與段高快取,只在尺寸改變時重量(捲動中讀版面尺寸會逼瀏覽器當場重算版面)
@@ -149,25 +171,22 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
       // 從前一段過場到一半起開始浮現,接近置中時完整;以 1/4 個字為單位
       const head = Math.round(clamp01((p - (i - 0.75)) / 0.6) * (TOTALS[i] + SOFT) * 4) / 4
       if (head !== card.head) {
-        // 第 k 個字的浮現程度 v 只在 head - SOFT < k < head 之間介於 0~1;
-        // 從舊位置移到新位置時,只有這段範圍內的字會變,其餘不動
-        const n = card.spans.length
-        const from = card.head === null ? 0 : Math.max(0, Math.floor(Math.min(card.head, head) - SOFT))
-        const to = card.head === null ? n - 1 : Math.min(n - 1, Math.ceil(Math.max(card.head, head)))
-        for (let k = from; k <= to; k++) {
-          const v = clamp01((head - k) / SOFT)
-          const st = card.spans[k].style
-          st.opacity = `${v}`
-          st.transform = lite || v === 1 || v === 0 ? "" : `translateY(${(1 - v) * 6}px)`
-          st.filter = blur && v > 0 && v < 1 ? `blur(${(1 - v) * 6}px)` : ""
-        }
+        paint(card.spans, card.head, head, lite, blur)
         if (card.line) card.line.style.transform = `scaleX(${clamp01((head - TITLE_LENS[i]) / SOFT)})`
         card.head = head
       }
+      // 切換到導入後:導入前那段整段淡出,導入後那段再逐字浮現
       const m = plasmaMix(i)
-      if (m !== card.m) {
-        if (card.pain) card.pain.style.opacity = `${1 - 0.65 * m}`
-        if (card.fix) card.fix.style.opacity = `${0.35 + 0.65 * m}`
+      if (m !== card.m && card.pain) {
+        const out = clamp01(m / SWAP)
+        card.pain.style.opacity = `${1 - out}`
+        card.pain.style.transform = lite || out === 0 ? "" : `translateY(${-out * 6}px)`
+        card.pain.style.visibility = out === 1 ? "hidden" : ""
+        const fixHead = Math.round(clamp01((m - SWAP) / (1 - SWAP)) * (card.fixSpans.length + SOFT) * 4) / 4
+        if (fixHead !== card.fixHead) {
+          paint(card.fixSpans, card.fixHead, fixHead, lite, blur)
+          card.fixHead = fixHead
+        }
         card.m = m
       }
       const e = (1 - 0.7 * clamp01(Math.abs(p - i))).toFixed(2)

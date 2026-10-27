@@ -1,9 +1,10 @@
 import { SCENES } from "./scenes"
 import { scrollStore } from "./scroll"
 
-// 每頁「有／沒有 Plasma」的切換狀態。按鈕切換時用時間動畫(不是捲動)在兩種畫面之間過渡;
+// 每頁「導入前／導入 Plasma 後」的切換狀態。按鈕切換時用時間動畫(不是捲動)在兩種畫面之間過渡;
 // 每格更新後通知 scrollStore,所有依捲動繪製的東西照常重算
-const DURATION = 700
+// 前 30% 舊說明淡出、圖開始變化,之後新說明逐字浮現(見 NarrationPanel)
+const DURATION = 1100
 
 const target = SCENES.map(() => 0)
 const mix = SCENES.map(() => 0)
@@ -42,7 +43,7 @@ export function setPlasma(i: number, on: boolean) {
   raf = requestAnimationFrame(tick)
 }
 
-// 先痛再解:某頁完全離開畫面後就回到「沒有 Plasma」,下次捲回來又從痛點開始
+// 先痛再解:某頁完全離開畫面後就回到「導入前」,下次捲回來又從痛點開始
 scrollStore.subscribe((p) => {
   const q = Math.min(SCENES.length - 1, Math.max(0, p))
   for (let j = 0; j < SCENES.length; j++) {

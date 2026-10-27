@@ -20,6 +20,9 @@ validateScenes() // 載入即檢查情境資料完整性
 const AGENT_W = 380
 // 抵達最後一個情境(MCP Agent)後,再留多少段 --scroll-step 的捲動距離給右側對話逐步播放
 const CHAT_SPAN = 2.5
+// 最後一頁切到「導入 Plasma 後」時,自動捲完對話所需的秒數(使用者一滾動就交還手動控制)
+const CHAT_PLAY = 9
+const CHAT_DELAY = 600 // 等 Agent 面板滑出後再開始播
 
 const easeInOutCubic = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2)
 
@@ -180,6 +183,30 @@ export function App() {
     })
   }, [stepPx])
 
+  // 切換導入前後。最後一頁切到導入後:自動往下捲,讓 Agent 對話一路播完;
+  // 對話仍由捲動位置驅動,所以使用者隨時可以用滾輪/觸控接手(Lenis 收到滾動就停止自動捲動)
+  const chatTimer = useRef(0)
+  const togglePlasma = useCallback((i: number, on: boolean) => {
+    setPlasma(i, on)
+    if (i !== LAST) return
+    window.clearTimeout(chatTimer.current)
+    const lenis = lenisRef.current
+    if (!lenis) return
+    if (!on) {
+      // 切回導入前:停在目前位置
+      lenis.scrollTo(window.scrollY, { immediate: true })
+      return
+    }
+    chatTimer.current = window.setTimeout(() => {
+      const h = stepPx()
+      const end = (LAST + CHAT_SPAN) * h
+      if (!h || !plasmaOn(LAST) || window.scrollY >= end - 1) return
+      // 已經捲到一半就只播剩下的部分
+      const left = (end - window.scrollY) / (CHAT_SPAN * h)
+      lenis.scrollTo(end, { duration: Math.max(1, CHAT_PLAY * Math.min(1, left)), easing: (x) => x })
+    }, CHAT_DELAY)
+  }, [stepPx])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
@@ -189,14 +216,14 @@ export function App() {
         // 在最後一個情境按 →:捲到對話播完
         goTo(next > LAST ? LAST + CHAT_SPAN : next)
       } else if ((e.key === "p" || e.key === "P") && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        // P:切換目前這頁有／沒有 Plasma
+        // P:切換目前這頁導入前後
         const cur = Math.round(clampProgress(scrollStore.get()))
-        setPlasma(cur, !plasmaOn(cur))
+        togglePlasma(cur, !plasmaOn(cur))
       }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [goTo])
+  }, [goTo, togglePlasma])
 
   return (
     <div className="min-h-full">
@@ -213,7 +240,7 @@ export function App() {
         <div className="flex items-center gap-4">
           <span className="font-mono text-xs tabular-nums text-muted-foreground">
             {String(current + 1).padStart(2, "0")} / {String(SCENES.length).padStart(2, "0")}
-            <span className="ml-3 hidden sm:inline">捲動或 ← → 換頁，P 切換 Plasma</span>
+            <span className="ml-3 hidden sm:inline">捲動或 ← → 換頁，P 切換導入前後</span>
           </span>
           <ThemeToggle />
         </div>
@@ -237,12 +264,12 @@ export function App() {
         </aside>
 
         {/* 舞台固定在畫面上,不隨頁面捲動 */}
-        {/* 上方留一列給「有／沒有 Plasma」切換(在進度條下方),舞台從切換列下面開始,不會被擋住 */}
+        {/* 上方留一列給「導入前｜導入 Plasma 後」切換(在進度條下方),舞台從切換列下面開始,不會被擋住 */}
         <div className="sticky top-[var(--header-h)] flex h-[var(--stage-h)] min-w-0 flex-1 pt-[72px] pp:order-1 pp:w-full pp:flex-none pp:pb-1.5 pp:pt-[66px] pl:pt-[64px]">
           <div className="relative min-h-0 min-w-0 flex-1">
             <Stage />
             <div className="absolute bottom-full right-0 z-10 mb-2 pp:mb-1.5 pl:mb-1">
-              <PlasmaToggle />
+              <PlasmaToggle onToggle={togglePlasma} />
             </div>
           </div>
 
