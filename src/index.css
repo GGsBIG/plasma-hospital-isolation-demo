@@ -377,3 +377,9 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .brain-aura, .callout-in { animation: none; }
 }
+
+/* 防護框:綠色虛線,底色極淡 */
+.zone {
+  border-color: hsl(var(--ok) / 0.55);
+  background: hsl(var(--ok) / 0.04);
+}

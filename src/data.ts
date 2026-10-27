@@ -24,8 +24,10 @@ export const DOWNSTREAM: NodeDef[] = [
   { id: "ds-ward",   kind: "downstream", label: "護理站",     icon: "heart-pulse" },
   { id: "ds-admin",  kind: "downstream", label: "行政批價",   icon: "receipt" },
   { id: "ds-lab",    kind: "downstream", label: "檢驗室",     icon: "flask-conical" },
-  // 情境 6:導入前,報表要靠資訊室人工撈
-  { id: "ds-it",     kind: "downstream", label: "資訊室",     icon: "users" },
+  // 情境 4、8:導入前,資料要靠 IT 人工撈取、整併
+  { id: "ds-it",     kind: "downstream", label: "IT 部門",    icon: "users" },
+  // 情境 8:提出資料需求的 AI 部門
+  { id: "ds-aiteam", kind: "downstream", label: "AI 部門",    icon: "users" },
 ]
 
 // 上方新應用
@@ -34,14 +36,18 @@ export const APPS: NodeDef[] = [
   { id: "app-fhir", kind: "app", label: "FHIR Server",  icon: "share-2" },
   { id: "app-bi",   kind: "app", label: "BI Dashboard", icon: "bar-chart-3" },
   { id: "app-ai",   kind: "app", label: "AI",           icon: "sparkles" },
+  // 情境 4:手工整併後產出的報表
+  { id: "app-report", kind: "app", label: "報表",       icon: "file-bar-chart" },
 ]
 
 export const PLASMA: NodeDef = { id: "plasma", kind: "plasma", label: "Plasma", sub: "AI-Ready 資料中台", icon: "layers", logo: { light: plasmaLogo, dark: plasmaLogoDark } }
 // Plasma 整理後的資料落地到這台 PostgreSQL,再提供給 AP 使用(與左側 NIS 的源頭資料庫 PostgreSQL 不同台)
 export const SERVING_PG: NodeDef = { id: "serving-pg", kind: "serving", label: "PostgreSQL", sub: "整理後資料 · 服務資料庫", icon: "database" }
+// 情境 4:各資料庫手工匯出的檔案
+export const FILES: NodeDef = { id: "files", kind: "file", label: "匯出檔 ×5", sub: "CSV／Excel", icon: "file" }
 export const KB: NodeDef = { id: "kb", kind: "kb", label: "知識庫", sub: "文件／技術文件", icon: "book-open" }
 
-export const ALL_NODES: NodeDef[] = [...DBS, ...CAMPUSES, ...DOWNSTREAM, ...APPS, PLASMA, SERVING_PG, KB]
+export const ALL_NODES: NodeDef[] = [...DBS, ...CAMPUSES, ...DOWNSTREAM, ...APPS, PLASMA, SERVING_PG, KB, FILES]
 export const NODE_BY_ID: Record<string, NodeDef> =
   Object.fromEntries(ALL_NODES.map((n) => [n.id, n]))
 

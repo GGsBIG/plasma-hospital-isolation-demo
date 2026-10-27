@@ -1,4 +1,4 @@
-export type NodeKind = "db" | "downstream" | "app" | "plasma" | "kb" | "serving"   // serving:Plasma 整理後資料落地的服務資料庫
+export type NodeKind = "db" | "downstream" | "app" | "plasma" | "kb" | "serving" | "file"   // serving:Plasma 整理後資料落地的服務資料庫;file:手工匯出的檔案
 
 export interface NodeDef {
   id: string
@@ -36,6 +36,7 @@ export interface SceneState {
   badges?: Record<string, BadgeOverride>
   callouts?: Record<string, Callout> // 節點旁的問答泡泡
   brain?: boolean                  // 知識庫與 Plasma 合體:外圍光暈 =「資料大腦」
+  zone?: { ids: string[]; label: string } // 圍住一組節點的虛線防護框(例如「核心資料庫 · 受保護」)
   showAgent?: boolean
   dimOpacity?: number              // 本狀態非重點節點的透明度,預設 0.28
 }

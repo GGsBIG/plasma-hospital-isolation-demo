@@ -63,8 +63,13 @@ const FLOW_MID = 560 // 情境 1 的既有系統
 // 情境 2 的源頭資料庫:A、B 兩欄的中心(+B_SHIFT/2)剛好在左側既有系統與右側應用的正中間
 const FLOW_MID_DB = (FLOW_SOURCE + FLOW_APP) / 2 - B_SHIFT / 2
 const FLOW_PLASMA = 640 // Plasma、知識庫、落地 PostgreSQL
+const FLOW_HANDOFF = 820 // 情境 4 的 IT 部門(匯出檔與報表之間)
+// 情境 2 導入後:既有系統在源頭資料庫的更左邊(情境資料的 x < DS_FAR_MAX)
+const DS_FAR_MAX = 200
+const FLOW_DS_FAR = -560
 
-const SLOT: Record<string, { y: number; b: boolean }> = {
+// x:固定的緊湊版橫軸位置(不依情境資料換算)
+const SLOT: Record<string, { y: number; b: boolean; x?: number }> = {
   "db-oracle": { y: ROW_A[0], b: false },
   "db-postgres": { y: ROW_A[1], b: false },
   "db-mssql": { y: ROW_A[2], b: false },
@@ -79,15 +84,19 @@ const SLOT: Record<string, { y: number; b: boolean }> = {
   "campus-main": { y: ROW_A[0], b: false },
   "campus-north": { y: ROW_A[1], b: false },
   "campus-south": { y: ROW_A[2], b: false },
-  // 情境 6 的資訊室:在 Plasma 的位置
+  // 情境 4、8 的 IT 部門、情境 8 的 AI 部門:和 Plasma 同一列
   "ds-it": { y: ROW_A[1], b: false },
+  "ds-aiteam": { y: ROW_A[1], b: false },
+  // 情境 4 的匯出檔:緊接在源頭資料庫右邊
+  files: { y: ROW_A[1], b: false, x: 560 },
 }
-const APP_SLOT: Record<string, number> = { "app-ap": APP_ROW[0], "app-fhir": APP_ROW[1], "app-bi": APP_ROW[2], "app-ai": APP_ROW[3] }
+const APP_SLOT: Record<string, number> = { "app-ap": APP_ROW[0], "app-fhir": APP_ROW[1], "app-bi": APP_ROW[2], "app-ai": APP_ROW[3], "app-report": APP_ROW[1] }
 
 // 情境資料的桌機 x(流向上的那一欄)→ 緊湊版橫軸
 function flowX(x: number): number {
   if (x <= 560) return FLOW_SOURCE
   if (x === 800) return FLOW_PLASMA
+  if (x === 1000) return FLOW_HANDOFF
   if (x < 1000) return FLOW_MID_DB
   if (x < 1300) return FLOW_MID
   return FLOW_APP
@@ -109,7 +118,8 @@ function compactPos(id: string, p: Pos): Pos {
     return { x: PAD_L + FLOW_APP, y }
   }
   const slot = SLOT[id]
-  return { x: PAD_L + flowX(p.x) + (slot.b ? B_SHIFT : 0), y: slot.y }
+  const fx = slot.x ?? (id.startsWith("ds-") && p.x < DS_FAR_MAX ? FLOW_DS_FAR : flowX(p.x))
+  return { x: PAD_L + fx + (slot.b ? B_SHIFT : 0), y: slot.y }
 }
 
 // 舞台座標系大小
@@ -141,11 +151,12 @@ const EXTENT: Record<NodeKind, { half: number; top: number; bottom: number }> = 
   app: { half: 140, top: 54, bottom: 214 },
   plasma: { half: 259, top: 98, bottom: 363 },
   kb: { half: 107, top: 215, bottom: 70 }, // 標籤在上方(疊在 Plasma 上時)
+  file: { half: 110, top: 48, bottom: 200 },
 }
 
 export interface Box { x0: number; y0: number; x1: number; y1: number }
 
-export function sceneBox(nodes: Record<string, Pos>, kindOf: (id: string) => NodeKind): Box {
+export function sceneBox(nodes: Record<string, Pos>, kindOf: (id: string) => NodeKind, zone?: string[]): Box {
   const b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
   for (const id of Object.keys(nodes)) {
     const p = place(id, nodes[id])
@@ -155,5 +166,26 @@ export function sceneBox(nodes: Record<string, Pos>, kindOf: (id: string) => Nod
     b.y0 = Math.min(b.y0, p.y - e.top)
     b.y1 = Math.max(b.y1, p.y + e.bottom)
   }
+  // 防護框比節點外框大一圈,也要放進鏡頭
+  if (zone) {
+    const z = zoneRect(zone.map((id) => place(id, nodes[id])))
+    b.x0 = Math.min(b.x0, z.x0)
+    b.x1 = Math.max(b.x1, z.x1)
+    b.y0 = Math.min(b.y0, z.y0)
+    b.y1 = Math.max(b.y1, z.y1)
+  }
   return b
+}
+
+// 防護框:圍住一組節點(含名稱、徽章),下緣多留一點給框的標題
+export function zoneRect(points: Pos[]): Box {
+  const k = mode === "desktop" ? 1 : 1.6
+  const xs = points.map((p) => p.x)
+  const ys = points.map((p) => p.y)
+  return {
+    x0: Math.min(...xs) - 190 * k,
+    x1: Math.max(...xs) + 190 * k,
+    y0: Math.min(...ys) - 110 * k,
+    y1: Math.max(...ys) + 170 * k,
+  }
 }

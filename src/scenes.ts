@@ -41,7 +41,26 @@ const viaPlasma = (ids: string[]) => [
   ...ids.map((id) => ({ from: "plasma", to: id, state: "isolated" as const })),
 ]
 
-// 每頁一個痛點:預設畫面是「導入前」,右上角切到「導入 Plasma 後」看解法
+const HIGH = { "db-oracle": 96, "db-postgres": 88, "db-mssql": 91, "db-mysql": 85, "db-informix": 83 }
+const NORMAL = { "db-oracle": 34, "db-postgres": 30, "db-mssql": 31, "db-mysql": 29, "db-informix": 30 }
+
+// 既有系統接回各自的源頭資料庫
+const dsEdges = [
+  { from: "db-oracle", to: "ds-clinic", state: "normal" as const },
+  { from: "db-postgres", to: "ds-ward", state: "normal" as const },
+  { from: "db-mssql", to: "ds-admin", state: "normal" as const },
+  { from: "db-informix", to: "ds-lab", state: "normal" as const },
+]
+
+const MID = PLASMA_POS.y // 單線流程(檔案、IT、報表…)排在 Plasma 那一列
+
+// 情境 2 導入後:資料庫(與對應的既有系統)上下間距收緊,外圍的防護框連同下緣標題才放得進舞台
+const TIGHT_Y: Record<string, number> = { "db-oracle": 165, "db-postgres": 350, "db-mssql": 535, "db-mysql": 720, "db-informix": 905 }
+const DS_DB: Record<string, string> = { "ds-clinic": "db-oracle", "ds-ward": "db-postgres", "ds-admin": "db-mssql", "ds-lab": "db-informix" }
+const tight = (ids: string[], x: number) => Object.fromEntries(ids.map((id) => [id, { x, y: TIGHT_Y[DS_DB[id] ?? id] }]))
+
+// 每頁一個痛點:預設畫面是「導入前」,右上角切到「導入 Plasma 後」看解法。
+// 每頁左側只有標題 + 導入前一句 + 導入後一句;圖上每個節點最多一個徽章,只強調一個關鍵對比
 export const SCENES: SceneDef[] = [
   // 1. 開場:醫院現況(沒有切換)
   {
@@ -54,31 +73,23 @@ export const SCENES: SceneDef[] = [
     ],
     nodes: { ...dbCol(560), ...dsCol(1060) },
     active: [...dbIds, ...dsIds],
-    edges: [
-      { from: "db-oracle", to: "ds-clinic", state: "normal" },
-      { from: "db-postgres", to: "ds-ward", state: "normal" },
-      { from: "db-mssql", to: "ds-admin", state: "normal" },
-      { from: "db-informix", to: "ds-lab", state: "normal" },
-    ],
+    edges: dsEdges,
     loads: { "db-oracle": 35, "db-postgres": 30, "db-mssql": 32, "db-mysql": 28, "db-informix": 30 },
   },
 
-  // 2. 新應用直連源頭資料庫 → 正式系統變慢
+  // 2. 保護核心資料庫:新應用直連 → 正式系統變慢;導入後資料庫被圍在防護框內,既有系統恢復正常
   {
-    id: "overload",
-    title: "新應用影響既有系統效能",
-    short: "系統效能",
-    pain: "AI、BI、FHIR 等新應用直接查詢正式資料庫，資料庫負載升高，門診、護理等既有系統回應變慢。",
-    fix: "新應用統一改由 Plasma 取得資料，正式資料庫只需供應 Plasma，負載恢復正常，既有系統不受影響。",
+    id: "protect",
+    title: "保護核心資料庫",
+    short: "保護核心",
+    pain: "新應用直接查詢正式資料庫，負載飆升，門診、護理系統跟著變慢。",
+    fix: "Plasma 隔離核心資料庫，新應用只向 Plasma 取用，正式環境運作不受影響。",
     nodes: { ...dsCol(220), ...dbCol(720), ...appCol(1320) },
     active: [...appIds, ...dbIds],
     // 左側既有系統是配角,但要看得出「回應變慢」,比預設淡化再清楚一點
     dimOpacity: 0.5,
     edges: [
-      { from: "db-oracle", to: "ds-clinic", state: "normal" },
-      { from: "db-postgres", to: "ds-ward", state: "normal" },
-      { from: "db-mssql", to: "ds-admin", state: "normal" },
-      { from: "db-informix", to: "ds-lab", state: "normal" },
+      ...dsEdges,
       { from: "db-oracle", to: "app-ap", state: "overload" },
       { from: "db-oracle", to: "app-fhir", state: "overload" },
       { from: "db-postgres", to: "app-fhir", state: "overload" },
@@ -87,55 +98,80 @@ export const SCENES: SceneDef[] = [
       { from: "db-mysql", to: "app-ai", state: "overload" },
       { from: "db-oracle", to: "app-ai", state: "overload" },
     ],
-    loads: { "db-oracle": 96, "db-postgres": 88, "db-mssql": 91, "db-mysql": 85, "db-informix": 83 },
+    loads: HIGH,
+    plasma: {
+      // 既有系統留在畫面上,看得到「正常運作」= 正式環境不受影響
+      nodes: { ...tight(dsIds, 150), ...tight(dbIds, 480), plasma: PLASMA_POS, ...appCol(1340) },
+      active: [...dsIds, ...dbIds, "plasma", ...appIds],
+      edges: [...dsEdges, ...viaPlasma(appIds)],
+      loads: NORMAL,
+      zone: { ids: dbIds, label: "核心資料庫 · 受保護" },
+    },
+  },
+
+  // 3. API 串接蜘蛛網化 → 單一入口
+  {
+    id: "api",
+    title: "API 串接蜘蛛網化",
+    short: "API 串接",
+    pain: "每個應用各自以 API 串接五套資料庫，錯綜複雜難以管理，大量查詢更消耗正式資料庫資源。",
+    fix: "所有應用透過 Plasma 單一入口取得資料，集中管理，正式資料庫不再被重複查詢。",
+    nodes: { ...dbCol(260), ...appCol(1340) },
+    active: [...appIds, ...dbIds],
+    edges: appIds.flatMap((app) => dbIds.map((db) => ({ from: db, to: app, state: "risk" as const }))),
+    loads: HIGH,
+    badges: Object.fromEntries(appIds.map((id) => [id, { tone: "danger" as const, text: "串接 5 套 API" }])),
     plasma: {
       nodes: { ...dbCol(260), plasma: PLASMA_POS, ...appCol(1340) },
       active: [...appIds, "plasma", ...dbIds],
       edges: viaPlasma(appIds),
-      loads: { "db-oracle": 34, "db-postgres": 30, "db-mssql": 31, "db-mysql": 29, "db-informix": 30 },
+      loads: NORMAL,
+      badges: { plasma: { tone: "ok", text: "單一入口 · 集中管理" } },
     },
   },
 
-  // 3. 每個應用各接五套資料庫 → 單一入口 + 落地 PostgreSQL
+  // 4. 手工合併資料 → Plasma 自動整合、報表即時
   {
-    id: "spaghetti",
-    title: "系統介接複雜、維護成本高",
-    short: "系統介接",
-    pain: "每個新應用都要分別介接五套資料庫，各家語法與資料格式不一，開發時間長，後續維護成本也高。",
-    fix: "所有應用統一透過 Plasma 取得資料，整理後的資料也可同步到 PostgreSQL，只需介接一次。",
-    nodes: { ...dbCol(260), ...appCol(1340) },
-    active: [...appIds, ...dbIds],
-    edges: appIds.flatMap((app) => dbIds.map((db) => ({ from: db, to: app, state: "risk" as const }))),
-    badges: Object.fromEntries(appIds.map((id) => [id, { tone: "danger" as const, text: "需介接 5 套資料庫" }])),
+    id: "manual",
+    title: "手工合併資料",
+    short: "手工合併",
+    pain: "各資料庫分別匯出檔案，再由 IT 人員手工整併，費時費力、容易出錯，報表無法即時。",
+    fix: "Plasma 自動整合五套資料庫，報表直接取用即時、一致的資料。",
+    nodes: { ...dbCol(260), files: { x: 640, y: MID }, "ds-it": { x: 1000, y: MID }, "app-report": { x: 1340, y: MID } },
+    active: [...dbIds, "files", "ds-it", "app-report"],
+    edges: [
+      ...dbIds.map((id) => ({ from: id, to: "files", state: "risk" as const })),
+      { from: "files", to: "ds-it", state: "risk" },
+      { from: "ds-it", to: "app-report", state: "risk" },
+    ],
+    badges: {
+      "ds-it": { tone: "warn", text: "手工整併" },
+      "app-report": { tone: "danger", text: "耗時數天 · 易出錯" },
+    },
     plasma: {
-      nodes: {
-        ...dbCol(260),
-        plasma: PLASMA_POS,
-        "serving-pg": { x: 1100, y: APP_Y["app-ap"] },
-        ...appCol(1400),
+      nodes: { ...dbCol(260), plasma: PLASMA_POS, "app-report": { x: 1340, y: MID } },
+      active: [...dbIds, "plasma", "app-report"],
+      edges: viaPlasma(["app-report"]),
+      badges: {
+        plasma: { tone: "ok", text: "自動整合 5 套資料庫" },
+        "app-report": { tone: "ok", text: "即時更新" },
       },
-      active: [...appIds, "plasma", "serving-pg"],
-      edges: [
-        ...viaPlasma(appIds.filter((id) => id !== "app-ap")),
-        { from: "plasma", to: "serving-pg", state: "isolated" },
-        { from: "serving-pg", to: "app-ap", state: "isolated" },
-      ],
     },
   },
 
-  // 4. 不同院區各有一套 HIS → Plasma 整合成全院視圖
+  // 5. 不同院區各有一套 HIS → Plasma 整合成全院視圖
   {
     id: "campus",
     title: "跨院區資料無法整合",
-    short: "跨院區整合",
-    pain: "各院區各有一套 HIS，病歷號與代碼編碼不同，跨院區報表難以彙整，病人在其他院區的檢驗結果也無法即時查詢。",
+    short: "跨院區",
+    pain: "各院區 HIS 的病歷號與代碼各自編碼，跨院區報表難以彙整，其他院區的檢驗結果也查不到。",
     fix: "Plasma 整合各院區資料並統一代碼，提供全院一致的資料視圖。",
-    nodes: { ...campusCol(400), "app-bi": { x: 1200, y: PLASMA_POS.y } },
+    nodes: { ...campusCol(400), "app-bi": { x: 1200, y: MID } },
     active: [...campusIds, "app-bi"],
     edges: campusIds.map((id) => ({ from: id, to: "app-bi", state: "risk" as const })),
     badges: { "app-bi": { tone: "danger", text: "資料無法彙整" } },
     plasma: {
-      nodes: { ...campusCol(260), plasma: PLASMA_POS, "app-bi": { x: 1340, y: PLASMA_POS.y } },
+      nodes: { ...campusCol(260), plasma: PLASMA_POS, "app-bi": { x: 1340, y: MID } },
       active: [...campusIds, "plasma", "app-bi"],
       edges: [
         ...campusIds.map((id) => ({ from: id, to: "plasma", state: "isolated" as const })),
@@ -148,20 +184,44 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 5. AI 不了解院內資料 → 知識庫與 Plasma 合體成資料大腦,AI 答得準
+  // 6. AI 的資安與效能風險 → 經由 Plasma 控管權限、不衝擊正式資料庫
+  {
+    id: "ai-risk",
+    title: "AI 的資安與效能風險",
+    short: "AI 資安",
+    pain: "AI 頻繁大量查詢，資料庫負載過高；串接後，誰能透過 AI 取用機敏資料也難以掌控。",
+    fix: "AI 只透過 Plasma 存取，依角色控管權限、遮罩機敏欄位，正式資料庫不受衝擊。",
+    nodes: { ...dbCol(260), "app-ai": { x: 1340, y: MID } },
+    active: [...dbIds, "app-ai"],
+    edges: dbIds.map((id) => ({ from: id, to: "app-ai", state: "overload" as const })),
+    loads: HIGH,
+    badges: { "app-ai": { tone: "danger", text: "機敏資料存取無管控" } },
+    plasma: {
+      nodes: { ...dbCol(260), plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
+      active: [...dbIds, "plasma", "app-ai"],
+      edges: viaPlasma(["app-ai"]),
+      loads: NORMAL,
+      badges: {
+        plasma: { tone: "ok", text: "權限控管 · 機敏欄位遮罩" },
+        "app-ai": { tone: "ok", text: "依權限存取" },
+      },
+    },
+  },
+
+  // 7. AI 不了解院內資料 → 知識庫與 Plasma 合體成資料大腦,AI 答得準
   {
     id: "knowledge",
     title: "AI 不了解院內資料",
-    short: "AI 與知識庫",
-    pain: "AI 直接連線正式資料庫，可能誤刪或修改資料；欄位多為代碼，AI 不了解其意義，回答容易出錯。",
-    fix: "匯入資料字典與系統文件後，Plasma 成為最了解院內所有資料庫與系統的資料大腦；AI 透過 Plasma 唯讀查詢，答案最精準。",
-    nodes: { ...dbCol(260), "app-ai": { x: 1340, y: PLASMA_POS.y } },
+    short: "AI 資料大腦",
+    pain: "資料庫欄位多為代碼，AI 不了解其意義，回答容易出錯。",
+    fix: "匯入資料字典與系統文件，Plasma 成為最了解院內資料的大腦，AI 的答案最精準。",
+    nodes: { ...dbCol(260), "app-ai": { x: 1340, y: MID } },
     active: [...dbIds, "app-ai"],
     edges: dbIds.map((id) => ({ from: id, to: "app-ai", state: "risk" as const })),
     badges: { "app-ai": { tone: "danger", text: "回答不準確" } },
     callouts: { "app-ai": { tone: "danger", q: ASK, a: "無法判斷 DEPT_C 欄位意義" } },
     plasma: {
-      nodes: { ...dbCol(260), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1340, y: PLASMA_POS.y } },
+      nodes: { ...dbCol(260), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
       active: ["plasma", "kb", "app-ai"],
       edges: viaPlasma(["app-ai"]),
       brain: true,
@@ -170,23 +230,29 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 6. 報表要排隊等資訊室 → MCP Agent
+  // 8. 跨部門溝通成本 → AI Agent 透過 MCP 自助取得資料
   {
     id: "mcp",
-    title: "報表需求仰賴人工處理",
-    short: "報表與 AI Agent",
-    pain: "業務單位需要報表時，須向資訊室提出需求，由專人查找欄位、撰寫 SQL，往往需要數天。",
-    fix: "AI Agent 透過 MCP 向 Plasma 查詢，數分鐘內即可產出報表，使用者不需了解底層資料結構。",
-    nodes: { ...dbCol(260), "ds-it": { x: 800, y: PLASMA_POS.y } },
-    active: [...dbIds, "ds-it"],
-    edges: dbIds.map((id) => ({ from: id, to: "ds-it", state: "risk" as const })),
-    badges: { "ds-it": { tone: "warn", text: "人工處理 · 需數天" } },
+    title: "跨部門溝通成本",
+    short: "跨部門協作",
+    pain: "AI 部門提出需求，IT 人工撈取、清洗再交付，往返溝通，流程冗長。",
+    fix: "AI Agent 透過 MCP 直接向 Plasma 取得資料，數分鐘產出結果，不必跨部門等待。",
+    nodes: { ...dbCol(260), "ds-it": { x: 800, y: MID }, "ds-aiteam": { x: 1340, y: MID } },
+    active: [...dbIds, "ds-it", "ds-aiteam"],
+    edges: [
+      ...dbIds.map((id) => ({ from: id, to: "ds-it", state: "risk" as const })),
+      { from: "ds-it", to: "ds-aiteam", state: "risk" },
+    ],
+    badges: {
+      "ds-it": { tone: "warn", text: "撈取 · 清洗 · 交付" },
+      "ds-aiteam": { tone: "danger", text: "往返數天" },
+    },
     plasma: {
-      nodes: { ...dbCol(260), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1340, y: PLASMA_POS.y } },
+      nodes: { ...dbCol(260), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
       active: ["plasma", "kb", "app-ai"],
       edges: viaPlasma(["app-ai"]),
       brain: true,
-      badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "數分鐘產出報表" } },
+      badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "數分鐘取得結果" } },
       showAgent: true,
     },
   },

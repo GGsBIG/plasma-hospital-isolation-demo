@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState } from "react"
 import type { SceneState } from "../types"
 import { NODE_BY_ID } from "../data"
-import { iconScale, sceneBox, stageSize, useLayoutMode, type Box } from "../layout"
+import { ShieldCheck } from "lucide-react"
+import { iconScale, sceneBox, stageSize, useLayoutMode, zoneRect, type Box } from "../layout"
 import { dominantStates, frameAt, loadsAt, segmentAt, segmentIndex, stageKey, statesAt, structureAt } from "../timeline"
 import { plasmaMix } from "../plasma"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
@@ -47,6 +48,8 @@ function describe(scene: SceneState, loads: Record<string, number>, id: string):
       return { badge: { tone: "ok", text: "已隔離正式資料庫" }, hot: false }
     case "serving":
       return { badge: { tone: "ok", text: "資料已同步" }, hot: false }
+    case "file":
+      return { hot: false }
     case "kb":
       return { badge: { tone: "ok", text: "已匯入資料字典" }, hot: false }
   }
@@ -98,7 +101,7 @@ function boxOf(key: string, s: SceneState, mode: string): Box {
   const k = `${key}|${mode}`
   let b = boxCache.get(k)
   if (!b) {
-    b = sceneBox(s.nodes, (id) => NODE_BY_ID[id].kind)
+    b = sceneBox(s.nodes, (id) => NODE_BY_ID[id].kind, s.zone?.ids)
     boxCache.set(k, b)
   }
   return b
@@ -133,6 +136,8 @@ export function Stage() {
   // DOM 參照在掛上時就存好(每格不再 querySelector);每個值記住上次寫入的內容,沒變就不寫
   // 知識庫與 Plasma 合體時的「資料大腦」光暈:跟著兩者的位置走,濃淡依各狀態的 brain 權重
   const auraRef = useRef<HTMLDivElement>(null)
+  // 防護框:圍住指定節點,跟著節點位置走,濃淡依各狀態有沒有這個框
+  const zoneRef = useRef<HTMLDivElement>(null)
   const nodeEls = useRef(new Map<string, { el: HTMLDivElement; num: Element | null; last: string; load: string }>())
   const edgeEls = useRef(new Map<string, { g: SVGGElement; path: SVGPathElement | null; last: string; d: string }>())
   const lastKey = useRef("")
@@ -193,6 +198,23 @@ export function Stage() {
         aura.style.display = "none"
       }
     }
+    const zoneEl = zoneRef.current
+    if (zoneEl) {
+      const states = statesAt(p)
+      const w = states.reduce((n, x) => n + (x.s.zone ? x.w : 0), 0)
+      const zone = states.find((x) => x.s.zone)?.s.zone
+      if (zone && w > 0.001) {
+        const pts = zone.ids.map((id) => f.nodes.find((n) => n.id === id)?.pos).filter((q) => q !== undefined)
+        const r = zoneRect(pts)
+        zoneEl.style.transform = `translate3d(${r.x0}px, ${r.y0}px, 0)`
+        zoneEl.style.width = `${r.x1 - r.x0}px`
+        zoneEl.style.height = `${r.y1 - r.y0}px`
+        zoneEl.style.opacity = `${w}`
+        zoneEl.style.display = ""
+      } else {
+        zoneEl.style.display = "none"
+      }
+    }
     for (const e of f.edges) {
       const rec = edgeEls.current.get(e.key)
       if (!rec) continue
@@ -216,7 +238,20 @@ export function Stage() {
       <div ref={innerRef} className="absolute left-0 top-0 origin-top-left" style={{ width: w, height: h }}>
         {/* 連線層 */}
         {/* 連線層:流動光點持續在動,捲動時也不暫停(節點各自是獨立圖層,光點重繪不會連帶重繪節點) */}
-        <svg className="pointer-events-none absolute inset-0" width={w} height={h}>
+        {/* 防護框在最底層(連線、節點之下);標題壓在下緣(上緣常在舞台可視範圍外) */}
+        <div
+          ref={zoneRef}
+          aria-hidden
+          className={`zone pointer-events-none absolute left-0 top-0 border-dashed ${compact ? "rounded-[56px] border-[4px]" : "rounded-[32px] border-2"}`}
+          style={{ display: "none" }}
+        >
+          <span className={`absolute bottom-0 left-1/2 flex -translate-x-1/2 translate-y-1/2 items-center whitespace-nowrap rounded-full bg-background font-medium text-ok ${compact ? "gap-3 px-6 text-[34px]" : "gap-2 px-4 text-[20px]"}`}>
+            <ShieldCheck className={compact ? "h-9 w-9" : "h-5 w-5"} />
+            {ranked.find((s) => s.zone)?.zone?.label}
+          </span>
+        </div>
+        {/* 連線可能延伸到舞台座標範圍外(手機版最左欄),不裁切 */}
+        <svg className="pointer-events-none absolute inset-0 overflow-visible" width={w} height={h}>
           {edges.map((e) => (
             <Edge
               key={e.key}

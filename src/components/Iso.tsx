@@ -71,7 +71,8 @@ function Decor({ kind, a, hot }: { kind: NodeKind; a: number; hot: boolean }) {
         </>
       )
     }
-    case "kb": {
+    case "kb":
+    case "file": {
       // 疊放的文件
       return (
         <>
