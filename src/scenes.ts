@@ -1,4 +1,4 @@
-import type { Callout, SceneDef } from "./types"
+import type { Callout, Phase, SceneDef } from "./types"
 import { NODE_BY_ID } from "./data"
 
 // 由左至右的資料流:源頭資料庫 → (Plasma) → 應用,y 為舞台 px
@@ -51,6 +51,50 @@ const dsEdges = [
   { from: "db-mssql", to: "ds-admin", state: "normal" as const },
   { from: "db-informix", to: "ds-lab", state: "normal" as const },
 ]
+
+// 情境 6:五個資料庫輪流被 AI 的 DELETE 打掛
+const CRASH_ORDER = ["db-oracle", "db-postgres", "db-mssql", "db-mysql", "db-informix"]
+const DS_OF: Record<string, string> = { "db-oracle": "ds-clinic", "db-postgres": "ds-ward", "db-mssql": "ds-admin", "db-informix": "ds-lab" }
+const SEV1: Callout = {
+  tone: "danger", side: "bottom", q: "重大事故（Sev-1）· 線上系統停機",
+  brief: "醫院須於 1 小時內通報主管機關",
+  rows: [
+    ["機構", "通報時限", "主管機關"],
+    ["銀行", "確認後 30 分鐘內（電話）、7 日內補公文", "金管會銀行局"],
+    ["政府機關", "知悉後 1 小時內", "數位發展部資安署"],
+    ["醫院", "資安事件 1 小時內／重大醫療事故 7 個工作日內", "數位發展部、衛福部"],
+  ],
+}
+
+// dead:已停機的資料庫;target:正被 DELETE 打的那一個
+function crashState(dead: string[], target?: string, alert = false): Phase["patch"] {
+  const alive = dbIds.filter((id) => !dead.includes(id))
+  const deadDs = dead.map((id) => DS_OF[id]).filter(Boolean)
+  return {
+    edges: [
+      ...dsEdges.map((e) => (dead.includes(e.from) ? { ...e, state: "dead" as const } : e)),
+      ...alive.filter((id) => id !== target).map((id) => ({ from: id, to: "app-ai", state: "overload" as const })),
+      ...(target ? [{ from: "app-ai", to: target, state: "attack" as const }] : []),
+    ],
+    loads: Object.fromEntries(alive.map((id) => [id, HIGH[id as keyof typeof HIGH]])),
+    down: [...dead, ...deadDs],
+    badges: {
+      ...Object.fromEntries([...dead, ...deadDs].map((id) => [id, { tone: "danger" as const, text: "停機" }])),
+      "app-ai": { tone: "danger", text: target ? "誤下 DELETE 指令" : alert ? "具寫入權限" : "大量查詢" },
+    },
+    ...(alert ? { callouts: { "app-ai": SEV1 } } : {}),
+  }
+}
+
+function crashPhases(): Phase[] {
+  const phases: Phase[] = [{ ms: 2600, patch: {} }]
+  CRASH_ORDER.forEach((id, k) => {
+    const before = CRASH_ORDER.slice(0, k)
+    phases.push({ ms: 1300, patch: crashState(before, id) })
+    phases.push({ ms: k === CRASH_ORDER.length - 1 ? 5200 : 900, patch: crashState([...before, id], undefined, k === CRASH_ORDER.length - 1) })
+  })
+  return phases
+}
 
 // 情境 8:跨部門協調的來回過程(依時間輪播)
 const HANDOFF: Callout = {
@@ -238,50 +282,8 @@ export const SCENES: SceneDef[] = [
     edges: [...dsEdges, ...dbIds.map((id) => ({ from: id, to: "app-ai", state: "overload" as const }))],
     loads: HIGH,
     badges: { "app-ai": { tone: "danger", text: "大量查詢" } },
-    // 三幕輪播,一次只發生一件事:過載 → AI 送出 DELETE → Oracle 停機、門診停擺、重大事故
-    phases: [
-      { ms: 3200, patch: {} },
-      {
-        ms: 1500,
-        patch: {
-          edges: [
-            ...dsEdges,
-            ...dbIds.filter((id) => id !== "db-oracle").map((id) => ({ from: id, to: "app-ai", state: "overload" as const })),
-            { from: "app-ai", to: "db-oracle", state: "attack" },
-          ],
-          badges: { "app-ai": { tone: "danger", text: "誤下 DELETE 指令" } },
-        },
-      },
-      {
-        ms: 4800,
-        patch: {
-          edges: [
-            { from: "db-oracle", to: "ds-clinic", state: "dead" },
-            ...dsEdges.filter((e) => e.from !== "db-oracle"),
-            ...dbIds.filter((id) => id !== "db-oracle").map((id) => ({ from: id, to: "app-ai", state: "overload" as const })),
-          ],
-          loads: { "db-postgres": 88, "db-mssql": 91, "db-mysql": 85, "db-informix": 83 },
-          down: ["db-oracle", "ds-clinic"],
-          badges: {
-            "db-oracle": { tone: "danger", text: "資料遭刪除 · 停機" },
-            "ds-clinic": { tone: "danger", text: "停機" },
-            "app-ai": { tone: "danger", text: "具寫入權限" },
-          },
-          callouts: {
-            "app-ai": {
-              tone: "danger", side: "bottom", q: "重大事故（Sev-1）· 線上系統停機",
-              brief: "醫院須於 1 小時內通報主管機關",
-              rows: [
-                ["機構", "通報時限", "主管機關"],
-                ["銀行", "確認後 30 分鐘內（電話）、7 日內補公文", "金管會銀行局"],
-                ["政府機關", "知悉後 1 小時內", "數位發展部資安署"],
-                ["醫院", "資安事件 1 小時內／重大醫療事故 7 個工作日內", "數位發展部、衛福部"],
-              ],
-            },
-          },
-        },
-      },
-    ],
+    // 輪播:先過載,接著 AI 誤下 DELETE,五個資料庫一個接一個垮掉(連帶的既有系統停機),最後跳出重大事故警報
+    phases: crashPhases(),
     plasma: {
       nodes: { ...dsCol(150), ...dbCol(480), plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
       active: [...dsIds, ...dbIds, "plasma", "app-ai"],
