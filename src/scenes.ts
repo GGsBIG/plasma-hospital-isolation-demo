@@ -184,11 +184,8 @@ export const SCENES: SceneDef[] = [
       "app-report": { x: 1340, y: MID },
     },
     active: [...dbIds, ...fileIds, "manual", "app-report"],
-    edges: [
-      ...dbIds.map((id, k) => ({ from: id, to: fileIds[k], state: "risk" as const })),
-      ...fileIds.map((id) => ({ from: id, to: "manual", state: "risk" as const })),
-      { from: "manual", to: "app-report", state: "risk" },
-    ],
+    // 手工作業:檔案是人工匯出、人工交付的,沒有系統之間的連線
+    edges: [],
     badges: {
       "app-report": { tone: "danger", text: "耗時數天 · 易出錯" },
     },
