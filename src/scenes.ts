@@ -306,7 +306,9 @@ export const SCENES: SceneDef[] = [
     nodes: { ...dbCol(260), "ds-it": { x: 800, y: MID }, "ds-aiteam": { x: 1340, y: MID } },
     active: [...dbIds, "ds-it", "ds-aiteam"],
     edges: [
-      ...dbIds.map((id) => ({ from: id, to: "ds-it", state: "risk" as const })),
+      // IT 與資料庫一來一回:去撈資料、資料送回來,兩條線並排
+      ...dbIds.map((id) => ({ from: "ds-it", to: id, state: "risk" as const, lane: -9 })),
+      ...dbIds.map((id) => ({ from: id, to: "ds-it", state: "risk" as const, lane: 9 })),
       { from: "ds-it", to: "ds-aiteam", state: "risk" },
     ],
     // 一個泡泡輪流在 AI 部門與 IT 部門上方出現,演出來回協調的過程與累計時間

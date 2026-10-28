@@ -2,7 +2,7 @@ import type { EdgeState, Pos, SceneDef, SceneState } from "./types"
 import { SCENES } from "./scenes"
 import { NODE_BY_ID } from "./data"
 import { edgePath } from "./geometry"
-import { layoutMode, place, verticalFlow } from "./layout"
+import { layoutMode, lineScale, place, verticalFlow } from "./layout"
 import { plasmaMix } from "./plasma"
 
 // 捲動進度 p:0 = 情境 1 置中,1 = 情境 2 置中…,小數就是卡在兩個情境之間。
@@ -63,7 +63,7 @@ export const dominantStates = (p: number) => statesAt(p).sort((x, y) => y.w - x.
 
 // ---- 結構:只跟「在哪兩頁之間」有關,整段過場不變,所以只在換段時算一次、React 才重繪 ----
 
-export interface EdgeSlot { key: string; from: string; to: string; state: EdgeState; length: number }
+export interface EdgeSlot { key: string; from: string; to: string; state: EdgeState; length: number; lane: number }
 export interface Structure { nodeIds: string[]; edges: EdgeSlot[] }
 
 const edgeKey = (e: SceneState["edges"][number]) => `${e.from}--${e.to}--${e.state}`
@@ -84,7 +84,7 @@ export function structureAt(i: number): Structure {
       if (edges.has(k)) continue
       const from = place(e.from, scene.nodes[e.from])
       const to = place(e.to, scene.nodes[e.to])
-      edges.set(k, { key: k, from: e.from, to: e.to, state: e.state, length: Math.hypot(to.x - from.x, to.y - from.y) })
+      edges.set(k, { key: k, from: e.from, to: e.to, state: e.state, length: Math.hypot(to.x - from.x, to.y - from.y), lane: e.lane ?? 0 })
     }
   }
   const s = { nodeIds, edges: [...edges.values()] }
@@ -124,6 +124,9 @@ export function agentAt(p: number): number {
   return statesAt(p).reduce((n, x) => n + (x.s.showAgent ? x.w : 0), 0)
 }
 
+// 並排連線的上下平移;手機版線較粗,間距跟著放大
+const shift = (p: Pos, lane: number) => (lane ? { x: p.x, y: p.y + lane * lineScale() } : p)
+
 export function frameAt(p: number): Frame {
   const states = statesAt(p)
   const { nodeIds, edges: slots } = structureAt(segmentIndex(p))
@@ -155,7 +158,7 @@ export function frameAt(p: number): Frame {
   const edges = slots.map((e) => ({
     key: e.key,
     opacity: states.reduce((n, x, k) => n + (keySets[k].has(e.key) ? x.w : 0), 0),
-    d: edgePath(posById[e.from], NODE_BY_ID[e.from].kind, posById[e.to], NODE_BY_ID[e.to].kind, verticalFlow()),
+    d: edgePath(shift(posById[e.from], e.lane), NODE_BY_ID[e.from].kind, shift(posById[e.to], e.lane), NODE_BY_ID[e.to].kind, verticalFlow()),
   }))
 
   return { nodes, edges, loads: loadsAt(p) }

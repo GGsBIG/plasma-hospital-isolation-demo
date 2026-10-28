@@ -19,6 +19,7 @@ export interface EdgeDef {
   from: string
   to: string
   state: EdgeState
+  lane?: number                    // 上下平移(px),讓一來一回的兩條線並排不重疊
 }
 
 export interface Pos { x: number; y: number }   // 舞台座標 px(見 layout.ts 的 stageSize)
