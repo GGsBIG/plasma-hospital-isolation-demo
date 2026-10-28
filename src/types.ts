@@ -42,7 +42,10 @@ export interface SceneState {
   brain?: boolean                  // 知識庫與 Plasma 合體:外圍光暈 =「資料大腦」
   zone?: { ids: string[]; label: string } // 圍住一組節點的虛線防護框(例如「核心資料庫 · 受保護」)
   down?: string[]                  // 停機的節點(平台變暗、出現裂痕)
-  phases?: Phase[]                 // 依時間輪播的分幕(各幕覆寫部分內容),循環播放
+  // 依時間輪播的分幕(各幕覆寫部分內容),循環播放;給函式時每一輪依 seed 重新產生(各幕長度須固定),
+  // 這時 phaseAll 列出所有可能出現的內容,讓連線結構事先涵蓋
+  phases?: Phase[] | ((seed: number) => Phase[])
+  phaseAll?: Phase["patch"][]
   showAgent?: boolean
   dimOpacity?: number              // 本狀態非重點節點的透明度,預設 0.28
 }

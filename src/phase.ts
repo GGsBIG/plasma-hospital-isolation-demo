@@ -1,18 +1,37 @@
 import { SCENES } from "./scenes"
 import { scrollStore } from "./scroll"
+import type { Phase } from "./types"
 
 // 依時間輪播的「分幕」(SceneState.phases):例如情境 6 先過載 → 送出 DELETE → 資料庫停機,循環播放。
 // 頁面進入畫面時從第 1 幕開始;每到換幕時間通知 scrollStore,畫面照常依捲動重算
 const start = new Map<number, number>()
+// 每次進入畫面給一個隨機起點,每一輪 seed = 起點 + 輪次,所以每輪、每次觀看的隨機結果都不同
+const base = new Map<number, number>()
 let timer = 0
 let visibleKey = ""
 
-const total = (i: number) => SCENES[i].phases!.reduce((n, ph) => n + ph.ms, 0)
+// 第 i 頁第 cycle 輪的分幕(函式型的每輪重新產生,快取起來)
+const cache = new Map<string, Phase[]>()
+export function phasesOf(i: number, cycle = 0): Phase[] {
+  const def = SCENES[i].phases!
+  if (typeof def !== "function") return def
+  const seed = (base.get(i) ?? 0) + cycle
+  const k = `${i}|${seed}`
+  let ph = cache.get(k)
+  if (!ph) {
+    if (cache.size > 50) cache.clear()
+    ph = def(seed)
+    cache.set(k, ph)
+  }
+  return ph
+}
+
+const total = (i: number) => phasesOf(i).reduce((n, ph) => n + ph.ms, 0)
 
 export function phaseOf(i: number): { idx: number; cycle: number } {
-  const phases = SCENES[i]?.phases
   const t0 = start.get(i)
-  if (!phases || t0 === undefined) return { idx: 0, cycle: 0 }
+  if (!SCENES[i]?.phases || t0 === undefined) return { idx: 0, cycle: 0 }
+  const phases = phasesOf(i)
   const elapsed = performance.now() - t0
   const len = total(i)
   let r = elapsed % len
@@ -26,7 +45,7 @@ export function phaseOf(i: number): { idx: number; cycle: number } {
 
 // 下一次換幕還有多久
 function untilNext(i: number) {
-  const phases = SCENES[i].phases!
+  const phases = phasesOf(i)
   let r = (performance.now() - start.get(i)!) % total(i)
   for (const ph of phases) {
     if (r < ph.ms) return ph.ms - r
@@ -58,6 +77,10 @@ scrollStore.subscribe((p) => {
   if (key === visibleKey) return
   visibleKey = key
   for (const i of [...start.keys()]) if (!list.includes(i)) start.delete(i)
-  for (const i of list) if (!start.has(i)) start.set(i, performance.now())
+  for (const i of list) {
+    if (start.has(i)) continue
+    start.set(i, performance.now())
+    base.set(i, Math.floor(Math.random() * 1e6))
+  }
   schedule()
 })

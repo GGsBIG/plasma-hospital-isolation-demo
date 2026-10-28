@@ -86,15 +86,43 @@ function crashState(dead: string[], target?: string, alert = false): Phase["patc
   }
 }
 
-function crashPhases(): Phase[] {
+// 簡單的可重現亂數(同一個 seed 得到同樣結果)
+function rng(seed: number) {
+  let t = seed >>> 0
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0
+    let r = Math.imul(t ^ (t >>> 15), 1 | t)
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// 每一輪隨機挑 3 台、隨機順序打掛。各幕長度每輪固定(輪播計時靠它),但間隔一短一長,不像節拍器
+const CRASH_COUNT = 3
+const GAPS = [500, 1600, 5200]
+function crashPhases(seed: number): Phase[] {
+  const rand = rng(seed)
+  // Fisher–Yates 洗牌(用 sort 搭配亂數比較會有偏差,前面的元素特別容易被選中)
+  const pool = [...CRASH_ORDER]
+  for (let k = pool.length - 1; k > 0; k--) {
+    const j = Math.floor(rand() * (k + 1))
+    ;[pool[k], pool[j]] = [pool[j], pool[k]]
+  }
+  const order = pool.slice(0, CRASH_COUNT)
   const phases: Phase[] = [{ ms: 2600, patch: {} }]
-  CRASH_ORDER.forEach((id, k) => {
-    const before = CRASH_ORDER.slice(0, k)
+  order.forEach((id, k) => {
+    const before = order.slice(0, k)
     phases.push({ ms: 1300, patch: crashState(before, id) })
-    phases.push({ ms: k === CRASH_ORDER.length - 1 ? 5200 : 900, patch: crashState([...before, id], undefined, k === CRASH_ORDER.length - 1) })
+    phases.push({ ms: GAPS[k], patch: crashState([...before, id], undefined, k === order.length - 1) })
   })
   return phases
 }
+
+// 結構涵蓋:任何一台被攻擊、任何一台停機
+const CRASH_ALL: Phase["patch"][] = [
+  ...CRASH_ORDER.map((id) => crashState([], id)),
+  crashState(CRASH_ORDER, undefined, true),
+]
 
 // 情境 8:跨部門協調的來回過程(依時間輪播)
 const HANDOFF: Callout = {
@@ -282,8 +310,9 @@ export const SCENES: SceneDef[] = [
     edges: [...dsEdges, ...dbIds.map((id) => ({ from: id, to: "app-ai", state: "overload" as const }))],
     loads: HIGH,
     badges: { "app-ai": { tone: "danger", text: "大量查詢" } },
-    // 輪播:先過載,接著 AI 誤下 DELETE,五個資料庫一個接一個垮掉(連帶的既有系統停機),最後跳出重大事故警報
-    phases: crashPhases(),
+    // 輪播:先過載,接著 AI 誤下 DELETE,每輪隨機 3 台資料庫依隨機順序垮掉(連帶的既有系統停機),最後跳出重大事故警報
+    phases: crashPhases,
+    phaseAll: CRASH_ALL,
     plasma: {
       nodes: { ...dsCol(150), ...dbCol(480), plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
       active: [...dsIds, ...dbIds, "plasma", "app-ai"],

@@ -4,7 +4,7 @@ import { NODE_BY_ID } from "./data"
 import { edgePath } from "./geometry"
 import { layoutMode, lineScale, place, verticalFlow } from "./layout"
 import { plasmaMix } from "./plasma"
-import { phaseOf } from "./phase"
+import { phaseOf, phasesOf } from "./phase"
 
 // 捲動進度 p:0 = 情境 1 置中,1 = 情境 2 置中…,小數就是卡在兩個情境之間。
 // 所有過場都由 p 直接算出畫面,不再依時間播放,所以停在中途就會停在過場的一半。
@@ -43,13 +43,16 @@ export const segmentIndex = (p: number) => Math.min(Math.floor(clampProgress(p))
 export interface Weighted { s: SceneState; key: string; w: number }
 
 // 有分幕的畫面:套上目前這一幕的覆寫
-const resolve = (scene: SceneDef, i: number): SceneState =>
-  scene.phases ? { ...scene, ...scene.phases[phaseOf(i).idx].patch } : scene
+const resolve = (scene: SceneDef, i: number): SceneState => {
+  if (!scene.phases) return scene
+  const { idx, cycle } = phaseOf(i)
+  return { ...scene, ...phasesOf(i, cycle)[idx].patch }
+}
 const variants = (scene: SceneDef, i: number): [SceneState, SceneState] => [resolve(scene, i), scene.plasma ?? scene]
 // 結構要涵蓋每一幕可能出現的連線
 const allStates = (scene: SceneDef): SceneState[] => [
   scene,
-  ...(scene.phases ?? []).map((ph) => ({ ...scene, ...ph.patch })),
+  ...(typeof scene.phases === "function" ? scene.phaseAll ?? [] : (scene.phases ?? []).map((ph) => ph.patch)).map((patch) => ({ ...scene, ...patch })),
   scene.plasma ?? scene,
 ]
 
