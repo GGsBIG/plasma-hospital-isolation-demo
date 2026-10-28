@@ -1,5 +1,7 @@
 import { Fragment } from "react"
+import { Siren, Timer } from "lucide-react"
 import type { Callout, NodeDef } from "../types"
+import { useTick } from "../ticker"
 import { sizeOf, NODE_SCALE } from "../geometry"
 import { Platform } from "./Iso"
 
@@ -23,7 +25,7 @@ const SPRING = "ease-[cubic-bezier(0.34,1.56,0.64,1)]"
 // 位置與透明度每格由 Stage 直接寫進外層 div(elRef),這裡不帶這兩個值,捲動時不重繪;
 // hovered / faded 是滑鼠互動,放在內層用 CSS transition,跟捲動驅動的外層互不干擾
 export function Node({
-  node, elRef, compact, hot, badge, stat, callout, hovered, faded, onHover,
+  node, elRef, compact, hot, badge, stat, callout, down = false, hovered, faded, onHover,
 }: {
   node: NodeDef
   elRef: (el: HTMLDivElement | null) => void
@@ -32,6 +34,7 @@ export function Node({
   badge?: Badge
   stat?: string
   callout?: Callout
+  down?: boolean
   hovered: boolean
   faded: boolean
   onHover: (id: string | null) => void
@@ -66,19 +69,49 @@ export function Node({
           style={{ transform: hovered ? "translateY(-12px) scale(1.07)" : undefined }}
           data-hovered={hovered || undefined}
         >
-          <Platform kind={node.kind} hot={hot} />
+          <Platform kind={node.kind} hot={hot} variant={node.icon} down={down} />
         </div>
 
+        {callout?.seq && <SeqBubble callout={callout} nodeId={node.id} a={a} compact={compact} bubble={s.bubble} />}
+
         {/* 小卡:預設在平台上方、靠右對齊節點右緣(左邊常是 Plasma,不往那邊擋);side=left 時在節點左側、上下置中 */}
-        {callout && (
+        {callout && !callout.seq && (
           <div
             key={`${callout.tone}-${callout.q}-${callout.a}`}
-            className={`callout-in absolute whitespace-nowrap border bg-card leading-snug shadow-[0_6px_20px_rgb(0_0_0/0.08)] ${s.bubble}
+            className={`callout-in absolute whitespace-nowrap border bg-card leading-snug shadow-[0_6px_20px_rgb(0_0_0/0.08)] ${s.bubble} ${compact && callout.rows ? "!text-[40px]" : ""}
               ${callout.tone === "ok" ? "border-ok/40" : "border-danger/40"} ${callout.side === "left" ? "-translate-y-1/2" : ""}`}
             // 手機版往右多推一點(仍在節點外框內),不碰到左邊疊在 Plasma 上的知識庫
-            style={callout.side === "left" ? { right: a + 70 * NODE_SCALE, top: 0 } : { right: compact ? -a - 40 : -a, bottom: a / 2 + 56 * NODE_SCALE }}
+            style={
+              callout.side === "left" ? { right: a + 70 * NODE_SCALE, top: 0 }
+              : callout.side === "bottom" ? { right: -a, top: a / 2 + t + (compact ? 150 : 70) }
+              : { right: compact ? -a - 40 : -a, bottom: a / 2 + 56 * NODE_SCALE }
+            }
           >
-            {callout.code ? (
+            {callout.rows ? (
+              // 警報卡:標題 + 表格(手機版字太小,改顯示一句重點)
+              <>
+                <div className="flex items-center gap-2 font-semibold text-danger">
+                  <Siren className={compact ? "h-8 w-8" : "h-5 w-5"} />
+                  {callout.q}
+                </div>
+                {compact ? (
+                  <div className="mt-1 text-foreground">{callout.brief}</div>
+                ) : (
+                  <div className="mt-2 grid grid-cols-[auto_auto_auto] gap-x-5 gap-y-1">
+                    {callout.rows.map((row, r) =>
+                      row.map((cell, c) => (
+                        <span
+                          key={`${r}-${c}`}
+                          className={r === 0 ? "text-[0.85em] text-muted-foreground" : c === 1 ? "font-medium text-foreground" : "text-muted-foreground"}
+                        >
+                          {cell}
+                        </span>
+                      )),
+                    )}
+                  </div>
+                )}
+              </>
+            ) : callout.code ? (
               <>
                 <div className="text-muted-foreground">{callout.q}</div>
                 <div className="mt-1 grid grid-cols-[auto_auto] gap-x-4">
@@ -100,8 +133,9 @@ export function Node({
           </div>
         )}
 
-        {/* 標籤跟著稍微上移 */}
+        {/* 標籤跟著稍微上移;沒有名稱也沒有徽章的節點(匯出檔)不顯示標籤 */}
         <div
+          hidden={!node.label && !badge}
           className={`absolute h-0 w-0 transition-transform duration-500 motion-reduce:transition-none ${SPRING}`}
           style={{ transform: hovered ? "translateY(-4px)" : undefined }}
         >
@@ -140,6 +174,29 @@ export function Node({
             )}
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// 對話輪播:依共用節拍輪流顯示每一步,輪到這個節點說話時才出現泡泡;下方一行是累計花費的時間
+function SeqBubble({ callout, nodeId, a, compact, bubble }: { callout: Callout; nodeId: string; a: number; compact: boolean; bubble: string }) {
+  const tick = useTick()
+  const seq = callout.seq!
+  const step = seq[tick % seq.length]
+  if (step.who !== nodeId) return null
+  const color = step.tone === "danger" ? "text-danger border-danger/40" : step.tone === "ok" ? "text-ok border-ok/40" : "text-foreground border-border"
+  return (
+    <div
+      key={tick}
+      className={`callout-in absolute whitespace-nowrap border bg-card leading-snug shadow-[0_6px_20px_rgb(0_0_0/0.08)] ${bubble} ${color}`}
+      // 靠右對齊節點右緣:最右邊的節點(AI 部門)泡泡才不會超出畫面
+      style={{ right: -a, bottom: a / 2 + 56 * NODE_SCALE }}
+    >
+      <div className="font-medium">{step.text}</div>
+      <div className="mt-0.5 flex items-center gap-1.5 text-[0.85em] text-muted-foreground">
+        <Timer className={compact ? "h-7 w-7" : "h-4 w-4"} />
+        {step.time}
       </div>
     </div>
   )

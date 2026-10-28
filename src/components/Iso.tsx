@@ -47,7 +47,37 @@ function Cylinder({ cx, cy, r, h, hot }: { cx: number; cy: number; r: number; h:
   )
 }
 
-function Decor({ kind, a, hot }: { kind: NodeKind; a: number; hot: boolean }) {
+// 齒輪外框:teeth 個齒,外徑 r、內徑 r * 0.78
+function gearPath(r: number, teeth: number) {
+  const pts: string[] = []
+  for (let i = 0; i < teeth * 4; i++) {
+    const ang = (i / (teeth * 4)) * Math.PI * 2
+    const rr = i % 4 < 2 ? r : r * 0.78
+    pts.push(`${(Math.cos(ang) * rr).toFixed(2)} ${(Math.sin(ang) * rr).toFixed(2)}`)
+  }
+  return `M ${pts.join(" L ")} Z`
+}
+
+function Gear({ x, y, r, dur, reverse = false }: { x: number; y: number; r: number; dur: number; reverse?: boolean }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <g>
+        <animateTransform attributeName="transform" type="rotate" from="0" to={reverse ? -360 : 360} dur={`${dur}s`} repeatCount="indefinite" />
+        <path d={gearPath(r, 8)} style={{ fill: "var(--iso-line)" }} />
+        <circle r={r * 0.32} style={{ fill: "var(--iso-top)" }} />
+      </g>
+    </g>
+  )
+}
+
+// 手工匯出的檔案:直立的文件,依格式上色
+const FILE_STYLE: Record<string, { fill: string; text: string }> = {
+  excel: { fill: "#1f9d55", text: "X" },
+  csv: { fill: "#3b82f6", text: "CSV" },
+  txt: { fill: "#9ca3af", text: "≡" },
+}
+
+function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: boolean; variant?: string }) {
   const s = a * 0.25
   switch (kind) {
     case "db":
@@ -71,8 +101,41 @@ function Decor({ kind, a, hot }: { kind: NodeKind; a: number; hot: boolean }) {
         </>
       )
     }
-    case "kb":
     case "file": {
+      const f = FILE_STYLE[variant ?? "txt"] ?? FILE_STYLE.txt
+      const w = 26
+      const h = 32
+      const fold = 8
+      return (
+        <g transform={`translate(${-w / 2} ${-h - 4})`}>
+          <path d={`M 0 0 H ${w - fold} L ${w} ${fold} V ${h} H 0 Z`} style={{ fill: f.fill }} />
+          <path d={`M ${w - fold} 0 V ${fold} H ${w} Z`} fill="#fff" opacity={0.45} />
+          <text x={w / 2} y={h * 0.64} textAnchor="middle" dominantBaseline="central" fontSize={f.text.length > 1 ? 8.5 : 13} fontWeight={800} fill="#fff" fontFamily="ui-sans-serif, system-ui">
+            {f.text}
+          </text>
+        </g>
+      )
+    }
+    case "person": {
+      // 人員 + 轉動的齒輪(人工作業);person-clock 再加上紅色時鐘(耗時)
+      return (
+        <>
+          <Gear x={-a * 0.62} y={-30} r={9} dur={4} />
+          <Gear x={a * 0.6} y={-8} r={7} dur={3} reverse />
+          <g transform="translate(0 -6)">
+            <circle cx={0} cy={-34} r={8} fill="#f59e0b" />
+            <path d="M -14 -6 Q -14 -22 0 -22 Q 14 -22 14 -6 Z" fill="#f59e0b" />
+          </g>
+          {variant === "person-clock" && (
+            <g transform={`translate(${a * 0.55} -44)`}>
+              <circle r={9} style={{ fill: "var(--dot-overload)" }} />
+              <path d="M 0 -5 V 0 L 4 3" fill="none" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
+            </g>
+          )}
+        </>
+      )
+    }
+    case "kb": {
       // 疊放的文件
       return (
         <>
@@ -105,7 +168,18 @@ function Decor({ kind, a, hot }: { kind: NodeKind; a: number; hot: boolean }) {
 }
 
 // 節點平台:座標原點為頂面中心
-export function Platform({ kind, hot = false }: { kind: NodeKind; hot?: boolean }) {
+// 過載冒煙:幾團灰色煙從平台上方緩緩升起、變大、淡出
+function Smoke({ a }: { a: number }) {
+  return (
+    <g aria-hidden>
+      {[-0.35, 0.1, 0.45].map((dx, i) => (
+        <circle key={i} className="smoke" cx={dx * a} cy={-a * 0.55} r={a * 0.22} style={{ animationDelay: `${i * 0.7}s` }} />
+      ))}
+    </g>
+  )
+}
+
+export function Platform({ kind, hot = false, variant, down = false }: { kind: NodeKind; hot?: boolean; variant?: string; down?: boolean }) {
   const { a, t } = sizeOf(kind)
   // 裝飾(圓柱、圓環…)跟著平台一起放大:基本倍率 × 直式圖示倍率
   const k = NODE_SCALE * iconScale(kind)
@@ -126,11 +200,24 @@ export function Platform({ kind, hot = false }: { kind: NodeKind; hot?: boolean 
       {kind === "plasma" && (
         <ellipse cx={0} cy={t / 2} rx={a * 1.2} ry={b * 1.2} style={{ fill: "var(--iso-glow)", opacity: "var(--iso-glow-opacity)", filter: "blur(18px)" }} />
       )}
-      <Box cx={0} cy={t} w={a} h={t} line={hot ? C.hot : C.line} />
-      {/* 裝飾以未縮放尺寸繪製,再整組放大 */}
-      <g transform={`scale(${k})`}>
-        <Decor kind={kind} a={a / k} hot={hot} />
+      <g className={down ? "iso-down" : undefined}>
+        <Box cx={0} cy={t} w={a} h={t} line={hot ? C.hot : C.line} />
+        {/* 裝飾以未縮放尺寸繪製,再整組放大 */}
+        <g transform={`scale(${k})`}>
+          <Decor kind={kind} a={a / k} hot={hot} variant={variant} />
+        </g>
       </g>
+      {/* 停機:頂面裂開 */}
+      {down && (
+        <path
+          d={`M ${-a * 0.7} ${-b * 0.1} L ${-a * 0.3} ${b * 0.15} L ${-a * 0.1} ${-b * 0.25} L ${a * 0.2} ${b * 0.3} L ${a * 0.45} ${-b * 0.05} L ${a * 0.75} ${b * 0.2}`}
+          fill="none"
+          style={{ stroke: "var(--dot-overload)" }}
+          strokeWidth={3 * k}
+          strokeLinejoin="round"
+        />
+      )}
+      {hot && <Smoke a={a} />}
     </svg>
   )
 }

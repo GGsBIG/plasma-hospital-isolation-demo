@@ -383,3 +383,24 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
   border-color: hsl(var(--ok) / 0.55);
   background: hsl(var(--ok) / 0.04);
 }
+
+/* 過載冒煙 */
+.smoke {
+  fill: #a1a1aa;
+  opacity: 0;
+  filter: blur(7px);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: smoke-rise 2.1s ease-out infinite;
+}
+.dark .smoke { fill: #d4d4d8; }
+@keyframes smoke-rise {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  25% { opacity: 0.32; }
+  100% { opacity: 0; transform: translateY(-70px) scale(1.7); }
+}
+/* 停機的節點:褪色變暗 */
+.iso-down { filter: grayscale(1) brightness(0.75); }
+@media (prefers-reduced-motion: reduce) {
+  .smoke { animation: none; opacity: 0.3; }
+}

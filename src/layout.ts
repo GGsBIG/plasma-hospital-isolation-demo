@@ -87,9 +87,16 @@ const SLOT: Record<string, { y: number; b: boolean; x?: number }> = {
   // 情境 4、8 的 IT 部門、情境 8 的 AI 部門:和 Plasma 同一列
   "ds-it": { y: ROW_A[1], b: false },
   "ds-aiteam": { y: ROW_A[1], b: false },
-  // 情境 4 的匯出檔:緊接在源頭資料庫右邊
-  files: { y: ROW_A[1], b: false, x: 560 },
+  // 情境 4 的匯出檔:各自和來源資料庫同高,排成一欄;人工處理在匯出檔與報表之間
+  "file-1": { y: ROW_A[0], b: false, x: 560 },
+  "file-2": { y: ROW_A[1], b: false, x: 560 },
+  "file-3": { y: ROW_A[2], b: false, x: 560 },
+  "file-4": { y: ROW_B[0], b: false, x: 560 },
+  "file-5": { y: ROW_B[1], b: false, x: 560 },
+  manual: { y: ROW_A[1], b: false },
 }
+// 情境 3 的停用系統:應用欄的上方與下方之外,放在中間
+const GHOST: Record<string, number> = { "ghost-1": -130, "ghost-2": 1160 }
 const APP_SLOT: Record<string, number> = { "app-ap": APP_ROW[0], "app-fhir": APP_ROW[1], "app-bi": APP_ROW[2], "app-ai": APP_ROW[3], "app-report": APP_ROW[1] }
 
 // 情境資料的桌機 x(流向上的那一欄)→ 緊湊版橫軸
@@ -112,6 +119,7 @@ function compactPos(id: string, p: Pos): Pos {
   // 知識庫與 Plasma 合體時(情境資料的 y 在 Plasma 上方不遠):疊在 Plasma 正上方
   if (id === "kb" && p.y > KB_DOCK_MIN) return { x: PAD_L + FLOW_PLASMA, y: ROW_A[1] - KB_DOCK_DY }
   if (id === "kb" || id === "serving-pg") return { x: PAD_L + FLOW_PLASMA, y: SIDE_Y }
+  if (id in GHOST) return { x: PAD_L + FLOW_MID, y: GHOST[id] }
   if (id in APP_SLOT) {
     // 只有單一應用的頁面,應用和 Plasma 同一列:放在 Plasma 正右方
     const y = p.y === PLASMA_ROW ? ROW_A[1] : APP_SLOT[id]
@@ -151,7 +159,8 @@ const EXTENT: Record<NodeKind, { half: number; top: number; bottom: number }> = 
   app: { half: 140, top: 54, bottom: 214 },
   plasma: { half: 259, top: 98, bottom: 363 },
   kb: { half: 107, top: 215, bottom: 70 }, // 標籤在上方(疊在 Plasma 上時)
-  file: { half: 110, top: 48, bottom: 200 },
+  file: { half: 60, top: 80, bottom: 30 },
+  person: { half: 120, top: 95, bottom: 205 },
 }
 
 export interface Box { x0: number; y0: number; x1: number; y1: number }

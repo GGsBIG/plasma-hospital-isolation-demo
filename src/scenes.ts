@@ -1,4 +1,4 @@
-import type { SceneDef } from "./types"
+import type { Callout, SceneDef } from "./types"
 import { NODE_BY_ID } from "./data"
 
 // 由左至右的資料流:源頭資料庫 → (Plasma) → 應用,y 為舞台 px
@@ -52,6 +52,25 @@ const dsEdges = [
   { from: "db-informix", to: "ds-lab", state: "normal" as const },
 ]
 
+// 情境 8:跨部門協調的來回過程(依時間輪播)
+const HANDOFF: Callout = {
+  tone: "danger",
+  q: "",
+  seq: [
+    { who: "ds-aiteam", text: "需要資料！", time: "第 0 週" },
+    { who: "ds-it", text: "找資料中…", time: "第 2 週" },
+    { who: "ds-it", text: "資料給你", time: "第 3 週" },
+    { who: "ds-aiteam", text: "資料不對，再協調一次", time: "第 4 週", tone: "danger" },
+    { who: "ds-it", text: "重新找資料…（第 2 次）", time: "第 8 週" },
+    { who: "ds-aiteam", text: "還是不對…", time: "第 12 週", tone: "danger" },
+    { who: "ds-it", text: "重新找資料…（第 3 次）", time: "第 18 週" },
+    { who: "ds-aiteam", text: "終於完成", time: "半年後", tone: "ok" },
+    { who: "ds-it", text: "負責人離職了…新同仁重新協調", time: "從頭來過", tone: "danger" },
+  ],
+}
+
+const fileIds = ["file-1", "file-2", "file-3", "file-4", "file-5"]
+
 const MID = PLASMA_POS.y // 單線流程(檔案、IT、報表…)排在 Plasma 那一列
 
 // 情境 2 導入後:資料庫(與對應的既有系統)上下間距收緊,外圍的防護框連同下緣標題才放得進舞台
@@ -89,7 +108,8 @@ export const SCENES: SceneDef[] = [
     // 左側既有系統是配角,但要看得出「回應變慢」,比預設淡化再清楚一點
     dimOpacity: 0.5,
     edges: [
-      ...dsEdges,
+      // 既有系統等不到資料:單顆慢速光點,工作站旁轉圈等待
+      ...dsEdges.map((e) => ({ ...e, state: "slow" as const })),
       { from: "db-oracle", to: "app-ap", state: "overload" },
       { from: "db-oracle", to: "app-fhir", state: "overload" },
       { from: "db-postgres", to: "app-fhir", state: "overload" },
@@ -114,13 +134,22 @@ export const SCENES: SceneDef[] = [
     id: "api",
     title: "API 串接蜘蛛網化",
     short: "API 串接",
-    pain: "每個應用各自串接五套資料庫，各家 SQL 語法不同、錯綜複雜難以管理，大量查詢更消耗正式資料庫資源。",
+    pain: "每個應用各自串接五套資料庫，SQL 語法各異；大量查詢消耗資源，沒人在用的 API 更成資安破口。",
     fix: "所有應用透過 Plasma 單一入口，用一種標準 SQL 查詢所有資料庫，集中管理，不再重複查詢。",
-    nodes: { ...dbCol(260), ...appCol(1340) },
-    active: [...appIds, ...dbIds],
-    edges: appIds.flatMap((app) => dbIds.map((db) => ({ from: db, to: app, state: "risk" as const }))),
+    nodes: { ...dbCol(260), ...appCol(1340), "ghost-1": { x: 1060, y: 60 }, "ghost-2": { x: 1060, y: 985 } },
+    active: [...appIds, ...dbIds, "ghost-1", "ghost-2"],
+    edges: [
+      ...appIds.flatMap((app) => dbIds.map((db) => ({ from: db, to: app, state: "risk" as const }))),
+      // 停用系統的 API 沒拔掉:灰色虛線,沒有資料在流,卻還開著
+      ...["db-oracle", "db-postgres", "db-mssql"].map((db) => ({ from: db, to: "ghost-1", state: "dead" as const })),
+      ...["db-mssql", "db-mysql", "db-informix"].map((db) => ({ from: db, to: "ghost-2", state: "dead" as const })),
+    ],
     loads: HIGH,
-    badges: Object.fromEntries(appIds.map((id) => [id, { tone: "danger" as const, text: "串接 5 套 API" }])),
+    badges: {
+      ...Object.fromEntries(appIds.map((id) => [id, { tone: "danger" as const, text: "串接 5 套 API" }])),
+      "ghost-1": { tone: "danger", text: "無人維護 · 資安破口" },
+      "ghost-2": { tone: "danger", text: "無人維護 · 資安破口" },
+    },
     // 同一個需求,各家資料庫寫法都不同
     callouts: {
       "app-bi": {
@@ -147,15 +176,20 @@ export const SCENES: SceneDef[] = [
     short: "手工合併",
     pain: "各資料庫分別匯出檔案，再由 IT 人員手工整併，費時費力、容易出錯，報表無法即時。",
     fix: "Plasma 自動整合五套資料庫，報表直接取用即時、一致的資料。",
-    nodes: { ...dbCol(260), files: { x: 640, y: MID }, "ds-it": { x: 1000, y: MID }, "app-report": { x: 1340, y: MID } },
-    active: [...dbIds, "files", "ds-it", "app-report"],
+    // 每個資料庫各匯出一個檔(Excel、CSV、文字檔),全部交給人工處理
+    nodes: {
+      ...dbCol(260),
+      ...Object.fromEntries(fileIds.map((id, k) => [id, { x: 600, y: DB_Y[dbIds[k]] }])),
+      manual: { x: 1000, y: MID },
+      "app-report": { x: 1340, y: MID },
+    },
+    active: [...dbIds, ...fileIds, "manual", "app-report"],
     edges: [
-      ...dbIds.map((id) => ({ from: id, to: "files", state: "risk" as const })),
-      { from: "files", to: "ds-it", state: "risk" },
-      { from: "ds-it", to: "app-report", state: "risk" },
+      ...dbIds.map((id, k) => ({ from: id, to: fileIds[k], state: "risk" as const })),
+      ...fileIds.map((id) => ({ from: id, to: "manual", state: "risk" as const })),
+      { from: "manual", to: "app-report", state: "risk" },
     ],
     badges: {
-      "ds-it": { tone: "warn", text: "手工整併" },
       "app-report": { tone: "danger", text: "耗時數天 · 易出錯" },
     },
     plasma: {
@@ -194,25 +228,47 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 6. AI 的資安與效能風險 → 經由 Plasma 控管權限、不衝擊正式資料庫
+  // 6. 資安風險:AI 大量查詢拖垮效能,誤下 DELETE 讓資料庫停機 → 重大事故、依法限時通報
   {
     id: "ai-risk",
     title: "AI 的資安與效能風險",
     short: "資安風險",
-    pain: "AI 頻繁大量查詢，資料庫負載過高；串接後，誰能透過 AI 取用機敏資料也難以掌控。",
-    fix: "AI 只透過 Plasma 存取，依角色控管權限、遮罩機敏欄位，正式資料庫不受衝擊。",
-    nodes: { ...dbCol(260), "app-ai": { x: 1340, y: MID } },
-    active: [...dbIds, "app-ai"],
-    edges: dbIds.map((id) => ({ from: id, to: "app-ai", state: "overload" as const })),
-    loads: HIGH,
-    badges: { "app-ai": { tone: "danger", text: "機敏資料存取無管控" } },
+    pain: "AI 直連正式資料庫，大量查詢拖垮效能；一個錯誤指令就可能刪改資料，導致線上系統停機。",
+    fix: "AI 只透過 Plasma 唯讀存取，依角色控管權限，正式資料庫不會被誤刪或改動。",
+    nodes: { ...dsCol(150), ...dbCol(480), "app-ai": { x: 1340, y: MID } },
+    active: [...dsIds, ...dbIds, "app-ai"],
+    edges: [
+      { from: "db-oracle", to: "ds-clinic", state: "dead" },
+      ...dsEdges.filter((e) => e.from !== "db-oracle"),
+      ...dbIds.filter((id) => id !== "db-oracle").map((id) => ({ from: id, to: "app-ai", state: "overload" as const })),
+      { from: "app-ai", to: "db-oracle", state: "attack" },
+    ],
+    loads: { "db-postgres": 88, "db-mssql": 91, "db-mysql": 85, "db-informix": 83 },
+    down: ["db-oracle", "ds-clinic"],
+    badges: {
+      "db-oracle": { tone: "danger", text: "資料遭刪除 · 停機" },
+      "ds-clinic": { tone: "danger", text: "停機" },
+      "app-ai": { tone: "danger", text: "具寫入權限" },
+    },
+    callouts: {
+      "app-ai": {
+        tone: "danger", side: "bottom", q: "重大事故（Sev-1）· 線上系統停機",
+        brief: "醫院須於 1 小時內通報主管機關",
+        rows: [
+          ["機構", "通報時限", "主管機關"],
+          ["銀行", "確認後 30 分鐘內（電話）、7 日內補公文", "金管會銀行局"],
+          ["政府機關", "知悉後 1 小時內", "數位發展部資安署"],
+          ["醫院", "資安事件 1 小時內／重大醫療事故 7 個工作日內", "數位發展部、衛福部"],
+        ],
+      },
+    },
     plasma: {
-      nodes: { ...dbCol(260), plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
-      active: [...dbIds, "plasma", "app-ai"],
-      edges: viaPlasma(["app-ai"]),
+      nodes: { ...dsCol(150), ...dbCol(480), plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
+      active: [...dsIds, ...dbIds, "plasma", "app-ai"],
+      edges: [...dsEdges, ...viaPlasma(["app-ai"])],
       loads: NORMAL,
       badges: {
-        plasma: { tone: "ok", text: "權限控管 · 機敏欄位遮罩" },
+        plasma: { tone: "ok", text: "唯讀 · 權限控管" },
         "app-ai": { tone: "ok", text: "依權限存取" },
       },
     },
@@ -253,10 +309,9 @@ export const SCENES: SceneDef[] = [
       ...dbIds.map((id) => ({ from: id, to: "ds-it", state: "risk" as const })),
       { from: "ds-it", to: "ds-aiteam", state: "risk" },
     ],
-    badges: {
-      "ds-it": { tone: "warn", text: "撈取 · 清洗 · 交付" },
-      "ds-aiteam": { tone: "danger", text: "往返數天" },
-    },
+    // 一個泡泡輪流在 AI 部門與 IT 部門上方出現,演出來回協調的過程與累計時間
+    callouts: { "ds-aiteam": HANDOFF, "ds-it": HANDOFF },
+    badges: { "ds-aiteam": { tone: "warn", text: "等待資料" } },
     plasma: {
       nodes: { ...dbCol(260), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
       active: ["plasma", "kb", "app-ai"],

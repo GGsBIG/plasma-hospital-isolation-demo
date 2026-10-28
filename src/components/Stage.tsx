@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react"
 import type { SceneState } from "../types"
 import { NODE_BY_ID } from "../data"
 import { ShieldCheck } from "lucide-react"
-import { iconScale, sceneBox, stageSize, useLayoutMode, zoneRect, type Box } from "../layout"
+import { iconScale, place, sceneBox, stageSize, useLayoutMode, zoneRect, type Box } from "../layout"
 import { dominantStates, frameAt, loadsAt, segmentAt, segmentIndex, stageKey, statesAt, structureAt } from "../timeline"
 import { plasmaMix } from "../plasma"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
@@ -49,6 +49,7 @@ function describe(scene: SceneState, loads: Record<string, number>, id: string):
     case "serving":
       return { badge: { tone: "ok", text: "資料已同步" }, hot: false }
     case "file":
+    case "person":
       return { hot: false }
     case "kb":
       return { badge: { tone: "ok", text: "已匯入資料字典" }, hot: false }
@@ -102,6 +103,13 @@ function boxOf(key: string, s: SceneState, mode: string): Box {
   let b = boxCache.get(k)
   if (!b) {
     b = sceneBox(s.nodes, (id) => NODE_BY_ID[id].kind, s.zone?.ids)
+    // 節點下方的警報卡也要放進鏡頭(右緣對齊節點)
+    for (const [id, c] of Object.entries(s.callouts ?? {})) {
+      if (c.side !== "bottom" || !s.nodes[id]) continue
+      const p = place(id, s.nodes[id])
+      b.y1 = Math.max(b.y1, p.y + 420)
+      b.x0 = Math.min(b.x0, p.x - 520)
+    }
     boxCache.set(k, b)
   }
   return b
@@ -294,6 +302,7 @@ export function Stage() {
               badge={info.badge}
               stat={info.stat}
               callout={owner.callouts?.[id]}
+              down={owner.down?.includes(id) ?? false}
               hovered={hover === id}
               faded={hover !== null && !linked.has(id)}
               onHover={setHover}

@@ -11,7 +11,8 @@ const BASE_SIZE: Record<NodeKind, { a: number; t: number }> = {
   app: { a: 54, t: 12 },
   plasma: { a: 104, t: 18 },
   kb: { a: 50, t: 12 },
-  file: { a: 50, t: 12 },
+  file: { a: 34, t: 8 },
+  person: { a: 52, t: 12 },
   serving: { a: 54, t: 12 },
 }
 
