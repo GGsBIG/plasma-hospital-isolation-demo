@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import type { EdgeDef } from "../types"
 import { dotScale, isCompact, lineScale } from "../layout"
 
@@ -134,20 +135,31 @@ export function Edge({ id, gRef, length, state, highlight, faded }: {
           </>
         )}
 
-        {state === "attack" && (
-          // 破壞性指令:紅色 DELETE 封包衝向資料庫,抵達後消失,停一下再來一次
-          <g>
-            <animateMotion dur={`${(dur + 1.2).toFixed(2)}s`} repeatCount="indefinite" calcMode="linear" keyPoints="0;1;1" keyTimes={`0;${(dur / (dur + 1.2)).toFixed(3)};1`}>
-              <mpath href={href} />
-            </animateMotion>
-            <animate attributeName="opacity" values="1;1;0;0" keyTimes={`0;${(dur / (dur + 1.2) - 0.01).toFixed(3)};${(dur / (dur + 1.2)).toFixed(3)};1`} dur={`${(dur + 1.2).toFixed(2)}s`} repeatCount="indefinite" />
-            <rect x={-34 * dr} y={-11 * dr} width={68 * dr} height={22 * dr} rx={11 * dr} style={{ fill: "var(--dot-overload)" }} />
-            <text textAnchor="middle" dominantBaseline="central" fontSize={12 * dr} fontWeight={700} fontFamily="ui-monospace, monospace" fill="#fff">
-              DELETE
-            </text>
-          </g>
-        )}
+        {state === "attack" && <AttackPacket href={href} dr={dr} />}
       </g>
+    </g>
+  )
+}
+
+// 破壞性指令:紅色 DELETE 封包衝向資料庫一次,抵達後消失。
+// 每一輪由 Stage 重新掛上;begin="indefinite" + 掛上時 beginElement,動畫才會從頭播(否則會接續文件時間軸、從中途開始)
+const ATTACK_DUR = 1.1
+
+function AttackPacket({ href, dr }: { href: string; dr: number }) {
+  const ref = useRef<SVGGElement>(null)
+  useEffect(() => {
+    ref.current?.querySelectorAll<SVGAnimationElement>("animateMotion, animate").forEach((a) => a.beginElement())
+  }, [])
+  return (
+    <g ref={ref} opacity={0}>
+      <animateMotion begin="indefinite" dur={`${ATTACK_DUR}s`} fill="freeze" calcMode="linear" keyPoints="0;1" keyTimes="0;1">
+        <mpath href={href} />
+      </animateMotion>
+      <animate attributeName="opacity" begin="indefinite" dur={`${ATTACK_DUR}s`} fill="freeze" values="1;1;0" keyTimes="0;0.92;1" />
+      <rect x={-34 * dr} y={-11 * dr} width={68 * dr} height={22 * dr} rx={11 * dr} style={{ fill: "var(--dot-overload)" }} />
+      <text textAnchor="middle" dominantBaseline="central" fontSize={12 * dr} fontWeight={700} fontFamily="ui-monospace, monospace" fill="#fff">
+        DELETE
+      </text>
     </g>
   )
 }

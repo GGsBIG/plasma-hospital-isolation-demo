@@ -404,3 +404,18 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .smoke { animation: none; opacity: 0.3; }
 }
+
+/* 資料庫垮掉的瞬間:平台劇烈晃動一下,再停在變暗的狀態 */
+.iso-down { animation: iso-crash 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+@keyframes iso-crash {
+  0% { filter: none; transform: translate(0, 0); }
+  15% { transform: translate(-6px, 2px); }
+  30% { transform: translate(6px, -2px); filter: brightness(1.6) saturate(2); }
+  45% { transform: translate(-5px, 1px); }
+  60% { transform: translate(4px, 0); }
+  75% { transform: translate(-2px, 0); }
+  100% { transform: translate(0, 0); filter: grayscale(1) brightness(0.75); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iso-down { animation: none; }
+}

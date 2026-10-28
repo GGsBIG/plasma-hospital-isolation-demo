@@ -42,8 +42,15 @@ export interface SceneState {
   brain?: boolean                  // 知識庫與 Plasma 合體:外圍光暈 =「資料大腦」
   zone?: { ids: string[]; label: string } // 圍住一組節點的虛線防護框(例如「核心資料庫 · 受保護」)
   down?: string[]                  // 停機的節點(平台變暗、出現裂痕)
+  phases?: Phase[]                 // 依時間輪播的分幕(各幕覆寫部分內容),循環播放
   showAgent?: boolean
   dimOpacity?: number              // 本狀態非重點節點的透明度,預設 0.28
+}
+
+// 分幕:持續 ms 毫秒,期間以 patch 覆寫該畫面狀態的連線、負載、徽章等
+export interface Phase {
+  ms: number
+  patch: Partial<Pick<SceneState, "edges" | "loads" | "badges" | "callouts" | "down">>
 }
 
 // 節點旁的小卡,用同一個問題/需求對照導入前後:

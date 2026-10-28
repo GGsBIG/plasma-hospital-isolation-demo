@@ -4,6 +4,7 @@ import { NODE_BY_ID } from "./data"
 import { edgePath } from "./geometry"
 import { layoutMode, lineScale, place, verticalFlow } from "./layout"
 import { plasmaMix } from "./plasma"
+import { phaseOf } from "./phase"
 
 // 捲動進度 p:0 = 情境 1 置中,1 = 情境 2 置中…,小數就是卡在兩個情境之間。
 // 所有過場都由 p 直接算出畫面,不再依時間播放,所以停在中途就會停在過場的一半。
@@ -41,15 +42,24 @@ export const segmentIndex = (p: number) => Math.min(Math.floor(clampProgress(p))
 
 export interface Weighted { s: SceneState; key: string; w: number }
 
-const variants = (scene: SceneDef): [SceneState, SceneState] => [scene, scene.plasma ?? scene]
+// 有分幕的畫面:套上目前這一幕的覆寫
+const resolve = (scene: SceneDef, i: number): SceneState =>
+  scene.phases ? { ...scene, ...scene.phases[phaseOf(i).idx].patch } : scene
+const variants = (scene: SceneDef, i: number): [SceneState, SceneState] => [resolve(scene, i), scene.plasma ?? scene]
+// 結構要涵蓋每一幕可能出現的連線
+const allStates = (scene: SceneDef): SceneState[] => [
+  scene,
+  ...(scene.phases ?? []).map((ph) => ({ ...scene, ...ph.patch })),
+  scene.plasma ?? scene,
+]
 
 export function statesAt(p: number): Weighted[] {
   const { a, b, t } = segmentAt(p)
   const i = segmentIndex(p)
   const ma = plasmaMix(i)
   const mb = plasmaMix(i + 1)
-  const [a0, a1] = variants(a)
-  const [b0, b1] = variants(b)
+  const [a0, a1] = variants(a, i)
+  const [b0, b1] = variants(b, i + 1)
   return [
     { s: a0, key: a.id, w: (1 - t) * (1 - ma) },
     { s: a1, key: `${a.id}+`, w: (1 - t) * ma },
@@ -74,7 +84,7 @@ export function structureAt(i: number): Structure {
   const cacheKey = `${i}|${layoutMode()}`
   const cached = structures.get(cacheKey)
   if (cached) return cached
-  const states = [...variants(SCENES[i]), ...variants(SCENES[i + 1])]
+  const states = [...allStates(SCENES[i]), ...allStates(SCENES[i + 1])]
   const nodeIds = [...new Set(states.flatMap((s) => Object.keys(s.nodes)))]
   const edges = new Map<string, EdgeSlot>()
   // 光點速度與數量依「所在狀態裡」的連線長度決定,過場中不變,SMIL 動畫才不會一直重啟
@@ -168,5 +178,8 @@ export function frameAt(p: number): Frame {
 const tone = (v: number) => (v >= 80 ? "d" : v >= 60 ? "w" : "o")
 export function stageKey(p: number): string {
   const loads = loadsAt(p)
-  return `${layoutMode()}|${segmentIndex(p)}|${dominantStates(p)[0].key}|${Object.keys(loads).map((id) => tone(loads[id])).join("")}`
+  const seg = segmentIndex(p)
+  // 換幕也要重繪(徽章、停機狀態;攻擊封包依輪次重新掛上)
+  const ph = `${phaseOf(seg).idx}.${phaseOf(seg).cycle}/${phaseOf(seg + 1).idx}.${phaseOf(seg + 1).cycle}`
+  return `${layoutMode()}|${ph}|${segmentIndex(p)}|${dominantStates(p)[0].key}|${Object.keys(loads).map((id) => tone(loads[id])).join("")}`
 }

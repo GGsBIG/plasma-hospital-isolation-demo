@@ -234,31 +234,54 @@ export const SCENES: SceneDef[] = [
     fix: "AI 只透過 Plasma 唯讀存取，依角色控管權限，正式資料庫不會被誤刪或改動。",
     nodes: { ...dsCol(150), ...dbCol(480), "app-ai": { x: 1340, y: MID } },
     active: [...dsIds, ...dbIds, "app-ai"],
-    edges: [
-      { from: "db-oracle", to: "ds-clinic", state: "dead" },
-      ...dsEdges.filter((e) => e.from !== "db-oracle"),
-      ...dbIds.filter((id) => id !== "db-oracle").map((id) => ({ from: id, to: "app-ai", state: "overload" as const })),
-      { from: "app-ai", to: "db-oracle", state: "attack" },
-    ],
-    loads: { "db-postgres": 88, "db-mssql": 91, "db-mysql": 85, "db-informix": 83 },
-    down: ["db-oracle", "ds-clinic"],
-    badges: {
-      "db-oracle": { tone: "danger", text: "資料遭刪除 · 停機" },
-      "ds-clinic": { tone: "danger", text: "停機" },
-      "app-ai": { tone: "danger", text: "具寫入權限" },
-    },
-    callouts: {
-      "app-ai": {
-        tone: "danger", side: "bottom", q: "重大事故（Sev-1）· 線上系統停機",
-        brief: "醫院須於 1 小時內通報主管機關",
-        rows: [
-          ["機構", "通報時限", "主管機關"],
-          ["銀行", "確認後 30 分鐘內（電話）、7 日內補公文", "金管會銀行局"],
-          ["政府機關", "知悉後 1 小時內", "數位發展部資安署"],
-          ["醫院", "資安事件 1 小時內／重大醫療事故 7 個工作日內", "數位發展部、衛福部"],
-        ],
+    // 第 1 幕(預設內容):AI 大量查詢,所有資料庫過載冒煙
+    edges: [...dsEdges, ...dbIds.map((id) => ({ from: id, to: "app-ai", state: "overload" as const }))],
+    loads: HIGH,
+    badges: { "app-ai": { tone: "danger", text: "大量查詢" } },
+    // 三幕輪播,一次只發生一件事:過載 → AI 送出 DELETE → Oracle 停機、門診停擺、重大事故
+    phases: [
+      { ms: 3200, patch: {} },
+      {
+        ms: 1500,
+        patch: {
+          edges: [
+            ...dsEdges,
+            ...dbIds.filter((id) => id !== "db-oracle").map((id) => ({ from: id, to: "app-ai", state: "overload" as const })),
+            { from: "app-ai", to: "db-oracle", state: "attack" },
+          ],
+          badges: { "app-ai": { tone: "danger", text: "誤下 DELETE 指令" } },
+        },
       },
-    },
+      {
+        ms: 4800,
+        patch: {
+          edges: [
+            { from: "db-oracle", to: "ds-clinic", state: "dead" },
+            ...dsEdges.filter((e) => e.from !== "db-oracle"),
+            ...dbIds.filter((id) => id !== "db-oracle").map((id) => ({ from: id, to: "app-ai", state: "overload" as const })),
+          ],
+          loads: { "db-postgres": 88, "db-mssql": 91, "db-mysql": 85, "db-informix": 83 },
+          down: ["db-oracle", "ds-clinic"],
+          badges: {
+            "db-oracle": { tone: "danger", text: "資料遭刪除 · 停機" },
+            "ds-clinic": { tone: "danger", text: "停機" },
+            "app-ai": { tone: "danger", text: "具寫入權限" },
+          },
+          callouts: {
+            "app-ai": {
+              tone: "danger", side: "bottom", q: "重大事故（Sev-1）· 線上系統停機",
+              brief: "醫院須於 1 小時內通報主管機關",
+              rows: [
+                ["機構", "通報時限", "主管機關"],
+                ["銀行", "確認後 30 分鐘內（電話）、7 日內補公文", "金管會銀行局"],
+                ["政府機關", "知悉後 1 小時內", "數位發展部資安署"],
+                ["醫院", "資安事件 1 小時內／重大醫療事故 7 個工作日內", "數位發展部、衛福部"],
+              ],
+            },
+          },
+        },
+      },
+    ],
     plasma: {
       nodes: { ...dsCol(150), ...dbCol(480), plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
       active: [...dsIds, ...dbIds, "plasma", "app-ai"],

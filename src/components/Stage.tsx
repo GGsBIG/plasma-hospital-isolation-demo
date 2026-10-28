@@ -5,6 +5,7 @@ import { ShieldCheck } from "lucide-react"
 import { iconScale, place, sceneBox, stageSize, useLayoutMode, zoneRect, type Box } from "../layout"
 import { dominantStates, frameAt, loadsAt, segmentAt, segmentIndex, stageKey, statesAt, structureAt } from "../timeline"
 import { plasmaMix } from "../plasma"
+import { phaseOf } from "../phase"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
 import { Node, type Badge } from "./Node"
 import { Edge } from "./Edge"
@@ -124,6 +125,10 @@ export function Stage() {
   useScrollSelector(stageKey)
   const p = scrollStore.get()
   const { nodeIds, edges } = structureAt(segmentIndex(p))
+  // 目前的幕與輪次:攻擊封包在進入那一幕時重新掛上,動畫才會剛好在那一幕從頭播
+  const pa = phaseOf(segmentIndex(p))
+  const pb = phaseOf(segmentIndex(p) + 1)
+  const cycle = `${pa.cycle}.${pa.idx}/${pb.cycle}.${pb.idx}`
   // 依權重排序的畫面狀態;第一個是「目前看起來最像」的那個
   const ranked = dominantStates(p).map((x) => x.s)
   const near = ranked[0]
@@ -169,7 +174,7 @@ export function Stage() {
   useScrollEffect((p) => {
     // 過場前後的停留區畫面完全不變,整格略過
     const i = segmentIndex(p)
-    const key = `${i}|${segmentAt(p).t.toFixed(4)}|${plasmaMix(i).toFixed(4)}|${plasmaMix(i + 1).toFixed(4)}`
+    const key = `${i}|${segmentAt(p).t.toFixed(4)}|${plasmaMix(i).toFixed(4)}|${plasmaMix(i + 1).toFixed(4)}|${phaseOf(i).idx}|${phaseOf(i + 1).idx}`
     if (key === lastKey.current) return
     lastKey.current = key
     const f = frameAt(p)
@@ -262,7 +267,8 @@ export function Stage() {
         <svg className="pointer-events-none absolute inset-0 overflow-visible" width={w} height={h}>
           {edges.map((e) => (
             <Edge
-              key={e.key}
+              // 攻擊封包每一幕重新掛上,動畫才會從頭播
+              key={e.state === "attack" ? `${e.key}#${cycle}` : e.key}
               id={`edge-${e.key}`}
               gRef={(el) => {
                 if (el) edgeEls.current.set(e.key, { g: el, path: el.querySelector("path"), last: "", d: "" })
