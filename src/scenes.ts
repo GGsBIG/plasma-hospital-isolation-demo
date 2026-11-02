@@ -33,7 +33,19 @@ const appIds = Object.keys(APP_Y)
 const dsIds = Object.keys(DS_Y)
 
 const campusIds = ["campus-main", "campus-north", "campus-south"]
-const campusCol = (x: number) => Object.fromEntries(campusIds.map((id, k) => [id, { x, y: 310 + k * 215 }]))
+const branchIds = ["campus-north", "campus-south"]
+// 總院在左、兩間分院在右;導入後 Plasma 插在中間
+const CAMPUS_POS = { "campus-main": { x: 260, y: 525 }, "campus-north": { x: 1340, y: 300 }, "campus-south": { x: 1340, y: 750 } }
+// 一來一回兩條線並排(上去、送回來)
+const twoWay = (a: string, b: string) => [
+  { from: a, to: b, state: "isolated" as const, lane: -9 },
+  { from: b, to: a, state: "isolated" as const, lane: 9 },
+]
+
+// FHIR 對外交換:FHIR Server 與院外的診所、藥局
+const extIds = ["ext-clinic", "ext-pharmacy"]
+const FHIR_POS = { x: 1100, y: 525 }
+const EXT_POS = { "ext-clinic": { x: 1440, y: 400 }, "ext-pharmacy": { x: 1440, y: 650 } }
 
 // 資料都經過 Plasma:源頭資料庫 → Plasma → 各應用
 const viaPlasma = (ids: string[]) => [
@@ -173,8 +185,8 @@ export const SCENES: SceneDef[] = [
     id: "protect",
     title: "保護核心資料庫",
     short: "保護核心",
-    pain: "新應用直接查詢正式資料庫，負載飆升，門診、護理系統跟著變慢。",
-    fix: "Plasma 隔離核心資料庫，新應用只向 Plasma 取用，正式環境運作不受影響。",
+    pain: "新應用直連正式資料庫，門診、護理系統跟著變慢。",
+    fix: "新應用改向 Plasma 取用，正式資料庫不受影響。",
     nodes: { ...dsCol(220), ...dbCol(720), ...appCol(1320) },
     active: [...appIds, ...dbIds],
     // 左側既有系統是配角,但要看得出「回應變慢」,比預設淡化再清楚一點
@@ -206,8 +218,8 @@ export const SCENES: SceneDef[] = [
     id: "api",
     title: "API 串接蜘蛛網化",
     short: "API 串接",
-    pain: "每個應用各自串接五套資料庫，SQL 語法各異；大量查詢消耗資源，沒人在用的 API 更成資安破口。",
-    fix: "所有應用透過 Plasma 單一入口，用一種標準 SQL 查詢所有資料庫，集中管理，不再重複查詢。",
+    pain: "每個應用各接五套資料庫，語法各異；廢棄的 API 成為資安破口。",
+    fix: "單一入口、一種 SQL，集中管理所有資料庫。",
     nodes: { ...dbCol(260), ...appCol(1340), "ghost-1": { x: 1060, y: 60 }, "ghost-2": { x: 1060, y: 985 } },
     active: [...appIds, ...dbIds, "ghost-1", "ghost-2"],
     edges: [
@@ -241,13 +253,13 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 4. 手工合併資料 → Plasma 自動整合、報表即時
+  // 4. 手工合併資料 → Plasma 自動整合、戰情室即時
   {
     id: "manual",
     title: "手工合併資料",
     short: "手工合併",
-    pain: "各資料庫分別匯出檔案，再由 IT 人員手工整併，費時費力、容易出錯，報表無法即時。",
-    fix: "Plasma 自動整合五套資料庫，報表直接取用即時、一致的資料。",
+    pain: "各資料庫匯出檔案，人工整併，數字要等好幾天。",
+    fix: "Plasma 自動整合，戰情室數字即時更新。",
     // 每個資料庫各匯出一個檔(Excel、CSV、文字檔),全部交給人工處理
     nodes: {
       ...dbCol(260),
@@ -272,38 +284,63 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 5. 不同院區各有一套 HIS → Plasma 整合成全院視圖
+  // 5. 跨院區:總院的資料要等凌晨批次才到分院 → 各院區與 Plasma 雙向即時同步
   {
     id: "campus",
-    title: "跨院區資料無法整合",
+    title: "跨院區資料不同步",
     short: "跨院區",
-    pain: "各院區 HIS 的病歷號與代碼各自編碼，跨院區報表難以彙整，其他院區的檢驗結果也查不到。",
-    fix: "Plasma 整合各院區資料並統一代碼，提供全院一致的資料視圖。",
-    nodes: { ...campusCol(400), "app-bi": { x: 1200, y: MID } },
-    active: [...campusIds, "app-bi"],
-    edges: campusIds.map((id) => ({ from: id, to: "app-bi", state: "risk" as const })),
-    badges: { "app-bi": { tone: "danger", text: "資料無法彙整" } },
+    pain: "總院的檢驗結果，分院隔天才看得到。",
+    fix: "各院區即時同步，資料就在院區本地。",
+    nodes: CAMPUS_POS,
+    active: campusIds,
+    // 單顆慢速光點,分院旁轉圈等待
+    edges: branchIds.map((id) => ({ from: "campus-main", to: id, state: "slow" as const })),
+    badges: Object.fromEntries(branchIds.map((id) => [id, { tone: "danger" as const, text: "隔天才看得到" }])),
     plasma: {
-      nodes: { ...campusCol(260), plasma: PLASMA_POS, "app-bi": { x: 1340, y: MID } },
-      active: [...campusIds, "plasma", "app-bi"],
-      edges: [
-        ...campusIds.map((id) => ({ from: id, to: "plasma", state: "isolated" as const })),
-        { from: "plasma", to: "app-bi", state: "isolated" },
-      ],
+      nodes: { ...CAMPUS_POS, plasma: PLASMA_POS },
+      active: [...campusIds, "plasma"],
+      edges: campusIds.flatMap((id) => twoWay(id, "plasma")),
       badges: {
-        plasma: { tone: "ok", text: "整合 3 個院區" },
-        "app-bi": { tone: "ok", text: "全院資料一致" },
+        plasma: { tone: "ok", text: "即時同步" },
+        ...Object.fromEntries(branchIds.map((id) => [id, { tone: "ok" as const, text: "即時可查" }])),
       },
     },
   },
 
-  // 6. 資安風險:AI 大量查詢拖垮效能,誤下 DELETE 讓資料庫停機 → 重大事故、依法限時通報
+  // 6. FHIR 對外交換:轉檔程式直連核心資料庫 → Plasma 整理後交給 FHIR Server,以標準格式與院外交換
+  {
+    id: "fhir",
+    title: "FHIR 對外交換",
+    short: "FHIR 交換",
+    pain: "FHIR 轉檔直連核心資料庫，負載過高、格式不一。",
+    fix: "Plasma 整理資料後交給 FHIR Server，以標準格式與院外交換。",
+    nodes: { ...dbCol(260), "app-fhir": FHIR_POS, ...EXT_POS },
+    active: [...dbIds, "app-fhir", ...extIds],
+    edges: [
+      ...dbIds.map((id) => ({ from: id, to: "app-fhir", state: "overload" as const })),
+      ...extIds.map((id) => ({ from: "app-fhir", to: id, state: "risk" as const })),
+    ],
+    loads: HIGH,
+    badges: Object.fromEntries(extIds.map((id) => [id, { tone: "danger" as const, text: "格式不一" }])),
+    plasma: {
+      nodes: { ...dbCol(260), plasma: PLASMA_POS, "app-fhir": FHIR_POS, ...EXT_POS },
+      active: [...dbIds, "plasma", "app-fhir", ...extIds],
+      edges: [...viaPlasma(["app-fhir"]), ...extIds.map((id) => ({ from: "app-fhir", to: id, state: "isolated" as const }))],
+      loads: NORMAL,
+      badges: {
+        "app-fhir": { tone: "ok", text: "標準格式交換" },
+        ...Object.fromEntries(extIds.map((id) => [id, { tone: "ok" as const, text: "電子處方箋" }])),
+      },
+    },
+  },
+
+  // 7. 資安風險:AI 大量查詢拖垮效能,誤下 DELETE 讓資料庫停機 → 重大事故、依法限時通報
   {
     id: "ai-risk",
     title: "AI 的資安與效能風險",
     short: "資安風險",
-    pain: "AI 直連正式資料庫，大量查詢拖垮效能；一個錯誤指令就可能刪改資料，導致線上系統停機。",
-    fix: "AI 只透過 Plasma 唯讀存取，依角色控管權限，正式資料庫不會被誤刪或改動。",
+    pain: "AI 直連正式資料庫，一個錯誤指令就可能讓系統停機。",
+    fix: "AI 只能透過 Plasma 唯讀存取，資料不會被誤刪。",
     nodes: { ...dsCol(150), ...dbCol(480), "app-ai": { x: 1340, y: MID } },
     active: [...dsIds, ...dbIds, "app-ai"],
     // 第 1 幕(預設內容):AI 大量查詢,所有資料庫過載冒煙
@@ -325,13 +362,13 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 7. AI 不了解院內資料 → 知識庫與 Plasma 合體成資料大腦,AI 答得準
+  // 8. AI 不了解院內資料 → 知識庫與 Plasma 合體成資料大腦,AI 答得準
   {
     id: "knowledge",
     title: "AI 不了解院內資料",
     short: "Plasma 大腦",
-    pain: "資料庫欄位多為代碼，AI 不了解其意義，回答容易出錯。",
-    fix: "匯入資料字典與系統文件，Plasma 成為最了解院內資料的大腦，AI 的答案最精準。",
+    pain: "欄位多為代碼，AI 看不懂，答案容易出錯。",
+    fix: "匯入資料字典，Plasma 成為最懂院內資料的大腦。",
     nodes: { ...dbCol(260), "app-ai": { x: 1340, y: MID } },
     active: [...dbIds, "app-ai"],
     edges: dbIds.map((id) => ({ from: id, to: "app-ai", state: "risk" as const })),
@@ -347,13 +384,13 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 8. 跨部門溝通成本 → AI Agent 透過 MCP 自助取得資料
+  // 9. 跨部門溝通成本 → AI Agent 透過 MCP 自助取得資料
   {
     id: "mcp",
     title: "跨部門溝通成本",
     short: "跨部門協作",
-    pain: "AI 部門提出需求，IT 人工撈取、清洗再交付，往返溝通，流程冗長。",
-    fix: "AI Agent 透過 MCP 直接向 Plasma 取得資料，數分鐘產出結果，不必跨部門等待。",
+    pain: "需求在 AI 部門與 IT 之間來回，動輒數月。",
+    fix: "AI Agent 透過 MCP 直接取用資料，數分鐘完成。",
     nodes: { ...dbCol(260), "ds-it": { x: 800, y: MID }, "ds-aiteam": { x: 1340, y: MID } },
     active: [...dbIds, "ds-it", "ds-aiteam"],
     edges: [

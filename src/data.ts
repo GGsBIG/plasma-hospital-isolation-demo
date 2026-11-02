@@ -11,7 +11,7 @@ export const DBS: NodeDef[] = [
   { id: "db-informix", kind: "db", label: "Informix",   sub: "LIS 檢驗資訊系統",   icon: "database" },
 ]
 
-// 情境 4:不同院區各有一套 HIS
+// 跨院區:不同院區各有一套 HIS
 export const CAMPUSES: NodeDef[] = [
   { id: "campus-main",  kind: "db", label: "總院",     sub: "HIS 醫療資訊系統", icon: "database" },
   { id: "campus-north", kind: "db", label: "北區分院", sub: "HIS 醫療資訊系統", icon: "database" },
@@ -30,6 +30,9 @@ export const DOWNSTREAM: NodeDef[] = [
   { id: "manual",    kind: "person",     label: "人工處理",   icon: "person-clock" },
   // 情境 8:提出資料需求的 AI 部門
   { id: "ds-aiteam", kind: "downstream", label: "AI 部門",    icon: "users" },
+  // FHIR 對外交換:院外的診所、藥局
+  { id: "ext-clinic",   kind: "downstream", label: "診所", icon: "building-2" },
+  { id: "ext-pharmacy", kind: "downstream", label: "藥局", icon: "pill" },
 ]
 
 // 上方新應用
@@ -38,8 +41,8 @@ export const APPS: NodeDef[] = [
   { id: "app-fhir", kind: "app", label: "FHIR Server",  icon: "share-2" },
   { id: "app-bi",   kind: "app", label: "BI Dashboard", icon: "bar-chart-3" },
   { id: "app-ai",   kind: "app", label: "AI",           icon: "sparkles" },
-  // 情境 4:手工整併後產出的報表
-  { id: "app-report", kind: "app", label: "報表",       icon: "file-bar-chart" },
+  // 情境 4:手工整併後產出的戰情室(icon dashboard:平台上畫一面長條圖)
+  { id: "app-report", kind: "app", label: "戰情室",     icon: "dashboard" },
   // 情境 3:沒人在用、也沒人維護的舊系統,API 還接著
   { id: "ghost-1", kind: "app", label: "停用系統", icon: "ghost" },
   { id: "ghost-2", kind: "app", label: "停用系統", icon: "ghost" },

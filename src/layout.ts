@@ -64,6 +64,7 @@ const FLOW_MID = 560 // 情境 1 的既有系統
 const FLOW_MID_DB = (FLOW_SOURCE + FLOW_APP) / 2 - B_SHIFT / 2
 const FLOW_PLASMA = 640 // Plasma、知識庫、落地 PostgreSQL
 const FLOW_HANDOFF = 820 // 情境 4 的 IT 部門(匯出檔與報表之間)
+const FLOW_EXT = 1460 // FHIR 頁的院外診所、藥局(FHIR Server 在應用欄)
 // 情境 2 導入後:既有系統在源頭資料庫的更左邊(情境資料的 x < DS_FAR_MAX)
 const DS_FAR_MAX = 200
 const FLOW_DS_FAR = -560
@@ -80,10 +81,13 @@ const SLOT: Record<string, { y: number; b: boolean; x?: number }> = {
   "ds-ward": { y: APP_ROW[1], b: false },
   "ds-admin": { y: APP_ROW[2], b: false },
   "ds-lab": { y: APP_ROW[3], b: false },
-  // 情境 4 的三個院區:同一欄,和 A 欄的源頭資料庫同高
-  "campus-main": { y: ROW_A[0], b: false },
-  "campus-north": { y: ROW_A[1], b: false },
-  "campus-south": { y: ROW_A[2], b: false },
+  // 跨院區:總院在最左欄中間,兩間分院在應用欄的上下(導入後 Plasma 插在中間)
+  "campus-main": { y: ROW_A[1], b: false },
+  "campus-north": { y: ROW_A[0], b: false, x: FLOW_APP },
+  "campus-south": { y: ROW_A[2], b: false, x: FLOW_APP },
+  // FHIR 對外交換:FHIR Server 之後再往右一欄的診所、藥局
+  "ext-clinic": { y: ROW_A[1] - 200, b: false, x: FLOW_EXT },
+  "ext-pharmacy": { y: ROW_A[1] + 200, b: false, x: FLOW_EXT },
   // 情境 4、8 的 IT 部門、情境 8 的 AI 部門:和 Plasma 同一列
   "ds-it": { y: ROW_A[1], b: false },
   "ds-aiteam": { y: ROW_A[1], b: false },

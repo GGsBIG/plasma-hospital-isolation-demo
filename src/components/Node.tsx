@@ -49,7 +49,7 @@ export function Node({
   // 字放大(手機上舞台縮得比較小)、徽章疊在名稱下方、省略副標題
   const s = compact
     ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", logo: "h-[100px]", bubble: "text-[28px] px-5 py-3 rounded-[24px]" }
-    : { name: "text-[26px]", badge: "text-[20px] px-3 py-1", meta: "text-[20px]", logo: "h-[64px]", bubble: "text-[19px] px-4 py-2.5 rounded-2xl" }
+    : { name: "text-[30px]", badge: "text-[23px] px-3 py-1", meta: "text-[22px]", logo: "h-[64px]", bubble: "text-[19px] px-4 py-2.5 rounded-2xl" }
 
   const labelStyle = side
     ? { left: a + 22, top: -30 }
@@ -69,7 +69,8 @@ export function Node({
           style={{ transform: hovered ? "translateY(-12px) scale(1.07)" : undefined }}
           data-hovered={hovered || undefined}
         >
-          <Platform kind={node.kind} hot={hot} variant={node.icon} down={down} />
+          {/* live:徽章為正常(綠)時,戰情室的長條才跳動 */}
+          <Platform kind={node.kind} hot={hot} variant={node.icon} down={down} live={badge?.tone === "ok"} />
         </div>
 
         {callout?.seq && <SeqBubble callout={callout} nodeId={node.id} a={a} compact={compact} bubble={s.bubble} />}
