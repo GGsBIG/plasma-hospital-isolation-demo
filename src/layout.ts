@@ -156,8 +156,8 @@ export const dotScale = () => (mode === "desktop" ? 1 : 1.75)
 // 外框 = 節點中心 +「圖示 + 名稱 + 徽章」的範圍(舞台座標,依實際量測值;
 // 改了緊湊版的字級或圖示倍率要重新量)
 const EXTENT: Record<NodeKind, { half: number; top: number; bottom: number }> = {
-  db: { half: 165, top: 65, bottom: 222 }, // 名稱左邊多了品牌圖示
-  serving: { half: 165, top: 65, bottom: 222 },
+  db: { half: 200, top: 65, bottom: 222 }, // 名稱左邊多了品牌圖示
+  serving: { half: 200, top: 65, bottom: 222 },
   downstream: { half: 100, top: 41, bottom: 205 },
   app: { half: 140, top: 54, bottom: 214 },
   plasma: { half: 259, top: 98, bottom: 363 },

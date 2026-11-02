@@ -49,12 +49,45 @@ export function Node({
   // 手機緊湊版:連線可能穿過節點下方的標籤,所以標籤加底色蓋住線;
   // 字放大(手機上舞台縮得比較小)、徽章疊在名稱下方、省略副標題
   const s = compact
-    ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", logo: "h-[100px]", brand: "h-[62px] w-[62px]", bubble: "text-[28px] px-5 py-3 rounded-[24px]" }
-    : { name: "text-[30px]", badge: "text-[22px] px-3 py-1", meta: "text-[22px]", logo: "h-[64px]", brand: "h-[42px] w-[42px]", bubble: "text-[22px] px-4 py-2.5 rounded-2xl" }
+    ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", logo: "h-[100px]", brand: "h-[128px] w-[128px]", bubble: "text-[28px] px-5 py-3 rounded-[24px]" }
+    : { name: "text-[30px]", badge: "text-[22px] px-3 py-1", meta: "text-[22px]", logo: "h-[64px]", brand: "h-[80px] w-[80px]", bubble: "text-[22px] px-4 py-2.5 rounded-2xl" }
 
   const labelStyle = side
     ? { left: a + 22, top: -30 }
     : above ? { left: 0, top: -(a / 2 + 40 * NODE_SCALE) } : { left: 0, top: a / 2 + t + 12 }
+
+  // 名稱列(名稱 + 徽章)、副標、說明列
+  const text = (
+    <>
+      {/* 名稱與狀態徽章同一行,節省垂直空間;有 logo 時徽章放在 logo 下方 */}
+      <div className={`flex gap-2.5 ${side ? "flex-col items-start" : node.logo || compact || stack ? `flex-col ${node.brand ? "items-start" : "items-center"}` : "items-center"}`}>
+        {node.logo ? (
+          // max-w-none:Tailwind 預設 img max-width:100%,會讓 logo 被下方較短的文字列壓窄,各情境大小不一
+          <>
+            <img src={node.logo.light} alt={node.label} className={`${s.logo} w-auto max-w-none dark:hidden`} />
+            <img src={node.logo.dark} alt={node.label} className={`hidden ${s.logo} w-auto max-w-none dark:block`} />
+          </>
+        ) : (
+          <span className={`${s.name} font-medium tracking-tight text-foreground`}>{node.label}</span>
+        )}
+        {badge && (
+          <span
+            className={`inline-flex items-center gap-2 rounded-full border bg-card ${s.badge} text-foreground/90 transition-[border-color,box-shadow] duration-300
+              ${hovered ? "border-foreground/30" : "border-border"}`}
+          >
+            <span className={`h-2.5 w-2.5 rounded-full ${DOT[badge.tone]} ${badge.tone === "danger" ? "animate-pulse" : ""}`} />
+            {badge.text}
+            {badge.load !== undefined && <span data-load className="tabular-nums">{badge.load}%</span>}
+          </span>
+        )}
+      </div>
+      {node.sub && !compact && <span className={`mt-0.5 ${s.meta} text-muted-foreground`}>{node.sub}</span>}
+      {/* 說明列只在情境自訂徽章時出現;手機版字大、會撞到旁邊的節點,省略(左側文字已說明) */}
+      {stat && !compact && (
+        <span className={`mt-1 ${s.meta} tabular-nums text-muted-foreground`}>{stat}</span>
+      )}
+    </>
+  )
 
   return (
     // 位置用 transform(由 Stage 寫入),自己一個圖層:移動與淡入淡出都交給 GPU 合成,不重排版面
@@ -148,35 +181,15 @@ export function Node({
             } ${compact ? "rounded-2xl bg-background/90 px-2 py-1" : ""}`}
             style={labelStyle}
           >
-            {/* 名稱與狀態徽章同一行,節省垂直空間;有 logo 時徽章放在 logo 下方 */}
-            <div className={`flex items-center gap-2.5 ${side ? "flex-col items-start" : node.logo || compact || stack ? "flex-col" : ""}`}>
-              {node.logo ? (
-                // max-w-none:Tailwind 預設 img max-width:100%,會讓 logo 被下方較短的文字列壓窄,各情境大小不一
-                <>
-                  <img src={node.logo.light} alt={node.label} className={`${s.logo} w-auto max-w-none dark:hidden`} />
-                  <img src={node.logo.dark} alt={node.label} className={`hidden ${s.logo} w-auto max-w-none dark:block`} />
-                </>
-              ) : (
-                <span className={`${s.name} inline-flex items-center gap-2.5 font-medium tracking-tight text-foreground`}>
-                  {node.brand && <img src={node.brand} alt="" className={`${s.brand} shrink-0`} />}
-                  {node.label}
-                </span>
-              )}
-              {badge && (
-                <span
-                  className={`inline-flex items-center gap-2 rounded-full border bg-card ${s.badge} text-foreground/90 transition-[border-color,box-shadow] duration-300
-                    ${hovered ? "border-foreground/30" : "border-border"}`}
-                >
-                  <span className={`h-2.5 w-2.5 rounded-full ${DOT[badge.tone]} ${badge.tone === "danger" ? "animate-pulse" : ""}`} />
-                  {badge.text}
-                  {badge.load !== undefined && <span data-load className="tabular-nums">{badge.load}%</span>}
-                </span>
-              )}
-            </div>
-            {node.sub && !compact && <span className={`mt-0.5 ${s.meta} text-muted-foreground`}>{node.sub}</span>}
-            {/* 說明列只在情境自訂徽章時出現;手機版字大、會撞到旁邊的節點,省略(左側文字已說明) */}
-            {stat && !compact && (
-              <span className={`mt-1 ${s.meta} tabular-nums text-muted-foreground`}>{stat}</span>
+            {/* 資料庫:品牌圖示在左,邊長等於右邊兩行文字的高度並上下置中(s.brand:桌機 = 名稱列 + 副標,
+                手機 = 名稱 + 徽章,依實際量測;改了字級要一起改) */}
+            {node.brand ? (
+              <div className="flex items-center gap-3">
+                <img src={node.brand} alt="" className={`${s.brand} shrink-0`} />
+                <div className="flex flex-col items-start text-left">{text}</div>
+              </div>
+            ) : (
+              text
             )}
           </div>
         </div>
