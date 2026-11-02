@@ -25,7 +25,7 @@ const SPRING = "ease-[cubic-bezier(0.34,1.56,0.64,1)]"
 // 位置與透明度每格由 Stage 直接寫進外層 div(elRef),這裡不帶這兩個值,捲動時不重繪;
 // hovered / faded 是滑鼠互動,放在內層用 CSS transition,跟捲動驅動的外層互不干擾
 export function Node({
-  node, elRef, compact, hot, badge, stat, callout, down = false, hovered, faded, onHover,
+  node, elRef, compact, hot, badge, stat, callout, down = false, stack = false, hovered, faded, onHover,
 }: {
   node: NodeDef
   elRef: (el: HTMLDivElement | null) => void
@@ -35,6 +35,7 @@ export function Node({
   stat?: string
   callout?: Callout
   down?: boolean
+  stack?: boolean
   hovered: boolean
   faded: boolean
   onHover: (id: string | null) => void
@@ -147,7 +148,7 @@ export function Node({
             style={labelStyle}
           >
             {/* 名稱與狀態徽章同一行,節省垂直空間;有 logo 時徽章放在 logo 下方 */}
-            <div className={`flex items-center gap-2.5 ${side ? "flex-col items-start" : node.logo || compact ? "flex-col" : ""}`}>
+            <div className={`flex items-center gap-2.5 ${side ? "flex-col items-start" : node.logo || compact || stack ? "flex-col" : ""}`}>
               {node.logo ? (
                 // max-w-none:Tailwind 預設 img max-width:100%,會讓 logo 被下方較短的文字列壓窄,各情境大小不一
                 <>

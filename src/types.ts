@@ -12,8 +12,8 @@ export interface NodeDef {
 
 // risk:有風險、雜亂的直連(紅色虛線,光點稀疏),和負載過高的 overload 區分
 // slow:資料遲遲不來(單顆慢速光點,終點轉圈等待);dead:廢棄沒人用的連線(灰色虛線,沒有光點)
-// attack:AI 送出的破壞性指令(紅色 DELETE 封包)
-export type EdgeState = "normal" | "overload" | "isolated" | "risk" | "slow" | "dead" | "attack"
+// attack:AI 送出的破壞性指令(紅色 DELETE 封包);raw:尚未整理的原始資料(光點依來源資料庫各自一色)
+export type EdgeState = "normal" | "overload" | "isolated" | "risk" | "slow" | "dead" | "attack" | "raw"
 
 export interface EdgeDef {
   from: string
@@ -47,6 +47,7 @@ export interface SceneState {
   phases?: Phase[] | ((seed: number) => Phase[])
   phaseAll?: Phase["patch"][]
   showAgent?: boolean
+  stack?: string[]                 // 這些節點的名稱與徽章改成上下兩行(節點排得密時避免左右重疊)
   dimOpacity?: number              // 本狀態非重點節點的透明度,預設 0.28
 }
 

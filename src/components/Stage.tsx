@@ -270,6 +270,7 @@ export function Stage() {
               // 攻擊封包每一幕重新掛上,動畫才會從頭播
               key={e.state === "attack" ? `${e.key}#${cycle}` : e.key}
               id={`edge-${e.key}`}
+              from={e.from}
               gRef={(el) => {
                 if (el) edgeEls.current.set(e.key, { g: el, path: el.querySelector("path"), last: "", d: "" })
                 else edgeEls.current.delete(e.key)
@@ -308,6 +309,7 @@ export function Stage() {
               badge={info.badge}
               stat={info.stat}
               callout={owner.callouts?.[id]}
+              stack={owner.stack?.includes(id) ?? false}
               down={owner.down?.includes(id) ?? false}
               hovered={hover === id}
               faded={hover !== null && !linked.has(id)}

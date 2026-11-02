@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import Lenis from "lenis"
 import { SCENES, validateScenes } from "./scenes"
-import { agentAt, clamp01, clampProgress, LAST } from "./timeline"
+import { agentAt, CHAT_SPAN, clamp01, clampProgress, END, LAST, RECAP_AT, RECAP_INDEX, recapAt } from "./timeline"
 import { quantize, scrollStore, useScrollEffect, useScrollSelector } from "./scroll"
 import { useLayoutMode } from "./layout"
 import { Stepper } from "./components/Stepper"
@@ -11,6 +11,7 @@ import { NarrationPanel } from "./components/NarrationPanel"
 import { AgentChat } from "./components/AgentChat"
 import { ThemeToggle } from "./components/ThemeToggle"
 import { PlasmaToggle } from "./components/PlasmaToggle"
+import { Recap } from "./components/Recap"
 import { plasmaOn, setPlasma } from "./plasma"
 import logo from "./assets/brobridge-logo.png"
 import logoDark from "./assets/brobridge-logo-dark.png"
@@ -18,8 +19,6 @@ import logoDark from "./assets/brobridge-logo-dark.png"
 validateScenes() // 載入即檢查情境資料完整性
 
 const AGENT_W = 380
-// 抵達最後一個情境(MCP Agent)後,再留多少段 --scroll-step 的捲動距離給右側對話逐步播放
-const CHAT_SPAN = 2.5
 // 最後一頁切到「導入 Plasma 後」時,自動捲完對話所需的秒數(使用者一滾動就交還手動控制)
 const CHAT_PLAY = 9
 const CHAT_DELAY = 600 // 等 Agent 面板滑出後再開始播
@@ -85,13 +84,15 @@ function AgentPanel() {
   )
 }
 
-// 頂部進度條:6 等分(情境 1→2 … 5→6 各一段,最後一段是 Agent 對話播完),
+// 頂部進度條:情境之間各一段,再加 Agent 對話播完、結尾總覽各一段,
 // 每個情境完整抵達處留一道細縫當刻度,看得出目前在第幾段。
 // 填滿長度每格直接寫進 DOM(transform),不觸發重繪
-const SEGMENTS = LAST + 1
+const SEGMENTS = LAST + 2
 function progressFill(p: number) {
   const q = Math.max(0, p)
-  return q < LAST ? q / SEGMENTS : (LAST + clamp01((q - LAST) / CHAT_SPAN)) / SEGMENTS
+  if (q < LAST) return q / SEGMENTS
+  if (q < RECAP_AT) return (LAST + clamp01((q - LAST) / CHAT_SPAN)) / SEGMENTS
+  return (LAST + 1 + clamp01(q - RECAP_AT)) / SEGMENTS
 }
 
 function ProgressBar() {
@@ -123,6 +124,7 @@ export function App() {
   // 捲動進度(整數 = 某情境置中,小數 = 卡在兩情境之間)放在 scrollStore,不是 React state:
   // App 本身只在「目前情境」改變時重繪(標題列的頁碼)
   const current = useScrollSelector((p) => Math.round(clampProgress(p)))
+  const recap = useScrollSelector((p) => recapAt(p) >= 0.5)
   // 版面模式只在換版面(例如手機轉向)時改變
   const mode = useLayoutMode()
 
@@ -174,8 +176,8 @@ export function App() {
   const goTo = useCallback((i: number) => {
     const h = stepPx()
     if (!h || !lenisRef.current) return
-    // 最後一個情境之後可以再往下捲到對話播完(LAST + CHAT_SPAN)
-    const target = Math.max(0, Math.min(i, LAST + CHAT_SPAN))
+    // 最後一個情境之後可以再往下捲到對話播完(RECAP_AT),再往下是結尾總覽(END)
+    const target = i === RECAP_INDEX ? END : Math.max(0, Math.min(i, END))
     const distance = Math.abs(target - scrollStore.get())
     lenisRef.current.scrollTo(target * h, {
       duration: Math.min(1.8 + distance * 0.5, 4),
@@ -209,15 +211,18 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const raw = scrollStore.get()
       if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
         e.preventDefault()
-        const cur = Math.round(clampProgress(scrollStore.get()))
-        const next = cur + (e.key === "ArrowRight" ? 1 : -1)
-        // 在最後一個情境按 →:捲到對話播完
-        goTo(next > LAST ? LAST + CHAT_SPAN : next)
+        const cur = Math.round(clampProgress(raw))
+        // 在最後一個情境按 →:導入後先捲到對話播完,再按一次到結尾總覽(導入前沒有對話,直接到總覽);
+        // 在總覽按 ←:回到最後一個情境
+        if (e.key === "ArrowRight") goTo(cur < LAST ? cur + 1 : plasmaOn(LAST) && raw < RECAP_AT - 0.01 ? RECAP_AT : END)
+        else goTo(raw > RECAP_AT + 0.01 ? LAST : cur - 1)
       } else if ((e.key === "p" || e.key === "P") && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        // P:切換目前這頁導入前後
-        const cur = Math.round(clampProgress(scrollStore.get()))
+        // P:切換目前這頁導入前後(總覽沒有切換)
+        if (raw > RECAP_AT + 0.5) return
+        const cur = Math.round(clampProgress(raw))
         togglePlasma(cur, !plasmaOn(cur))
       }
     }
@@ -239,7 +244,7 @@ export function App() {
         </div>
         <div className="flex items-center gap-4">
           <span className="font-mono text-xs tabular-nums text-muted-foreground">
-            {String(current + 1).padStart(2, "0")} / {String(SCENES.length).padStart(2, "0")}
+            {String(recap ? RECAP_INDEX + 1 : current + 1).padStart(2, "0")} / {String(RECAP_INDEX + 1).padStart(2, "0")}
             <span className="ml-3 hidden sm:inline">捲動或 ← → 換頁，P 切換導入前後</span>
           </span>
           <ThemeToggle />
@@ -249,7 +254,7 @@ export function App() {
       {/* 頁面高度只用來提供捲動距離:舞台高 + 每個過場一段 --scroll-step;左右兩欄都固定在畫面上 */}
       <main
         className="relative flex items-start gap-5 px-6 pp:flex-col pp:items-stretch pp:gap-0 pp:px-6 pl:gap-3 pl:px-3"
-        style={{ height: `calc(var(--pin-h) + ${LAST + CHAT_SPAN} * var(--scroll-step))` }}
+        style={{ height: `calc(var(--pin-h) + ${END} * var(--scroll-step))` }}
       >
         <div ref={stepRef} aria-hidden className="pointer-events-none invisible absolute h-[var(--scroll-step)] w-0" />
 
@@ -276,6 +281,8 @@ export function App() {
           <AgentPanel />
         </div>
       </main>
+
+      <Recap onSelect={goTo} />
 
       {/* 底部情境切換列只在桌機出現;手機用捲動切換(也可點說明卡片) */}
       {mode === "desktop" && (

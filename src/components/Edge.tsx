@@ -10,6 +10,7 @@ const LINE: Record<EdgeDef["state"], string> = {
   slow: "var(--edge-normal)",
   dead: "var(--edge-normal)",
   attack: "var(--dot-overload)",
+  raw: "var(--edge-isolated)",
 }
 
 const DOT: Record<EdgeDef["state"], string> = {
@@ -20,6 +21,16 @@ const DOT: Record<EdgeDef["state"], string> = {
   slow: "var(--dot-normal)",
   dead: "var(--edge-normal)",
   attack: "var(--dot-overload)",
+  raw: "var(--dot-isolated)",
+}
+
+// 原始資料:各來源資料庫的格式不同,光點各自一色;經過 Plasma 整理後才統一成同一色(isolated)
+const RAW: Record<string, string> = {
+  "db-oracle": "#f59e0b",
+  "db-postgres": "#8b5cf6",
+  "db-mssql": "#0ea5e9",
+  "db-mysql": "#ec4899",
+  "db-informix": "#14b8a6",
 }
 
 // 每秒移動的 px:過載時資料流明顯更急
@@ -31,6 +42,7 @@ const SPEED: Record<EdgeDef["state"], number> = {
   slow: 70,
   dead: 0,
   attack: 260,
+  raw: 150,
 }
 
 // 每 px 的光點密度
@@ -43,6 +55,7 @@ const DENSITY: Record<EdgeDef["state"], number> = {
   slow: 0,
   dead: 0,
   attack: 0,
+  raw: 1 / 140,
 }
 
 // 過載:衝一段、卡住、再衝(keyPoints = 走到路徑的哪裡,keyTimes = 什麼時候),看起來像傳輸不穩
@@ -56,8 +69,9 @@ const BEFORE = `0;${ARRIVE - 0.01};${ARRIVE};1`
 // 連線 + 沿線流動的光點(SMIL animateMotion 跟著 path 走,path 變形時光點會跟著)。
 // 形狀 d 與透明度每格由 Stage 直接寫進 DOM(gRef),這裡不帶,捲動時不重繪;
 // highlight / faded 是滑鼠停在節點上時的強調,用 CSS transition
-export function Edge({ id, gRef, length, state, highlight, faded }: {
+export function Edge({ id, from, gRef, length, state, highlight, faded }: {
   id: string
+  from: string
   gRef: (el: SVGGElement | null) => void
   length: number
   state: EdgeDef["state"]
@@ -73,20 +87,21 @@ export function Edge({ id, gRef, length, state, highlight, faded }: {
   const dr = dotScale()
   const href = `#${id}`
   const dashed = state === "risk" || state === "dead"
+  const dot = state === "raw" ? RAW[from] ?? DOT.raw : DOT[state]
   return (
     <g ref={gRef}>
       <g className={`transition-opacity duration-300 ${faded ? "opacity-20" : state === "dead" ? "opacity-60" : "opacity-100"}`}>
         <path
           id={id}
           className="transition-[stroke-width] duration-300"
-          style={{ stroke: highlight ? DOT[state] : LINE[state], strokeWidth: (state === "overload" || state === "attack" ? 1.6 : 1.3) * lw * (highlight ? 2 : 1) }}
+          style={{ stroke: highlight ? dot : LINE[state], strokeWidth: (state === "overload" || state === "attack" ? 1.6 : 1.3) * lw * (highlight ? 2 : 1) }}
           // 有風險、廢棄的連線畫成虛線
           strokeDasharray={dashed ? `${8 * lw} ${6 * lw}` : undefined}
           fill="none"
         />
         {Array.from({ length: count }, (_, i) => (
           // 光點不加 drop-shadow:幾十顆同時移動時每格都要重繪陰影,是捲動卡頓的主因;改用略大的實心點
-          <circle key={`${state}-${i}`} r={(state === "overload" ? 3.3 : 3.7) * dr} style={{ fill: DOT[state] }}>
+          <circle key={`${state}-${i}`} r={(state === "overload" ? 3.3 : 3.7) * dr} style={{ fill: dot }}>
             <animateMotion
               dur={`${dur.toFixed(2)}s`}
               begin={`${(-(i * dur) / count).toFixed(2)}s`}

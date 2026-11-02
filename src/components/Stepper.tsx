@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { SCENES } from "../scenes"
-import { clampProgress, easedProgress, LAST } from "../timeline"
+import { clampProgress, easedProgress, LAST, RECAP_AT, RECAP_INDEX, recapAt } from "../timeline"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
 
 interface Slot { left: number; width: number }
@@ -29,7 +29,8 @@ function step(e: Edge, target: number, { k, damping }: { k: number; damping: num
 // 跟著捲動進度從一格被「磁吸」到下一格
 export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
   // 只有「目前是哪個情境」改變時重繪;指示器位置每格由下方的訂閱與彈簧迴圈直接改 DOM
-  const current = useScrollSelector((p) => Math.round(clampProgress(p)))
+  // 結尾總覽排在最後一格(RECAP_INDEX)
+  const current = useScrollSelector((p) => (recapAt(p) >= 0.5 ? RECAP_INDEX : Math.round(clampProgress(p))))
   const barRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
   const glassRef = useRef<HTMLSpanElement>(null)
@@ -44,16 +45,18 @@ export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
   const loop = useRef<{ wake: () => void } | null>(null)
 
   const retarget = useCallback((p: number) => {
+    // 對話播完後再往下捲:從最後一個情境移到總覽那格
+    const toRecap = p > RECAP_AT
     const q = easedProgress(p)
-    const i = Math.min(Math.floor(q), LAST - 1)
+    const i = toRecap ? LAST : Math.min(Math.floor(q), LAST - 1)
     const a = slots.current[i]
     const b = slots.current[i + 1]
     if (!a || !b) return
-    const m = magnet(q - i)
+    const m = toRecap ? magnet(recapAt(p)) : magnet(q - i)
     let l = a.left + (b.left - a.left) * m
     let r = a.left + a.width + (b.left + b.width - a.left - a.width) * m
     const h = hoveredRef.current
-    const cur = Math.round(clampProgress(p))
+    const cur = recapAt(p) >= 0.5 ? RECAP_INDEX : Math.round(clampProgress(p))
     if (h !== null && h !== cur) {
       if (h > cur) r += HOVER_PULL
       else l -= HOVER_PULL
@@ -127,7 +130,7 @@ export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
       <span className="mx-1 h-5 w-px bg-foreground/10" />
 
       <div ref={barRef} className="relative flex items-center" onMouseLeave={() => setHovered(null)}>
-        {SCENES.map((s, k) => (
+        {[...SCENES, { id: "recap", short: "總覽" }].map((s, k) => (
           <button
             key={s.id}
             ref={(el) => { itemRefs.current[k] = el }}
@@ -150,7 +153,7 @@ export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
       </div>
 
       <span className="mx-1 h-5 w-px bg-foreground/10" />
-      <button onClick={() => onSelect(current + 1)} disabled={current === LAST} className={nav} aria-label="下一步">
+      <button onClick={() => onSelect(current + 1)} disabled={current === RECAP_INDEX} className={nav} aria-label="下一步">
         <ChevronRight className="h-4 w-4" />
       </button>
     </div>

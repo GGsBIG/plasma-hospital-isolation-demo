@@ -1,7 +1,7 @@
 import { ShieldCheck, TriangleAlert } from "lucide-react"
 import { FloatingButtonGroup } from "@/components/arc/floating-button-group/floating-button-group"
 import { SCENES } from "../scenes"
-import { clampProgress } from "../timeline"
+import { clampProgress, recapAt } from "../timeline"
 import { useScrollSelector } from "../scroll"
 import { plasmaOn } from "../plasma"
 import { useLayoutMode } from "../layout"
@@ -13,7 +13,9 @@ export function PlasmaToggle({ onToggle }: { onToggle: (i: number, on: boolean) 
   const current = useScrollSelector((p) => Math.round(clampProgress(p)))
   const on = useScrollSelector((p) => plasmaOn(Math.round(clampProgress(p))))
   const compact = useLayoutMode() !== "desktop"
-  const has = !!SCENES[current].plasma
+  // 結尾總覽蓋上來時也淡出
+  const recap = useScrollSelector((p) => recapAt(p) > 0)
+  const has = !!SCENES[current].plasma && !recap
 
   return (
     <span

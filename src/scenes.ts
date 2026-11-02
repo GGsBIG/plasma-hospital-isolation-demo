@@ -44,8 +44,11 @@ const twoWay = (a: string, b: string) => [
 
 // FHIR 對外交換:FHIR Server 與院外的診所、藥局
 const extIds = ["ext-clinic", "ext-pharmacy"]
-const FHIR_POS = { x: 1100, y: 525 }
-const EXT_POS = { "ext-clinic": { x: 1440, y: 400 }, "ext-pharmacy": { x: 1440, y: 650 } }
+// 導入後是五段流程(資料庫 → Plasma → PostgreSQL → FHIR Server → 診所／藥局),這頁的 Plasma 往左移,各欄間距平均
+const FHIR_POS = { x: 1230, y: 525 }
+const EXT_POS = { "ext-clinic": { x: 1480, y: 400 }, "ext-pharmacy": { x: 1480, y: 650 } }
+const FHIR_PLASMA = { x: 640, y: 525 }
+const FHIR_PG = { x: 960, y: 525 }
 
 // 資料都經過 Plasma:源頭資料庫 → Plasma → 各應用
 const viaPlasma = (ids: string[]) => [
@@ -307,14 +310,14 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 6. FHIR 對外交換:轉檔程式直連核心資料庫 → Plasma 整理後交給 FHIR Server,以標準格式與院外交換
+  // 6. FHIR 對外交換:轉檔程式直連核心資料庫 → Plasma 整理後寫入 PostgreSQL,FHIR Server 只讀這台,以標準格式與院外交換
   {
     id: "fhir",
     title: "FHIR 對外交換",
     short: "FHIR 交換",
     pain: "FHIR 轉檔直連核心資料庫，負載過高、格式不一。",
-    fix: "Plasma 整理資料後交給 FHIR Server，以標準格式與院外交換。",
-    nodes: { ...dbCol(260), "app-fhir": FHIR_POS, ...EXT_POS },
+    fix: "Plasma 整理好資料存入 PostgreSQL，FHIR 只讀這一台。",
+    nodes: { ...dbCol(220), "app-fhir": FHIR_POS, ...EXT_POS },
     active: [...dbIds, "app-fhir", ...extIds],
     edges: [
       ...dbIds.map((id) => ({ from: id, to: "app-fhir", state: "overload" as const })),
@@ -323,12 +326,20 @@ export const SCENES: SceneDef[] = [
     loads: HIGH,
     badges: Object.fromEntries(extIds.map((id) => [id, { tone: "danger" as const, text: "格式不一" }])),
     plasma: {
-      nodes: { ...dbCol(260), plasma: PLASMA_POS, "app-fhir": FHIR_POS, ...EXT_POS },
-      active: [...dbIds, "plasma", "app-fhir", ...extIds],
-      edges: [...viaPlasma(["app-fhir"]), ...extIds.map((id) => ({ from: "app-fhir", to: id, state: "isolated" as const }))],
+      nodes: { ...dbCol(220), plasma: FHIR_PLASMA, "serving-pg": FHIR_PG, "app-fhir": FHIR_POS, ...EXT_POS },
+      active: [...dbIds, "plasma", "serving-pg", "app-fhir", ...extIds],
+      // 進 Plasma 前光點各色(各系統格式不一),出來後統一成同一色
+      edges: [
+        ...dbIds.map((id) => ({ from: id, to: "plasma", state: "raw" as const })),
+        { from: "plasma", to: "serving-pg", state: "isolated" },
+        { from: "serving-pg", to: "app-fhir", state: "isolated" },
+        ...extIds.map((id) => ({ from: "app-fhir", to: id, state: "isolated" as const })),
+      ],
       loads: NORMAL,
+      stack: ["serving-pg", "app-fhir"],
       badges: {
-        "app-fhir": { tone: "ok", text: "標準格式交換" },
+        plasma: { tone: "ok", text: "清洗 · 統一代碼" },
+        "serving-pg": { tone: "ok", text: "標準化資料" },
         ...Object.fromEntries(extIds.map((id) => [id, { tone: "ok" as const, text: "電子處方箋" }])),
       },
     },

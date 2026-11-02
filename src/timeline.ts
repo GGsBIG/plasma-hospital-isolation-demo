@@ -21,6 +21,14 @@ const smoothstep = (x: number) => x * x * (3 - 2 * x)
 export const LAST = SCENES.length - 1
 export const clampProgress = (p: number) => Math.min(LAST, Math.max(0, p))
 
+// 抵達最後一個情境(MCP Agent)後,再留多少段 --scroll-step 的捲動距離給右側對話逐步播放
+export const CHAT_SPAN = 2.5
+// 對話播完後再一段是結尾總覽(不是情境,蓋在整個畫面上);RECAP_INDEX 是它在切換列上的位置
+export const RECAP_AT = LAST + CHAT_SPAN
+export const END = RECAP_AT + 1
+export const RECAP_INDEX = SCENES.length
+export const recapAt = (p: number) => smoothstep(clamp01((p - RECAP_AT - HOLD) / (1 - 2 * HOLD)))
+
 // 目前所在的兩個情境與兩者之間的過場進度(已 ease)
 export function segmentAt(p: number): { a: SceneDef; b: SceneDef; t: number } {
   const q = clampProgress(p)
