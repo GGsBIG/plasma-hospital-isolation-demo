@@ -47,7 +47,7 @@ export function Node({
   // 手機版知識庫疊在 Plasma 上方,標籤放下面會蓋住 Plasma,也改放上方
   const above = compact ? node.kind === "kb" : node.kind === "serving"
   // 手機緊湊版:連線可能穿過節點下方的標籤,所以標籤加底色蓋住線;
-  // 字放大(手機上舞台縮得比較小)、徽章疊在名稱下方、省略副標題
+  // 字放大(手機上舞台縮得比較小)、徽章疊在名稱下方
   const s = compact
     ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", logo: "h-[100px]", brand: "h-[104px] w-[104px]", bubble: "text-[28px] px-5 py-3 rounded-[24px]" }
     : { name: "text-[30px]", badge: "text-[22px] px-3 py-1", meta: "text-[22px]", logo: "h-[64px]", brand: "h-[44px] w-[44px]", bubble: "text-[22px] px-4 py-2.5 rounded-2xl" }
@@ -56,7 +56,7 @@ export function Node({
     ? { left: a + 22, top: -30 }
     : above ? { left: 0, top: -(a / 2 + 40 * NODE_SCALE) } : { left: 0, top: a / 2 + t + 12 }
 
-  // 名稱列(名稱 + 徽章)、副標、說明列
+  // 名稱列(名稱 + 徽章)、說明列
   const text = (
     <>
       {/* 名稱與狀態徽章同一行,節省垂直空間;有 logo 時徽章放在 logo 下方 */}
