@@ -11,6 +11,7 @@ import { Node, type Badge } from "./Node"
 import { Edge } from "./Edge"
 
 const HOT = 80
+const SAFE = 40 // 桌機舞台四周的安全邊距(螢幕 px)
 
 function loadBadge(v: number): Badge {
   // 數字(load)每格由 Stage 直接改 DOM,這裡只決定文字與色調
@@ -71,7 +72,9 @@ function useFit(w: number, h: number, compact: boolean) {
     const { width, height } = size.current
     if (!el || !width) return
     const b = compact && box ? box : { x0: 0, y0: 0, x1: w, y1: h }
-    const s = Math.min(width / (b.x1 - b.x0), height / (b.y1 - b.y0))
+    // 桌機:四周留同樣寬的安全邊距,最外圈的節點與名稱不會貼到標題列或底部切換列
+    const m = compact ? 0 : SAFE
+    const s = Math.min((width - 2 * m) / (b.x1 - b.x0), (height - 2 * m) / (b.y1 - b.y0))
     const tx = (width - (b.x1 - b.x0) * s) / 2 - b.x0 * s
     const ty = (height - (b.y1 - b.y0) * s) / 2 - b.y0 * s
     el.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`

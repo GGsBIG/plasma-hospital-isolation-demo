@@ -84,10 +84,7 @@ const Section = memo(function Section({
         className={`narration-card group relative -ml-4 rounded-2xl py-4 pl-4 pr-3 outline-none cp:py-2 pp:mx-0 pp:px-0 pl:ml-0 pl:pl-0 ${isCurrent ? "cursor-default" : "cursor-pointer"}`}
       >
         <span aria-hidden className="narration-accent absolute bottom-5 left-0 top-5 w-[2px] rounded-full bg-foreground" />
-        <div className="font-mono text-[15px] tabular-nums text-muted-foreground transition-colors duration-300 group-hover:text-foreground">
-          {String(index + 1).padStart(2, "0")}
-        </div>
-        <h2 className="narration-title mt-2 text-balance text-[26px] font-semibold leading-snug tracking-tight text-foreground cp:mt-1 pl:text-[19px] pp:text-[22px] ps:text-[19px]">
+        <h2 className="narration-title text-balance text-[26px] font-semibold leading-snug tracking-tight text-foreground cp:mt-1 pl:text-[19px] pp:text-[22px] ps:text-[19px]">
           {title.map(word)}
         </h2>
         <div className="rv-line mt-4 h-px w-12 origin-left bg-foreground/30 cp:mt-2" />

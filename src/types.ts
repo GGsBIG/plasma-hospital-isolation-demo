@@ -8,6 +8,7 @@ export interface NodeDef {
   sub?: string      // 副標：對應系統 / db_type
   icon: string      // lucide 圖示名(由 Node 解析)
   logo?: { light: string; dark: string }   // 有 logo 時取代文字名稱,依主題切換
+  brand?: string    // 資料庫產品的品牌圖示,放在名稱左邊(名稱照樣顯示)
 }
 
 // risk:有風險、雜亂的直連(紅色虛線,光點稀疏),和負載過高的 overload 區分

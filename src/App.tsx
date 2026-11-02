@@ -243,7 +243,7 @@ export function App() {
           <h1 className="text-[15px] text-foreground/85 cp:hidden">Plasma 醫院資料隔離</h1>
         </div>
         <div className="flex items-center gap-4">
-          <span className="font-mono text-xs tabular-nums text-muted-foreground">
+          <span className="text-xs tabular-nums text-muted-foreground">
             {String(recap ? RECAP_INDEX + 1 : current + 1).padStart(2, "0")} / {String(RECAP_INDEX + 1).padStart(2, "0")}
             <span className="ml-3 hidden sm:inline">捲動或 ← → 換頁，P 切換導入前後</span>
           </span>

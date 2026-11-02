@@ -28,4 +28,6 @@ Agent 對話)都由捲動位置直接驅動,捲到一半停下就停在過場的
     npm run preview  # 預覽 build 結果
 
 技術:Vite + React 19 + TypeScript + Tailwind + framer-motion。
+資料庫品牌圖示在 `src/assets/db/`(取自 Simple Icons,官方色;MS SQL 與 IBM 已從新版 Simple Icons 移除,取自 v9.0.0;Informix 沒有獨立圖示,用 IBM)。
+
 情境內容在 `src/scenes.ts` 與 `src/data.ts`,改情境只改這兩個檔;過場插值在 `src/timeline.ts`;捲動進度放在 `src/scroll.ts` 的外部 store(不是 React state):逐格變化的位置、透明度、連線、文字浮現由 `useScrollEffect` 直接寫 DOM,元件只在離散狀態改變時用 `useScrollSelector` 重繪;過場捲動距離(`--scroll-step`)與左側段落間距(`--section-h`)在 `src/index.css` 開頭;最後一個情境後的 Agent 對話捲動長度是 `src/App.tsx` 的 `CHAT_SPAN`;節點座標為 1600×1100 舞台 px,平台尺寸與連線曲線在 `src/geometry.ts`。

@@ -140,7 +140,7 @@ export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
             className={`relative z-0 inline-flex h-10 items-center gap-2 rounded-full px-4 text-[14px] transition-[color,transform] duration-300
               ${k === current ? "scale-[1.04] font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}`}
           >
-            <span className="font-mono text-[12px] tabular-nums opacity-60">{k + 1}</span>
+            <span className="text-[12px] tabular-nums opacity-60">{k + 1}</span>
             <span className="whitespace-nowrap">{s.short}</span>
           </button>
         ))}

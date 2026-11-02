@@ -49,8 +49,8 @@ export function Node({
   // 手機緊湊版:連線可能穿過節點下方的標籤,所以標籤加底色蓋住線;
   // 字放大(手機上舞台縮得比較小)、徽章疊在名稱下方、省略副標題
   const s = compact
-    ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", logo: "h-[100px]", bubble: "text-[28px] px-5 py-3 rounded-[24px]" }
-    : { name: "text-[30px]", badge: "text-[23px] px-3 py-1", meta: "text-[22px]", logo: "h-[64px]", bubble: "text-[19px] px-4 py-2.5 rounded-2xl" }
+    ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", logo: "h-[100px]", brand: "h-[62px] w-[62px]", bubble: "text-[28px] px-5 py-3 rounded-[24px]" }
+    : { name: "text-[30px]", badge: "text-[22px] px-3 py-1", meta: "text-[22px]", logo: "h-[64px]", brand: "h-[42px] w-[42px]", bubble: "text-[22px] px-4 py-2.5 rounded-2xl" }
 
   const labelStyle = side
     ? { left: a + 22, top: -30 }
@@ -80,7 +80,7 @@ export function Node({
         {callout && !callout.seq && (
           <div
             key={`${callout.tone}-${callout.q}-${callout.a}`}
-            className={`callout-in absolute whitespace-nowrap border bg-card leading-snug shadow-[0_6px_20px_rgb(0_0_0/0.08)] ${s.bubble} ${compact && callout.rows ? "!text-[40px]" : ""}
+            className={`callout-in absolute whitespace-nowrap border bg-card leading-snug ${s.bubble} ${compact && callout.rows ? "!text-[40px]" : ""}
               ${callout.tone === "ok" ? "border-ok/40" : "border-danger/40"} ${callout.side === "left" ? "-translate-y-1/2" : ""}`}
             // 手機版往右多推一點(仍在節點外框內),不碰到左邊疊在 Plasma 上的知識庫
             style={
@@ -156,12 +156,15 @@ export function Node({
                   <img src={node.logo.dark} alt={node.label} className={`hidden ${s.logo} w-auto max-w-none dark:block`} />
                 </>
               ) : (
-                <span className={`${s.name} font-medium tracking-tight text-foreground`}>{node.label}</span>
+                <span className={`${s.name} inline-flex items-center gap-2.5 font-medium tracking-tight text-foreground`}>
+                  {node.brand && <img src={node.brand} alt="" className={`${s.brand} shrink-0`} />}
+                  {node.label}
+                </span>
               )}
               {badge && (
                 <span
                   className={`inline-flex items-center gap-2 rounded-full border bg-card ${s.badge} text-foreground/90 transition-[border-color,box-shadow] duration-300
-                    ${hovered ? "border-foreground/30 shadow-[0_4px_14px_rgb(0_0_0/0.10)]" : "border-border"}`}
+                    ${hovered ? "border-foreground/30" : "border-border"}`}
                 >
                   <span className={`h-2.5 w-2.5 rounded-full ${DOT[badge.tone]} ${badge.tone === "danger" ? "animate-pulse" : ""}`} />
                   {badge.text}
@@ -169,7 +172,7 @@ export function Node({
                 </span>
               )}
             </div>
-            {node.sub && !compact && <span className={`mt-0.5 font-mono ${s.meta} text-muted-foreground`}>{node.sub}</span>}
+            {node.sub && !compact && <span className={`mt-0.5 ${s.meta} text-muted-foreground`}>{node.sub}</span>}
             {/* 說明列只在情境自訂徽章時出現;手機版字大、會撞到旁邊的節點,省略(左側文字已說明) */}
             {stat && !compact && (
               <span className={`mt-1 ${s.meta} tabular-nums text-muted-foreground`}>{stat}</span>
@@ -191,7 +194,7 @@ function SeqBubble({ callout, nodeId, a, compact, bubble }: { callout: Callout; 
   return (
     <div
       key={tick}
-      className={`callout-in absolute whitespace-nowrap border bg-card leading-snug shadow-[0_6px_20px_rgb(0_0_0/0.08)] ${bubble} ${color}`}
+      className={`callout-in absolute whitespace-nowrap border bg-card leading-snug ${bubble} ${color}`}
       // 靠右對齊節點右緣:最右邊的節點(AI 部門)泡泡才不會超出畫面
       style={{ right: -a, bottom: a / 2 + 56 * NODE_SCALE }}
     >
