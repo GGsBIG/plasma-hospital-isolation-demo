@@ -115,7 +115,7 @@ function flowX(x: number): number {
 const PLASMA_ROW = 525 // 情境資料裡 Plasma 那一列的桌機 y
 const SIDE_Y = 130 // 知識庫、落地 PostgreSQL:放在 Plasma 正上方
 const KB_DOCK_MIN = 300 // 情境資料裡知識庫 y 大於此值 = 與 Plasma 合體
-const KB_DOCK_DY = 109 // 合體時知識庫疊在 Plasma 核心立方體頂面,比 Plasma 中心高多少(PLASMA_LIFT × 1.3 × 緊湊版倍率 1.45)
+const KB_DOCK_DY = 124 // 合體時知識庫疊在 Plasma 核心立方體頂面,比 Plasma 中心高多少(PLASMA_LIFT × 1.3 × 緊湊版倍率 1.45)
 
 function compactPos(id: string, p: Pos): Pos {
   if (id === "plasma") return { x: PAD_L + FLOW_PLASMA, y: ROW_A[1] }

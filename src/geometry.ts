@@ -9,7 +9,7 @@ const BASE_SIZE: Record<NodeKind, { a: number; t: number }> = {
   db: { a: 54, t: 12 },
   downstream: { a: 48, t: 10 },
   app: { a: 54, t: 12 },
-  plasma: { a: 120, t: 18 },
+  plasma: { a: 136, t: 18 },
   kb: { a: 50, t: 12 },
   file: { a: 34, t: 8 },
   person: { a: 52, t: 12 },
