@@ -157,7 +157,10 @@ export function Stage() {
   const zoneRef = useRef<HTMLDivElement>(null)
   const nodeEls = useRef(new Map<string, { el: HTMLDivElement; num: Element | null; last: string; load: string }>())
   // reveal:出現時逐步畫出的連線(mask 為遮罩裡的路徑,shown 記錄目前是否已畫出)
-  const edgeEls = useRef(new Map<string, { g: SVGGElement; path: SVGPathElement | null; mask: SVGPathElement | null; reveal?: number; shown: boolean; last: string; d: string }>())
+  const edgeEls = useRef(new Map<string, { g: SVGGElement; path: SVGPathElement | null; mask: SVGPathElement | null; reveal?: number; last: string; d: string }>())
+  // 已畫出的連線:另外記,重繪時(ref 重新掛上)不會被清掉而重畫一次;換成新的 DOM 元素才重新畫
+  const revealed = useRef(new Set<string>())
+  const revealEl = useRef(new Map<string, SVGGElement>())
   const lastKey = useRef("")
   // 重繪後可能有新節點/連線還沒套樣式,下一次一定要完整套一次
   lastKey.current = ""
@@ -252,15 +255,15 @@ export function Stage() {
       // 剛出現:遮罩先歸零,再沿路徑畫到終點(像文字逐字浮現);消失時由 CSS 淡出,下次出現再重畫
       if (rec.mask && rec.reveal !== undefined) {
         const vis = e.opacity > 0.5
-        if (vis && !rec.shown) {
+        if (vis && !revealed.current.has(e.key)) {
           const m = rec.mask
           m.style.transition = "none"
           m.style.strokeDashoffset = "1"
           m.getBoundingClientRect()
           m.style.transition = `stroke-dashoffset ${REVEAL_MS}ms cubic-bezier(0.22, 1, 0.36, 1) ${rec.reveal}ms`
           m.style.strokeDashoffset = "0"
-        }
-        rec.shown = vis
+          revealed.current.add(e.key)
+        } else if (!vis) revealed.current.delete(e.key)
       }
     }
   }, [])
@@ -299,7 +302,13 @@ export function Stage() {
               from={e.from}
               reveal={e.reveal !== undefined}
               gRef={(el) => {
-                if (el) edgeEls.current.set(e.key, { g: el, path: el.querySelector(":scope > g > path"), mask: el.querySelector("[data-reveal]"), reveal: e.reveal, shown: false, last: "", d: "" })
+                if (el) {
+                  edgeEls.current.set(e.key, { g: el, path: el.querySelector(":scope > g > path"), mask: el.querySelector("[data-reveal]"), reveal: e.reveal, last: "", d: "" })
+                  if (revealEl.current.get(e.key) !== el) {
+                    revealEl.current.set(e.key, el)
+                    revealed.current.delete(e.key)
+                  }
+                }
                 else edgeEls.current.delete(e.key)
               }}
               length={e.length}

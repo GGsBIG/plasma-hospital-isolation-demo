@@ -36,10 +36,10 @@ const campusIds = ["campus-main", "campus-north", "campus-south"]
 const branchIds = ["campus-north", "campus-south"]
 // 總院在左、兩間分院在右;導入後 Plasma 插在中間
 const CAMPUS_POS = { "campus-main": { x: 260, y: 525 }, "campus-north": { x: 1340, y: 300 }, "campus-south": { x: 1340, y: 750 } }
-// 一來一回兩條線並排(上去、送回來)
-const twoWay = (a: string, b: string) => [
-  { from: a, to: b, state: "isolated" as const, lane: -9 },
-  { from: b, to: a, state: "isolated" as const, lane: 9 },
+// 一來一回兩條線並排(上去、送回來);reveal 給延遲毫秒時,先畫出去程、再畫出回程
+const twoWay = (a: string, b: string, reveal?: number) => [
+  { from: a, to: b, state: "isolated" as const, lane: -9, reveal },
+  { from: b, to: a, state: "isolated" as const, lane: 9, reveal: reveal === undefined ? undefined : reveal + 350 },
 ]
 
 // 跨院區導入前:分院透過 DB Link 向總院拉資料,白天尖峰不能拉,只能等凌晨離峰;
@@ -389,7 +389,8 @@ export const SCENES: SceneDef[] = [
     plasma: {
       nodes: { ...CAMPUS_POS, plasma: PLASMA_POS },
       active: [...campusIds, "plasma"],
-      edges: campusIds.flatMap((id) => twoWay(id, "plasma")),
+      // 切到導入後:總院、北區、南區依序與 Plasma 畫出雙向連線
+      edges: campusIds.flatMap((id, k) => twoWay(id, "plasma", k * 250)),
       badges: {
         plasma: { tone: "ok", text: "即時同步" },
         ...Object.fromEntries(branchIds.map((id) => [id, { tone: "ok" as const, text: "即時可查" }])),
