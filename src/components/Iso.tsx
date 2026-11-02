@@ -1,6 +1,7 @@
 import type { NodeKind } from "../types"
 import plasmaLogo from "../assets/plasma-logo.svg"
 import plasmaLogoDark from "../assets/plasma-logo-dark.svg"
+import { KNOWLEDGE_ICON } from "../fileIcons"
 import { NODE_SCALE, sizeOf } from "../geometry"
 import { iconScale } from "../layout"
 
@@ -108,22 +109,22 @@ function FaceLogo({ side, w, h }: { side: "left" | "right"; w: number; h: number
   )
 }
 
-// 立方體的面上寫字:左、右側面沿等角水平線,頂面沿等角平面
-function FaceText({ side, w, h, text }: { side: "left" | "right" | "top"; w: number; h: number; text: string }) {
-  const style = { fill: "var(--dot-isolated)", fontFamily: "ui-sans-serif, system-ui", fontWeight: 700 }
-  if (side === "top") {
+// 立方體的面上貼圖示:左、右側面沿等角水平線,頂面沿等角平面;圖示置中,約佔面的 6–7 成
+function FaceIcon({ side, w, h }: { side: "left" | "right" | "top"; w: number; h: number }) {
+  const I = KNOWLEDGE_ICON
+  const glyph = (cx: number, cy: number, size: number) => {
+    const k = size / Math.max(I.w, I.h)
     return (
-      <g transform={`matrix(1 0.5 -1 0.5 0 ${-h})`}>
-        <text textAnchor="middle" dominantBaseline="central" fontSize={w * 0.24} style={style}>{text}</text>
-      </g>
+      <path
+        d={I.d}
+        transform={`translate(${cx - (I.w * k) / 2} ${cy - (I.h * k) / 2}) scale(${k}) translate(${-I.x} ${-I.y})`}
+        style={{ fill: "var(--dot-isolated)" }}
+      />
     )
   }
+  if (side === "top") return <g transform={`matrix(1 0.5 -1 0.5 0 ${-h})`}>{glyph(0, 0, w * 0.7)}</g>
   const { m, len } = faceMatrix(side, w, h)
-  return (
-    <g transform={m}>
-      <text x={len / 2} y={h / 2} textAnchor="middle" dominantBaseline="central" fontSize={len * 0.2} style={style}>{text}</text>
-    </g>
-  )
+  return <g transform={m}>{glyph(len / 2, h / 2, Math.min(len, h) * 0.62)}</g>
 }
 
 function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: boolean; variant?: string }) {
@@ -183,15 +184,15 @@ function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: bool
       )
     }
     case "kb": {
-      // 知識庫立方體:左、右、頂三個面都寫上 Knowledge
+      // 知識庫立方體:左、右、頂三個面都貼上知識(書本 + 燈泡)圖示
       const w = a * KB_CUBE
       const h = w * 0.9
       return (
         <>
           <Box cx={0} cy={0} w={w} h={h} top={C.raised} />
-          <FaceText side="left" w={w} h={h} text="Knowledge" />
-          <FaceText side="right" w={w} h={h} text="Knowledge" />
-          <FaceText side="top" w={w} h={h} text="Knowledge" />
+          <FaceIcon side="left" w={w} h={h} />
+          <FaceIcon side="right" w={w} h={h} />
+          <FaceIcon side="top" w={w} h={h} />
         </>
       )
     }

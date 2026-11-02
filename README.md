@@ -43,4 +43,5 @@ Agent 對話)都由捲動位置直接驅動,捲到一半停下就停在過場的
 
 - 大腦圖示:「Brain」by Clockwise from the Noun Project(CC BY 3.0),畫面右下角(大腦頁導入後)附標註。
 - 文件圖示:「File」系列 by Febri Ardianto from the Noun Project(CC BY 3.0),同一行標註。
+- 知識庫立方體圖示:「knowledge」by Suwarjo from the Noun Project(CC BY 3.0),同一行標註。
 - 資料庫品牌圖示:取自 Simple Icons,各品牌商標屬其所有人。

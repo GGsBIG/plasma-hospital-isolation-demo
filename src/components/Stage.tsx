@@ -501,7 +501,7 @@ export function Stage() {
       </div>
       {/* 大腦圖示的授權標註(Noun Project 免費圖示須標註作者),只在大腦頁導入後出現 */}
       {near.upload && (
-        <span className="pointer-events-none absolute bottom-1 right-2 whitespace-nowrap text-[11px] text-muted-foreground/60 pp:text-[9px]">Brain by Clockwise, File icons by Febri Ardianto from the Noun Project</span>
+        <span className="pointer-events-none absolute bottom-1 right-2 whitespace-nowrap text-[11px] text-muted-foreground/60 pp:text-[9px]">Brain by Clockwise, File icons by Febri Ardianto, Knowledge by Suwarjo from the Noun Project</span>
       )}
     </div>
   )
