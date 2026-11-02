@@ -6,7 +6,7 @@ import { BRAIN_LINES, BRAIN_NODES } from "../brainNet"
 //   A 長出來:節點從知識庫(中心上方)往外一顆顆亮起,連線跟著由內往外畫出
 //   B 神經訊號:光點不定時沿連線流動,抵達的節點閃一下
 //   C 滑鼠探照:游標附近的節點與連線變亮、節點微微靠向游標,遠的變淡
-//   D 點一下:從點擊處向外一圈圈亮起
+//   D 漣漪:每隔幾秒(隨機)從大腦裡隨機一處向外一圈圈亮起
 //   E 回答串連:一道訊號從知識庫經過大腦傳到右緣(AI 那側),定時重播
 // idle(跨部門頁):直接顯示,只有 B
 // 大腦光暈出現時 display 由 none 變回來,CSS 的長出動畫自動重播;JS 的效果在看不見時(brainVisibility.shown 為 false)自動略過
@@ -146,7 +146,7 @@ export function BrainNet({ width, delay, mode }: { width: number; delay: number;
       timers.push(window.setInterval(answer, 6000))
     }, start + 600)
 
-    // C 滑鼠探照 / D 點擊漣漪:在整個舞台上聽(大腦在節點層底下,自己收不到滑鼠)
+    // C 滑鼠探照:在整個舞台上聽(大腦在節點層底下,自己收不到滑鼠)
     const stage = svg.closest("[data-stage]") as HTMLElement | null
     const toLocal = (e: PointerEvent) => {
       const m = svg.getScreenCTM()
@@ -189,10 +189,8 @@ export function BrainNet({ width, delay, mode }: { width: number; delay: number;
         })
       })
     }
-    const onDown = (e: PointerEvent) => {
-      const p = shown() ? toLocal(e) : null
-      if (!p || !inside(p)) return
-      // D:節點與連線依離點擊處的距離,由近而遠亮起
+    // D 漣漪:節點與連線依離起點的距離,由近而遠亮起,外加一圈擴散的光環
+    const ripple = (p: { x: number; y: number }) => {
       nodes.forEach((n, i) => flash(i, 1.9, dist(n, p) * 14))
       lines.forEach((l, i) => {
         const d = dist({ x: (l.x1 + l.x2) / 2, y: (l.y1 + l.y2) / 2 }, p)
@@ -210,15 +208,20 @@ export function BrainNet({ width, delay, mode }: { width: number; delay: number;
           .finished.then(() => ring.remove()).catch(() => ring.remove())
       }
     }
+    // 長出來之後,每 3–7 秒在隨機一個節點的位置發一次(看不見時略過)
+    const nextRipple = () =>
+      later(() => {
+        if (shown()) ripple(nodes[Math.floor(Math.random() * nodes.length)])
+        nextRipple()
+      }, 3000 + Math.random() * 4000)
+    later(nextRipple, start)
     stage?.addEventListener("pointermove", onMove)
     stage?.addEventListener("pointerleave", reset)
-    stage?.addEventListener("pointerdown", onDown)
     return () => {
       timers.forEach((t) => { window.clearTimeout(t); window.clearInterval(t) })
       cancelAnimationFrame(raf)
       stage?.removeEventListener("pointermove", onMove)
       stage?.removeEventListener("pointerleave", reset)
-      stage?.removeEventListener("pointerdown", onDown)
     }
   }, [full, delay, width, height])
 
