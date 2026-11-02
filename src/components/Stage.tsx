@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react"
 import type { SceneState } from "../types"
 import { DOC_FILES, NODE_BY_ID } from "../data"
+import { SCENES } from "../scenes"
 import { FileText, ShieldCheck } from "lucide-react"
 import { iconScale, place, sceneBox, stageSize, useLayoutMode, zoneRect, type Box } from "../layout"
 import { dominantStates, frameAt, loadsAt, segmentAt, segmentIndex, stageKey, statesAt, structureAt } from "../timeline"
@@ -9,9 +10,11 @@ import { phaseOf } from "../phase"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
 import { Node, type Badge } from "./Node"
 import { Edge } from "./Edge"
-import { BrainArt } from "./BrainArt"
+import { BrainNet } from "./BrainNet"
 
 const HOT = 80
+// 任何畫面狀態裡會疊到 Plasma 上合體的節點
+const mergedIds = new Set(SCENES.flatMap((s) => [...(s.merged ?? []), ...(s.plasma?.merged ?? [])]))
 const SAFE = 40 // 桌機舞台四周的安全邊距(螢幕 px)
 const REVEAL_MS = 900 // 連線逐步畫出的時間
 // 文件上傳:第一份開始飛的時間、每份間隔(秒),各份的起點(相對大腦中心,舞台 px)
@@ -20,7 +23,7 @@ const DOC_STEP = 0.5
 const DOC_FROM: [number, number][] = [[-480, -400], [-165, -430], [165, -430], [480, -400]]
 // 手機版:知識庫疊在 Plasma 正上方、舞台上緣較近,文件排在知識庫上方並往左偏(右邊緊貼鏡頭邊緣),才留在鏡頭內
 const DOC_FROM_COMPACT: [number, number][] = [[-715, -390], [-345, -420], [25, -420], [390, -390]]
-const BRAIN_W = 900 // 大腦輪廓寬度(舞台 px,扁平,高約一半):包住知識庫與 Plasma 的名稱、徽章
+const BRAIN_W = 1000 // 大腦網路寬度(舞台 px,壓扁成 70% 高):包住疊在 Plasma 上的知識庫
 const DOC_COLOR = { pdf: "#e5484d", doc: "#3b82f6", xls: "#1f9d55", md: "#71717a" }
 
 function loadBadge(v: number): Badge {
@@ -173,6 +176,7 @@ export function Stage() {
   const revealed = useRef(new Set<string>())
   const revealEl = useRef(new Map<string, SVGGElement>())
   const revealTimers = useRef(new Map<string, number>())
+  const merging = useRef(new Set<string>())
   const hideTimers = useRef(new Map<string, number>())
   const lastKey = useRef("")
   // 重繪後可能有新節點/連線還沒套樣式,下一次一定要完整套一次
@@ -210,6 +214,17 @@ export function Stage() {
         rec.el.style.opacity = `${n.opacity}`
         // 過場中幾乎看不見的節點不接受滑鼠,免得游標停在空白處也觸發
         rec.el.style.pointerEvents = n.opacity < 0.15 ? "none" : ""
+      }
+      // 疊到 Plasma 上合體的節點(知識庫):每次出現時重播「落下合體」動畫
+      if (mergedIds.has(n.id)) {
+        const vis = n.opacity > 0.5
+        if (vis && !merging.current.has(n.id)) {
+          const plat = rec.el.querySelector(".node-platform")
+          plat?.classList.remove("kb-drop")
+          plat?.getBoundingClientRect()
+          plat?.classList.add("kb-drop")
+          merging.current.add(n.id)
+        } else if (!vis) merging.current.delete(n.id)
       }
       const load = f.loads[n.id]
       if (load !== undefined && rec.num && rec.load !== `${load}`) {
@@ -302,7 +317,7 @@ export function Stage() {
   }, [])
 
   return (
-    <div ref={ref} className="relative h-full w-full overflow-hidden">
+    <div ref={ref} data-stage className="relative h-full w-full overflow-hidden">
       <div ref={innerRef} className="absolute left-0 top-0 origin-top-left" style={{ width: w, height: h }}>
         {/* 連線層 */}
         {/* 連線層:流動光點持續在動,捲動時也不暫停(節點各自是獨立圖層,光點重繪不會連帶重繪節點) */}
@@ -359,9 +374,10 @@ export function Stage() {
             style={{ width: 620 * iconScale("plasma"), height: 500 * iconScale("plasma"), left: -310 * iconScale("plasma"), top: -250 * iconScale("plasma") }}
           />
           {/* 大腦輪廓:線條逐筆畫出,把知識庫與 Plasma 包在裡面;有上傳動畫時等文件都飛進去才開始畫 */}
-          <BrainArt
+          <BrainNet
             width={BRAIN_W * iconScale("plasma")}
-            delay={upload ? `${DOC_DELAY + DOC_FILES.length * DOC_STEP + 0.4}s` : "0.2s"}
+            delay={upload ? DOC_DELAY + DOC_FILES.length * DOC_STEP + 0.3 : 0.2}
+            mode={upload ? "full" : "idle"}
           />
           {/* 上傳到知識庫的文件:從上方各自飛進知識庫後消失 */}
           {/* 先一起浮現在上方排成一列(doc-appear),再一份一份飛進去(doc-fly) */}
@@ -403,6 +419,7 @@ export function Stage() {
               stat={info.stat}
               callout={owner.callouts?.[id]}
               stack={owner.stack?.includes(id) ?? false}
+              merged={owner.merged?.includes(id) ?? false}
               down={owner.down?.includes(id) ?? false}
               hovered={hover === id}
               faded={hover !== null && !linked.has(id)}
@@ -411,6 +428,10 @@ export function Stage() {
           )
         })}
       </div>
+      {/* 大腦圖示的授權標註(Noun Project 免費圖示須標註作者),只在大腦頁導入後出現 */}
+      {near.upload && (
+        <span className="pointer-events-none absolute bottom-1 right-2 text-[11px] text-muted-foreground/60">Brain by Clockwise from the Noun Project</span>
+      )}
     </div>
   )
 }

@@ -17,8 +17,9 @@ const DS_Y: Record<string, number> = {
 // Plasma 出現後(情境 3 起)固定在同一位置,切換時只有周邊節點移動
 // (情境 6 的 Agent 面板會擠窄舞台,整個舞台縮小左移,這是刻意的)
 const PLASMA_POS = { x: 800, y: 525 }
-// 知識庫與 Plasma 合體時,知識庫疊在 Plasma 正上方(兩者之間不再有連線)
-const KB_DOCK = { x: 800, y: 400 }
+// 知識庫與 Plasma 合體:知識庫疊在 Plasma 的平台上(落下合體),不顯示名稱;
+// nodes 裡 kb 要寫在 plasma 後面,才會畫在 Plasma 上層
+const KB_DOCK = { x: 800, y: 488 }
 const BRAIN_BADGE = { tone: "ok" as const, text: "資料大腦 · 理解所有表與欄位" }
 const ASK = "上月心臟內科住院幾人？"
 
@@ -475,13 +476,14 @@ export const SCENES: SceneDef[] = [
     badges: { "app-ai": { tone: "danger", text: "回答不準確" } },
     callouts: { "app-ai": { tone: "danger", q: ASK, a: "無法判斷 DEPT_C 欄位意義" } },
     plasma: {
-      nodes: { ...dbCol(150), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1460, y: MID } },
+      nodes: { ...dbCol(150), plasma: PLASMA_POS, kb: KB_DOCK, "app-ai": { x: 1460, y: MID } },
       active: ["plasma", "kb", "app-ai"],
       edges: viaPlasma(["app-ai"]),
       brain: true,
       // 系統文件、資料庫描述等文件依序飛進知識庫,接著大腦輪廓把知識庫與 Plasma 包在一起
       upload: true,
-      badges: { plasma: BRAIN_BADGE, kb: { tone: "ok", text: "已匯入系統文件" }, "app-ai": { tone: "ok", text: "回答精準" } },
+      merged: ["kb"],
+      badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "回答精準" } },
       callouts: { "app-ai": { tone: "ok", q: ASK, a: "312 人" } },
     },
   },
@@ -506,10 +508,11 @@ export const SCENES: SceneDef[] = [
     badges: { "ds-aiteam": { tone: "warn", text: "等待資料" } },
     plasma: {
       // 同大腦頁:源頭資料庫靠左、AI 靠右,中間留給大腦輪廓
-      nodes: { ...dbCol(150), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1460, y: MID } },
+      nodes: { ...dbCol(150), plasma: PLASMA_POS, kb: KB_DOCK, "app-ai": { x: 1460, y: MID } },
       active: ["plasma", "kb", "app-ai"],
       edges: viaPlasma(["app-ai"]),
       brain: true,
+      merged: ["kb"],
       badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "數分鐘取得結果" } },
       showAgent: true,
     },

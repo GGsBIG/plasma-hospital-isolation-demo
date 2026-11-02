@@ -50,6 +50,7 @@ export interface SceneState {
   phaseAll?: Phase["patch"][]
   showAgent?: boolean
   stack?: string[]                 // 這些節點的名稱與徽章改成上下兩行(節點排得密時避免左右重疊)
+  merged?: string[]                // 疊在 Plasma 上合體的節點:不顯示名稱與徽章,出現時播「落下合體」動畫
   dimOpacity?: number              // 本狀態非重點節點的透明度,預設 0.28
 }
 

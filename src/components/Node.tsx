@@ -25,7 +25,7 @@ const SPRING = "ease-[cubic-bezier(0.34,1.56,0.64,1)]"
 // 位置與透明度每格由 Stage 直接寫進外層 div(elRef),這裡不帶這兩個值,捲動時不重繪;
 // hovered / faded 是滑鼠互動,放在內層用 CSS transition,跟捲動驅動的外層互不干擾
 export function Node({
-  node, elRef, compact, hot, badge, stat, callout, down = false, stack = false, hovered, faded, onHover,
+  node, elRef, compact, hot, badge, stat, callout, down = false, stack = false, merged = false, hovered, faded, onHover,
 }: {
   node: NodeDef
   elRef: (el: HTMLDivElement | null) => void
@@ -36,6 +36,7 @@ export function Node({
   callout?: Callout
   down?: boolean
   stack?: boolean
+  merged?: boolean
   hovered: boolean
   faded: boolean
   onHover: (id: string | null) => void
@@ -170,7 +171,7 @@ export function Node({
 
         {/* 標籤跟著稍微上移;沒有名稱也沒有徽章的節點(匯出檔)不顯示標籤 */}
         <div
-          hidden={!node.label && !badge}
+          hidden={(!node.label && !badge) || merged}
           className={`absolute h-0 w-0 transition-transform duration-500 motion-reduce:transition-none ${SPRING}`}
           style={{ transform: hovered ? "translateY(-4px)" : undefined }}
         >
