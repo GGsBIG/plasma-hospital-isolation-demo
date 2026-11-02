@@ -42,6 +42,44 @@ const twoWay = (a: string, b: string) => [
   { from: b, to: a, state: "isolated" as const, lane: 9 },
 ]
 
+// 跨院區導入前:分院透過 DB Link 向總院拉資料,白天尖峰不能拉,只能等凌晨離峰;
+// 一來一回兩條線(分院送出查詢、總院資料送回)依序畫出
+const DBLINK_PHASES: Phase[] = [
+  {
+    ms: 2600,
+    patch: {
+      edges: [],
+      badges: {
+        "campus-main": { tone: "warn", text: "看診尖峰" },
+        ...Object.fromEntries(branchIds.map((id) => [id, { tone: "idle" as const, text: "等凌晨同步" }])),
+      },
+      callouts: { "campus-main": { tone: "idle", q: "白天尖峰，不能拉資料", time: "08:00–24:00" } },
+    },
+  },
+  {
+    ms: 3200,
+    patch: {
+      edges: branchIds.flatMap((id, k) => [
+        { from: id, to: "campus-main", state: "risk" as const, lane: -9, reveal: k * 300 },
+        { from: "campus-main", to: id, state: "risk" as const, lane: 9, reveal: 450 + k * 300 },
+      ]),
+      badges: {
+        "campus-main": { tone: "idle", text: "離峰" },
+        ...Object.fromEntries(branchIds.map((id) => [id, { tone: "warn" as const, text: "DB Link 拉取中" }])),
+      },
+      callouts: { "campus-main": { tone: "idle", q: "凌晨離峰，DB Link 拉資料", time: "02:00" } },
+    },
+  },
+  {
+    ms: 2800,
+    patch: {
+      edges: [],
+      badges: Object.fromEntries(branchIds.map((id) => [id, { tone: "danger" as const, text: "資料是昨天的" }])),
+      callouts: { "campus-main": { tone: "danger", q: "分院隔天才看得到", time: "隔天 08:00" } },
+    },
+  },
+]
+
 // FHIR 對外交換:FHIR Server 與院外的診所、藥局
 const extIds = ["ext-clinic", "ext-pharmacy"]
 // 導入後是五段流程(資料庫 → Plasma → PostgreSQL → FHIR Server → 診所／藥局),這頁的 Plasma 往左移,各欄間距平均
@@ -336,18 +374,18 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 5. 跨院區:總院的資料要等凌晨批次才到分院 → 各院區與 Plasma 雙向即時同步
+  // 5. 跨院區:分院透過 DB Link 向總院拉資料,只能等凌晨離峰 → 各院區與 Plasma 雙向即時同步
   {
     id: "campus",
     title: "跨院區資料不同步",
     short: "跨院區",
-    pain: "總院的檢驗結果，分院隔天才看得到。",
+    pain: "分院透過 DB Link 向總院拉資料，只能等凌晨離峰，隔天才看得到。",
     fix: "各院區即時同步，資料就在院區本地。",
     nodes: CAMPUS_POS,
     active: campusIds,
-    // 單顆慢速光點,分院旁轉圈等待
-    edges: branchIds.map((id) => ({ from: "campus-main", to: id, state: "slow" as const })),
-    badges: Object.fromEntries(branchIds.map((id) => [id, { tone: "danger" as const, text: "隔天才看得到" }])),
+    edges: [],
+    // 依時間輪播:白天尖峰不能拉 → 凌晨 DB Link 拉資料 → 隔天才看得到
+    phases: DBLINK_PHASES,
     plasma: {
       nodes: { ...CAMPUS_POS, plasma: PLASMA_POS },
       active: [...campusIds, "plasma"],
