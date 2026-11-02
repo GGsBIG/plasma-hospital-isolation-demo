@@ -64,13 +64,12 @@ export const ALL_NODES: NodeDef[] = [...DBS, ...CAMPUSES, ...DOWNSTREAM, ...APPS
 export const NODE_BY_ID: Record<string, NodeDef> =
   Object.fromEntries(ALL_NODES.map((n) => [n.id, n]))
 
-// 情境 5 匯入知識庫的文件
-export const DOC_FILES = [
-  "院內系統資料字典.md",
-  "就診紀錄欄位說明.md",
-  "檢驗代碼對照.md",
-  "ICD-10診斷碼說明.md",
-  "病歷整合規格書.md",
+// Plasma 大腦頁:切到導入後,依序上傳到知識庫的文件(名稱、檔案類型決定圖示顏色)
+export const DOC_FILES: { name: string; type: "pdf" | "doc" | "xls" | "md" }[] = [
+  { name: "系統規格書.pdf", type: "pdf" },
+  { name: "資料庫描述.docx", type: "doc" },
+  { name: "資料字典.xlsx", type: "xls" },
+  { name: "欄位代碼說明.md", type: "md" },
 ]
 
 // 情境 6 Plasma 對外開放的 MCP 工具

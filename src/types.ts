@@ -40,7 +40,8 @@ export interface SceneState {
   loads?: Record<string, number>   // db id -> 負載 0~100
   badges?: Record<string, BadgeOverride>
   callouts?: Record<string, Callout> // 節點旁的問答泡泡
-  brain?: boolean                  // 知識庫與 Plasma 合體:外圍光暈 =「資料大腦」
+  brain?: boolean                  // 知識庫與 Plasma 合體:外圍光暈 + 大腦輪廓 =「資料大腦」
+  upload?: boolean                 // 出現時先播「文件上傳到知識庫」,再畫出大腦輪廓
   zone?: { ids: string[]; label: string } // 圍住一組節點的虛線防護框(例如「核心資料庫 · 受保護」)
   down?: string[]                  // 停機的節點(平台變暗、出現裂痕)
   // 依時間輪播的分幕(各幕覆寫部分內容),循環播放;給函式時每一輪依 seed 重新產生(各幕長度須固定),

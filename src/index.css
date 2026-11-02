@@ -368,6 +368,31 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.05); }
 }
+/* 大腦輪廓:逐筆畫出後輕輕呼吸(光暈出現時 display 由 none 變回來,動畫自動重播) */
+.brain-outline {
+  color: rgb(37 132 235 / 0.45);
+  stroke-width: 1.2px;
+  animation: brain-breathe 4s ease-in-out infinite;
+}
+.dark .brain-outline { color: rgb(110 175 255 / 0.42); }
+.brain-outline path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: brain-draw 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes brain-draw { to { stroke-dashoffset: 0; } }
+/* 文件上傳:先在上方淡入排成一列,再一份一份縮小飛進知識庫後消失 */
+.doc-appear { animation: doc-appear 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes doc-appear {
+  from { opacity: 0; transform: translateY(-16px); }
+  to { opacity: 1; transform: none; }
+}
+.doc-fly { animation: doc-fly 0.9s cubic-bezier(0.55, 0, 0.3, 1) both; }
+@keyframes doc-fly {
+  0% { opacity: 1; transform: translate(var(--x0), var(--y0)) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(0, var(--kb-dy, 0px)) scale(0.2); }
+}
 /* 問答泡泡換內容時淡入 */
 .callout-in { animation: callout-in 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
 /* 逐步畫出的連線:消失時淡出 */
@@ -377,7 +402,9 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
   to { opacity: 1; translate: 0 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .brain-aura, .callout-in { animation: none; }
+  .brain-aura, .callout-in, .brain-outline { animation: none; }
+  .brain-outline path { animation: none; stroke-dashoffset: 0; }
+  .doc-appear { display: none; }
 }
 
 /* 防護框:綠色虛線,底色極淡 */

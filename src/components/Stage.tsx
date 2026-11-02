@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react"
 import type { SceneState } from "../types"
-import { NODE_BY_ID } from "../data"
-import { ShieldCheck } from "lucide-react"
+import { DOC_FILES, NODE_BY_ID } from "../data"
+import { FileText, ShieldCheck } from "lucide-react"
 import { iconScale, place, sceneBox, stageSize, useLayoutMode, zoneRect, type Box } from "../layout"
 import { dominantStates, frameAt, loadsAt, segmentAt, segmentIndex, stageKey, statesAt, structureAt } from "../timeline"
 import { plasmaMix } from "../plasma"
@@ -9,10 +9,19 @@ import { phaseOf } from "../phase"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
 import { Node, type Badge } from "./Node"
 import { Edge } from "./Edge"
+import { BrainArt } from "./BrainArt"
 
 const HOT = 80
 const SAFE = 40 // 桌機舞台四周的安全邊距(螢幕 px)
 const REVEAL_MS = 900 // 連線逐步畫出的時間
+// 文件上傳:第一份開始飛的時間、每份間隔(秒),各份的起點(相對大腦中心,舞台 px)
+const DOC_DELAY = 1.3
+const DOC_STEP = 0.5
+const DOC_FROM: [number, number][] = [[-480, -400], [-165, -430], [165, -430], [480, -400]]
+// 手機版:知識庫疊在 Plasma 正上方、舞台上緣較近,文件排在知識庫上方並往左偏(右邊緊貼鏡頭邊緣),才留在鏡頭內
+const DOC_FROM_COMPACT: [number, number][] = [[-715, -390], [-345, -420], [25, -420], [390, -390]]
+const BRAIN_W = 900 // 大腦輪廓寬度(舞台 px,扁平,高約一半):包住知識庫與 Plasma 的名稱、徽章
+const DOC_COLOR = { pdf: "#e5484d", doc: "#3b82f6", xls: "#1f9d55", md: "#71717a" }
 
 function loadBadge(v: number): Badge {
   // 數字(load)每格由 Stage 直接改 DOM,這裡只決定文字與色調
@@ -136,6 +145,8 @@ export function Stage() {
   // 依權重排序的畫面狀態;第一個是「目前看起來最像」的那個
   const ranked = dominantStates(p).map((x) => x.s)
   const near = ranked[0]
+  // 大腦頁的文件上傳動畫(大腦光暈出現時,依目前最像的那個有大腦的狀態決定要不要播)
+  const upload = ranked.find((x) => x.brain)?.upload ?? false
   const loads = loadsAt(p)
 
   // 滑鼠停在哪個節點:它與直接相連的節點、連線保持清楚,其餘淡化
@@ -212,9 +223,10 @@ export function Stage() {
       const plasma = f.nodes.find((n) => n.id === "plasma")
       const kb = f.nodes.find((n) => n.id === "kb")
       if (brain > 0.001 && plasma) {
-        // 光暈中心在 Plasma 與疊在上面的知識庫之間
+        // 光暈中心在 Plasma 與疊在上面的知識庫之間;--kb-dy 是知識庫相對中心的位置(上傳的文件飛到這裡)
         const cy = kb ? (plasma.pos.y + kb.pos.y) / 2 : plasma.pos.y
         aura.style.transform = `translate3d(${plasma.pos.x}px, ${cy}px, 0)`
+        aura.style.setProperty("--kb-dy", `${kb ? kb.pos.y - cy : 0}px`)
         aura.style.opacity = `${brain}`
         aura.style.display = ""
       } else {
@@ -346,6 +358,30 @@ export function Stage() {
             className="brain-aura absolute rounded-full"
             style={{ width: 620 * iconScale("plasma"), height: 500 * iconScale("plasma"), left: -310 * iconScale("plasma"), top: -250 * iconScale("plasma") }}
           />
+          {/* 大腦輪廓:線條逐筆畫出,把知識庫與 Plasma 包在裡面;有上傳動畫時等文件都飛進去才開始畫 */}
+          <BrainArt
+            width={BRAIN_W * iconScale("plasma")}
+            delay={upload ? `${DOC_DELAY + DOC_FILES.length * DOC_STEP + 0.4}s` : "0.2s"}
+          />
+          {/* 上傳到知識庫的文件:從上方各自飛進知識庫後消失 */}
+          {/* 先一起浮現在上方排成一列(doc-appear),再一份一份飛進去(doc-fly) */}
+          {upload && DOC_FILES.map((f, k) => (
+            <div key={f.name} className="doc-appear absolute left-0 top-0" style={{ animationDelay: `${0.35 + k * 0.12}s` }}>
+            <div
+              className="doc-fly absolute left-0 top-0"
+              style={{
+                ["--x0" as string]: `${(compact ? DOC_FROM_COMPACT : DOC_FROM)[k][0]}px`,
+                ["--y0" as string]: `${(compact ? DOC_FROM_COMPACT : DOC_FROM)[k][1]}px`,
+                animationDelay: `${DOC_DELAY + k * DOC_STEP}s`,
+              }}
+            >
+              <div className={`flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-xl border border-border bg-card font-medium text-foreground ${compact ? "px-5 py-3 text-[32px]" : "px-3.5 py-2 text-[20px]"}`}>
+                <FileText className={compact ? "h-9 w-9" : "h-5 w-5"} style={{ color: DOC_COLOR[f.type] }} />
+                {f.name}
+              </div>
+            </div>
+            </div>
+          ))}
         </div>
 
         {/* 節點層 */}

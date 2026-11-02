@@ -468,17 +468,20 @@ export const SCENES: SceneDef[] = [
     short: "Plasma 大腦",
     pain: "欄位多為代碼，AI 看不懂，答案容易出錯。",
     fix: "匯入資料字典，Plasma 成為最懂院內資料的大腦。",
-    nodes: { ...dbCol(260), "app-ai": { x: 1340, y: MID } },
+    // 源頭資料庫靠左、AI 靠右,中間留給大腦輪廓
+    nodes: { ...dbCol(150), "app-ai": { x: 1460, y: MID } },
     active: [...dbIds, "app-ai"],
     edges: dbIds.map((id) => ({ from: id, to: "app-ai", state: "risk" as const })),
     badges: { "app-ai": { tone: "danger", text: "回答不準確" } },
     callouts: { "app-ai": { tone: "danger", q: ASK, a: "無法判斷 DEPT_C 欄位意義" } },
     plasma: {
-      nodes: { ...dbCol(260), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
+      nodes: { ...dbCol(150), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1460, y: MID } },
       active: ["plasma", "kb", "app-ai"],
       edges: viaPlasma(["app-ai"]),
       brain: true,
-      badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "回答精準" } },
+      // 系統文件、資料庫描述等文件依序飛進知識庫,接著大腦輪廓把知識庫與 Plasma 包在一起
+      upload: true,
+      badges: { plasma: BRAIN_BADGE, kb: { tone: "ok", text: "已匯入系統文件" }, "app-ai": { tone: "ok", text: "回答精準" } },
       callouts: { "app-ai": { tone: "ok", q: ASK, a: "312 人" } },
     },
   },
@@ -502,7 +505,8 @@ export const SCENES: SceneDef[] = [
     callouts: { "ds-aiteam": HANDOFF, "ds-it": HANDOFF },
     badges: { "ds-aiteam": { tone: "warn", text: "等待資料" } },
     plasma: {
-      nodes: { ...dbCol(260), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
+      // 同大腦頁:源頭資料庫靠左、AI 靠右,中間留給大腦輪廓
+      nodes: { ...dbCol(150), kb: KB_DOCK, plasma: PLASMA_POS, "app-ai": { x: 1460, y: MID } },
       active: ["plasma", "kb", "app-ai"],
       edges: viaPlasma(["app-ai"]),
       brain: true,
