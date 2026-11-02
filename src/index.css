@@ -358,11 +358,11 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 
 /* 知識庫與 Plasma 合體的「資料大腦」光暈:柔和、緩慢呼吸 */
 .brain-aura {
-  background: radial-gradient(closest-side, rgb(37 132 235 / 0.16), rgb(37 132 235 / 0.07) 55%, rgb(37 132 235 / 0) 100%);
+  background: radial-gradient(closest-side, rgb(113 113 122 / 0.16), rgb(113 113 122 / 0.07) 55%, rgb(113 113 122 / 0) 100%);
   animation: brain-breathe 4s ease-in-out infinite;
 }
 .dark .brain-aura {
-  background: radial-gradient(closest-side, rgb(80 160 255 / 0.20), rgb(80 160 255 / 0.08) 55%, rgb(80 160 255 / 0) 100%);
+  background: radial-gradient(closest-side, rgb(212 212 216 / 0.16), rgb(212 212 216 / 0.06) 55%, rgb(212 212 216 / 0) 100%);
 }
 @keyframes brain-breathe {
   0%, 100% { transform: scale(1); }

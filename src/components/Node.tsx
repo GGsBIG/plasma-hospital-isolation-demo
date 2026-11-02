@@ -64,10 +64,11 @@ export function Node({
       <div className={`flex gap-2.5 ${side ? "flex-col items-start" : node.logo || compact || stack ? `flex-col ${node.brand ? "items-start" : "items-center"}` : "items-center"}`}>
         {node.logo ? (
           // max-w-none:Tailwind 預設 img max-width:100%,會讓 logo 被下方較短的文字列壓窄,各情境大小不一
-          <>
+          // 外框:白底、細邊、直角,背後的大腦線條不會穿過 logo
+          <span className={`border border-border bg-card ${compact ? "px-4 py-2" : "px-3 py-1.5"}`}>
             <img src={node.logo.light} alt={node.label} className={`${s.logo} w-auto max-w-none dark:hidden`} />
             <img src={node.logo.dark} alt={node.label} className={`hidden ${s.logo} w-auto max-w-none dark:block`} />
-          </>
+          </span>
         ) : (
           <span className={`${s.name} font-medium tracking-tight text-foreground`}>{node.label}</span>
         )}
