@@ -55,10 +55,10 @@ export const APPS: NodeDef[] = [
   { id: "ghost-2", kind: "app", label: "停用系統", icon: "ghost" },
 ]
 
-export const PLASMA: NodeDef = { id: "plasma", kind: "plasma", label: "Plasma", sub: "AI-Ready 資料中台", icon: "layers", logo: { light: plasmaLogo, dark: plasmaLogoDark } }
+export const PLASMA: NodeDef = { id: "plasma", kind: "plasma", label: "Plasma", icon: "layers", logo: { light: plasmaLogo, dark: plasmaLogoDark } }
 // Plasma 整理後的資料落地到這台 PostgreSQL,再提供給 AP 使用(與左側 NIS 的源頭資料庫 PostgreSQL 不同台)
 export const SERVING_PG: NodeDef = { id: "serving-pg", kind: "serving", label: "PostgreSQL", icon: "database", brand: postgresLogo }
-export const KB: NodeDef = { id: "kb", kind: "kb", label: "知識庫", sub: "文件／技術文件", icon: "book-open" }
+export const KB: NodeDef = { id: "kb", kind: "kb", label: "知識庫", icon: "book-open" }
 
 export const ALL_NODES: NodeDef[] = [...DBS, ...CAMPUSES, ...DOWNSTREAM, ...APPS, PLASMA, SERVING_PG, KB]
 export const NODE_BY_ID: Record<string, NodeDef> =

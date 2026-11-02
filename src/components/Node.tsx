@@ -81,7 +81,6 @@ export function Node({
           </span>
         )}
       </div>
-      {node.sub && !compact && <span className={`mt-0.5 ${s.meta} text-muted-foreground`}>{node.sub}</span>}
       {/* 說明列只在情境自訂徽章時出現;手機版字大、會撞到旁邊的節點,省略(左側文字已說明) */}
       {stat && !compact && (
         <span className={`mt-1 ${s.meta} tabular-nums text-muted-foreground`}>{stat}</span>
