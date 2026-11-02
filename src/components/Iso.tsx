@@ -1,4 +1,6 @@
 import type { NodeKind } from "../types"
+import plasmaLogo from "../assets/plasma-logo.svg"
+import plasmaLogoDark from "../assets/plasma-logo-dark.svg"
 import { NODE_SCALE, sizeOf } from "../geometry"
 import { iconScale } from "../layout"
 
@@ -78,6 +80,52 @@ const FILE_STYLE: Record<string, { fill: string; text: string }> = {
   txt: { fill: "#9ca3af", text: "≡" },
 }
 
+// Plasma 核心立方體(相對平台半寬 a 的比例)與高度、知識庫立方體的大小(未縮放單位)
+export const PLASMA_LIFT = 46
+const PLASMA_CORE = 0.86
+const KB_CUBE = 1.05
+
+// 等角立方體側面的座標系:原點在側面左上角,x 沿側面水平方向(實際長度)、y 垂直向下。
+// 立方體底面中心在 (0, 0),半寬 w、高 h(與 Box 相同)
+function faceMatrix(side: "left" | "right", w: number, h: number) {
+  const len = Math.hypot(w, w / 2)
+  const ux = w / len
+  const uy = w / 2 / len
+  return side === "left"
+    ? { m: `matrix(${ux} ${uy} 0 1 ${-w} ${-h})`, len }
+    : { m: `matrix(${ux} ${-uy} 0 1 0 ${-h + w / 2})`, len }
+}
+
+// 側面貼 logo(深淺色各一張,依主題切換)
+function FaceLogo({ side, w, h }: { side: "left" | "right"; w: number; h: number }) {
+  const { m, len } = faceMatrix(side, w, h)
+  const pad = len * 0.08
+  return (
+    <g transform={m}>
+      <image href={plasmaLogo} x={pad} y={h * 0.2} width={len - 2 * pad} height={h * 0.6} preserveAspectRatio="xMidYMid meet" className="dark:hidden" />
+      <image href={plasmaLogoDark} x={pad} y={h * 0.2} width={len - 2 * pad} height={h * 0.6} preserveAspectRatio="xMidYMid meet" className="hidden dark:block" />
+    </g>
+  )
+}
+
+// 立方體的面上寫字:左、右側面沿等角水平線,頂面沿等角平面
+function FaceText({ side, w, h, text }: { side: "left" | "right" | "top"; w: number; h: number; text: string }) {
+  const style = { fill: "var(--dot-isolated)", fontFamily: "ui-sans-serif, system-ui", fontWeight: 700 }
+  if (side === "top") {
+    return (
+      <g transform={`matrix(1 0.5 -1 0.5 0 ${-h})`}>
+        <text textAnchor="middle" dominantBaseline="central" fontSize={w * 0.24} style={style}>{text}</text>
+      </g>
+    )
+  }
+  const { m, len } = faceMatrix(side, w, h)
+  return (
+    <g transform={m}>
+      <text x={len / 2} y={h / 2} textAnchor="middle" dominantBaseline="central" fontSize={len * 0.2} style={style}>{text}</text>
+    </g>
+  )
+}
+
 function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: boolean; variant?: string }) {
   const s = a * 0.25
   switch (kind) {
@@ -135,21 +183,27 @@ function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: bool
       )
     }
     case "kb": {
-      // 疊放的文件
+      // 知識庫立方體:左、右、頂三個面都寫上 Knowledge
+      const w = a * KB_CUBE
+      const h = w * 0.9
       return (
         <>
-          {[0, 1, 2].map((i) => (
-            <Box key={i} cx={(i - 1) * 3} cy={-i * 6} w={a * 0.5} h={4} top={i === 2 ? C.raised : C.top} />
-          ))}
+          <Box cx={0} cy={0} w={w} h={h} top={C.raised} />
+          <FaceText side="left" w={w} h={h} text="Knowledge" />
+          <FaceText side="right" w={w} h={h} text="Knowledge" />
+          <FaceText side="top" w={w} h={h} text="Knowledge" />
         </>
       )
     }
     case "plasma": {
-      // 隆起的核心 + 等角圓環的底圈(轉動的那一段畫在 Platform 的 HTML 圖層上)
-      const lift = 14
+      // 隆起的核心立方體:左右兩個側面都貼 Plasma logo;頂面是等角圓環的底圈(轉動的那一段畫在 Platform 的 HTML 圖層上)
+      const lift = PLASMA_LIFT
+      const w = a * PLASMA_CORE
       return (
         <>
-          <Box cx={0} cy={0} w={a * 0.5} h={lift} top={C.raised} />
+          <Box cx={0} cy={0} w={w} h={lift} top={C.raised} />
+          <FaceLogo side="left" w={w} h={lift} />
+          <FaceLogo side="right" w={w} h={lift} />
           <g transform={`matrix(1 0.5 -1 0.5 0 ${-lift})`}>
             <circle r={22} fill="none" style={{ stroke: "var(--iso-ring-track)" }} strokeWidth={2} vectorEffect="non-scaling-stroke" />
             <circle r={3.2} style={{ fill: "var(--iso-ring)" }} />
@@ -163,7 +217,7 @@ function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: bool
 // 節點平台:座標原點為頂面中心
 // 會動的部分(過載紅光、冒煙、齒輪、Plasma 的轉動圓環)都放在 SVG 外的 HTML 圖層,只動 transform / opacity,
 // 由 GPU 合成,不會每格重畫平台 SVG
-export function Platform({ kind, hot = false, variant, down = false }: { kind: NodeKind; hot?: boolean; variant?: string; down?: boolean }) {
+export function Platform({ kind, hot = false, variant, down = false, bare = false }: { kind: NodeKind; hot?: boolean; variant?: string; down?: boolean; bare?: boolean }) {
   const { a, t } = sizeOf(kind)
   // 裝飾(圓柱、圓環…)跟著平台一起放大:基本倍率 × 直式圖示倍率
   const k = NODE_SCALE * iconScale(kind)
@@ -184,7 +238,8 @@ export function Platform({ kind, hot = false, variant, down = false }: { kind: N
         <ellipse cx={0} cy={t / 2} rx={a * 1.4} ry={b * 1.4} fill="url(#plasma-glow)" />
       )}
       <g className={down ? "iso-down" : undefined}>
-        <Box cx={0} cy={t} w={a} h={t} line={hot ? C.hot : C.line} />
+        {/* bare:疊在別的平台上(合體的知識庫),不畫底座,只有上面的立方體 */}
+        {!bare && <Box cx={0} cy={t} w={a} h={t} line={hot ? C.hot : C.line} />}
         {/* 裝飾以未縮放尺寸繪製,再整組放大 */}
         <g transform={`scale(${k})`}>
           <Decor kind={kind} a={a / k} hot={hot} variant={variant} />
@@ -209,7 +264,7 @@ export function Platform({ kind, hot = false, variant, down = false }: { kind: N
     )}
     {kind === "plasma" && (
       // 等角平面上轉動的圓環:外層壓成等角,內層旋轉
-      <div className="absolute left-0 h-0 w-0" style={{ top: -14 * k, transform: "matrix(1, 0.5, -1, 0.5, 0, 0)" }}>
+      <div className="absolute left-0 h-0 w-0" style={{ top: -PLASMA_LIFT * k, transform: "matrix(1, 0.5, -1, 0.5, 0, 0)" }}>
         <div className="spin" style={{ left: -22 * k, top: -22 * k, width: 44 * k, height: 44 * k, animationDuration: "2.4s" }}>
           <svg viewBox="-23 -23 46 46" width="100%" height="100%" className="block overflow-visible">
             <circle r={22} fill="none" style={{ stroke: "var(--iso-ring)" }} strokeWidth={2.5 / k} strokeLinecap="round" strokeDasharray="95 43" />

@@ -21,11 +21,11 @@ const SAFE = 40 // 桌機舞台四周的安全邊距(螢幕 px)
 const REVEAL_MS = 900 // 連線逐步畫出的時間
 const DOT_PAD = (compact: boolean) => (compact ? 700 : 80) // 光點 canvas 超出舞台的邊(手機版連線會延伸到舞台外)
 // 文件上傳:第一份開始飛的時間、每份間隔(秒),各份的起點(相對大腦中心,舞台 px)
-const DOC_DELAY = 1.3
-const DOC_STEP = 0.5
-const DOC_FROM: [number, number][] = [[-540, -390], [-270, -425], [0, -440], [270, -425], [540, -390]]
+const DOC_DELAY = 1.8
+const DOC_STEP = 1.0
+const DOC_FROM: [number, number][] = [[-580, -390], [-290, -430], [0, -450], [290, -430], [580, -390]]
 // 手機版:舞台上緣較近、卡片字大,五份文件上下交錯排成兩列並往左偏(右邊緊貼鏡頭邊緣),才留在鏡頭內
-const DOC_FROM_COMPACT: [number, number][] = [[-715, -440], [-430, -330], [-165, -440], [120, -330], [400, -440]]
+const DOC_FROM_COMPACT: [number, number][] = [[-700, -460], [-420, -330], [-140, -460], [120, -330], [380, -460]]
 const BRAIN_W = 1000 // 大腦網路寬度(舞台 px,壓扁成 70% 高):包住疊在 Plasma 上的知識庫
 
 function loadBadge(v: number): Badge {
@@ -451,7 +451,7 @@ export function Stage() {
           {/* 上傳到知識庫的文件:從上方各自飛進知識庫後消失 */}
           {/* 先一起浮現在上方排成一列(doc-appear),再一份一份飛進去(doc-fly) */}
           {upload && DOC_FILES.map((f, k) => (
-            <div key={f.name} className="doc-appear absolute left-0 top-0" style={{ animationDelay: `${0.35 + k * 0.12}s` }}>
+            <div key={f.name} className="doc-appear absolute left-0 top-0" style={{ animationDelay: `${0.4 + k * 0.2}s` }}>
             <div
               className="doc-fly absolute left-0 top-0"
               style={{
@@ -460,8 +460,8 @@ export function Stage() {
                 animationDelay: `${DOC_DELAY + k * DOC_STEP}s`,
               }}
             >
-              <div className={`flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-xl border border-border bg-card font-medium text-foreground ${compact ? "px-5 py-3 text-[32px]" : "px-3.5 py-2 text-[20px]"}`}>
-                <svg viewBox={FILE_ICON_VIEWBOX} className={`shrink-0 text-[rgb(37_132_235)] dark:text-[rgb(110_175_255)] ${compact ? "h-11 w-11" : "h-7 w-7"}`} fill="currentColor" aria-hidden>
+              <div className={`flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-xl border border-border bg-card font-medium text-foreground ${compact ? "px-6 py-3.5 text-[38px]" : "px-4 py-2.5 text-[26px]"}`}>
+                <svg viewBox={FILE_ICON_VIEWBOX} className={`shrink-0 text-[rgb(37_132_235)] dark:text-[rgb(110_175_255)] ${compact ? "h-14 w-14" : "h-9 w-9"}`} fill="currentColor" aria-hidden>
                   {FILE_ICONS[f.icon].map((d, j) => <path key={j} d={d} />)}
                 </svg>
                 {f.name}

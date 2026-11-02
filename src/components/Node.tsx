@@ -50,8 +50,8 @@ export function Node({
   // 手機緊湊版:連線可能穿過節點下方的標籤,所以標籤加底色蓋住線;
   // 字放大(手機上舞台縮得比較小)、徽章疊在名稱下方
   const s = compact
-    ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", logo: "h-[100px]", brand: "h-[104px] w-[104px]", bubble: "text-[28px] px-5 py-3 rounded-[24px]" }
-    : { name: "text-[30px]", badge: "text-[22px] px-3 py-1", meta: "text-[22px]", logo: "h-[64px]", brand: "h-[44px] w-[44px]", bubble: "text-[22px] px-4 py-2.5 rounded-2xl" }
+    ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", brand: "h-[104px] w-[104px]", bubble: "text-[28px] px-5 py-3 rounded-[24px]" }
+    : { name: "text-[30px]", badge: "text-[22px] px-3 py-1", meta: "text-[22px]", brand: "h-[44px] w-[44px]", bubble: "text-[22px] px-4 py-2.5 rounded-2xl" }
 
   const labelStyle = side
     ? { left: a + 22, top: -30 }
@@ -60,18 +60,10 @@ export function Node({
   // 名稱列(名稱 + 徽章)、說明列
   const text = (
     <>
-      {/* 名稱與狀態徽章同一行,節省垂直空間;有 logo 時徽章放在 logo 下方 */}
+      {/* 名稱與狀態徽章同一行,節省垂直空間 */}
       <div className={`flex gap-2.5 ${side ? "flex-col items-start" : node.logo || compact || stack ? `flex-col ${node.brand ? "items-start" : "items-center"}` : "items-center"}`}>
-        {node.logo ? (
-          // max-w-none:Tailwind 預設 img max-width:100%,會讓 logo 被下方較短的文字列壓窄,各情境大小不一
-          // 外框:白底、細邊、直角,背後的大腦線條不會穿過 logo
-          <span className={`border border-border bg-card ${compact ? "px-4 py-2" : "px-3 py-1.5"}`}>
-            <img src={node.logo.light} alt={node.label} className={`${s.logo} w-auto max-w-none dark:hidden`} />
-            <img src={node.logo.dark} alt={node.label} className={`hidden ${s.logo} w-auto max-w-none dark:block`} />
-          </span>
-        ) : (
-          <span className={`${s.name} font-medium tracking-tight text-foreground`}>{node.label}</span>
-        )}
+        {/* 有 logo 的節點(Plasma):logo 貼在平台的立方體側面上,名稱列只留徽章 */}
+        {!node.logo && <span className={`${s.name} font-medium tracking-tight text-foreground`}>{node.label}</span>}
         {badge && (
           <span
             className={`inline-flex items-center gap-2 rounded-full border bg-card ${s.badge} text-foreground/90 transition-[border-color,box-shadow] duration-300
@@ -104,7 +96,7 @@ export function Node({
           style={{ transform: hovered ? "translateY(-12px) scale(1.07)" : undefined }}
           data-hovered={hovered || undefined}
         >
-          <Platform kind={node.kind} hot={hot} variant={node.icon} down={down} />
+          <Platform kind={node.kind} hot={hot} variant={node.icon} down={down} bare={merged} />
         </div>
 
         {callout?.seq && <SeqBubble callout={callout} nodeId={node.id} a={a} compact={compact} bubble={s.bubble} />}

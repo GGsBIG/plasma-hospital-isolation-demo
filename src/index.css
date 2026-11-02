@@ -377,9 +377,9 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 }
 /* 資料大腦(神經網路):連線由內往外畫出、節點一顆顆浮現(延遲寫在各元素上);只用 backwards 填滿,
    動畫結束後回到原本狀態,滑鼠探照與點擊漣漪才能改透明度與位置 */
-/* 黑色線條與節點;深色模式反白,才看得到 */
-.brain-net { color: #18181b; }
-.dark .brain-net { color: #f4f4f5; }
+/* Plasma 藍的線條與節點 */
+.brain-net { color: rgb(37 132 235); }
+.dark .brain-net { color: rgb(110 175 255); }
 /* 線寬用大腦座標單位(不用 non-scaling-stroke:那會讓 pathLength 的虛線變成螢幕 px,整條變成點線) */
 .brain-line { stroke: currentColor; stroke-opacity: 0.45; stroke-width: 0.16; stroke-dasharray: 1; transition: opacity 0.25s; }
 .brain-node { fill: currentColor; fill-opacity: 0.7; transform-box: fill-box; transform-origin: center; }
@@ -401,12 +401,12 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
   60% { opacity: 1; }
 }
 /* 文件上傳:先在上方淡入排成一列,再一份一份縮小飛進知識庫後消失 */
-.doc-appear { animation: doc-appear 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.doc-appear { animation: doc-appear 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
 @keyframes doc-appear {
   from { opacity: 0; transform: translateY(-16px); }
   to { opacity: 1; transform: none; }
 }
-.doc-fly { animation: doc-fly 0.9s cubic-bezier(0.55, 0, 0.3, 1) both; }
+.doc-fly { animation: doc-fly 1.5s cubic-bezier(0.55, 0, 0.3, 1) both; }
 @keyframes doc-fly {
   0% { opacity: 1; transform: translate(var(--x0), var(--y0)) scale(1); }
   70% { opacity: 1; }
