@@ -19,7 +19,7 @@ const DS_Y: Record<string, number> = {
 const PLASMA_POS = { x: 800, y: 525 }
 // 知識庫與 Plasma 合體:知識庫疊在 Plasma 的平台上(落下合體),不顯示名稱;
 // nodes 裡 kb 要寫在 plasma 後面,才會畫在 Plasma 上層
-const KB_DOCK = { x: 800, y: 465 } // Plasma 核心立方體頂面(Plasma 中心往上 PLASMA_LIFT × 1.3)
+const KB_DOCK = { x: 800, y: 450 } // Plasma 核心立方體頂面(Plasma 中心往上 PLASMA_LIFT × 1.3)
 const BRAIN_BADGE = { tone: "ok" as const, text: "資料大腦 · 理解所有表與欄位" }
 const ASK = "上月心臟內科住院幾人？"
 

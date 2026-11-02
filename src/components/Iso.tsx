@@ -81,9 +81,9 @@ const FILE_STYLE: Record<string, { fill: string; text: string }> = {
 }
 
 // Plasma 核心立方體(相對平台半寬 a 的比例)與高度、知識庫立方體的大小(未縮放單位)
-export const PLASMA_LIFT = 46
+export const PLASMA_LIFT = 58
 const PLASMA_CORE = 0.86
-const KB_CUBE = 1.05
+const KB_CUBE = 1.3
 
 // 等角立方體側面的座標系:原點在側面左上角,x 沿側面水平方向(實際長度)、y 垂直向下。
 // 立方體底面中心在 (0, 0),半寬 w、高 h(與 Box 相同)
