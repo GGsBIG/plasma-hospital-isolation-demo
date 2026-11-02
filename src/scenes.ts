@@ -156,22 +156,22 @@ const HANDOFF: Callout = {
   ],
 }
 
-// 情境 4:人工逐一到各資料庫匯出,再手動合併,最後產出戰情室、健保申報、評鑑資料
-const outIds = ["app-report", "app-claim", "app-accredit"]
-const OUT_POS = { "app-report": { x: 1340, y: 280 }, "app-claim": { x: 1340, y: 525 }, "app-accredit": { x: 1340, y: 770 } }
+// 情境 4:人工逐一到各資料庫匯出,再手動合併,最後產出健保申報、評鑑資料
+const outIds = ["app-claim", "app-accredit"]
+const OUT_POS = { "app-claim": { x: 1340, y: 400 }, "app-accredit": { x: 1340, y: 650 } }
 const PULL_DAY: Record<string, string> = {
   "db-oracle": "第 1 天", "db-postgres": "第 1 天", "db-mssql": "第 2 天", "db-mysql": "第 2 天", "db-informix": "第 3 天",
 }
 // 還沒產出前,三種產出都在等資料
 const WAIT = Object.fromEntries(outIds.map((id) => [id, { tone: "idle" as const, text: "等待資料" }]))
 const MANUAL_PHASES: Phase[] = [
-  // 一次只去一個資料庫:去要資料、檔案送回來,兩條線並排
+  // 一次只去一個資料庫:先畫出「去要資料」那條,再畫出「檔案送回來」那條(兩條線並排)
   ...dbIds.map((id, k) => ({
-    ms: 1500,
+    ms: 1800,
     patch: {
       edges: [
-        { from: "manual", to: id, state: "risk" as const, lane: -9 },
-        { from: id, to: "manual", state: "risk" as const, lane: 9 },
+        { from: "manual", to: id, state: "risk" as const, lane: -9, reveal: 0 },
+        { from: id, to: "manual", state: "risk" as const, lane: 9, reveal: 450 },
       ],
       badges: {
         ...WAIT,
@@ -193,13 +193,12 @@ const MANUAL_PHASES: Phase[] = [
   {
     ms: 2600,
     patch: {
-      edges: outIds.map((id) => ({ from: "manual", to: id, state: "risk" as const })),
+      edges: outIds.map((id, k) => ({ from: "manual", to: id, state: "risk" as const, reveal: k * 200 })),
       badges: {
-        "app-report": { tone: "warn", text: "數字已過時" },
         "app-claim": { tone: "warn", text: "需人工核對" },
         "app-accredit": { tone: "warn", text: "版本不一" },
       },
-      callouts: { manual: { tone: "idle", q: "產出報表、申報、評鑑資料", time: "第 5 天" } },
+      callouts: { manual: { tone: "idle", q: "產出申報、評鑑資料", time: "第 5 天" } },
     },
   },
   {
@@ -207,8 +206,7 @@ const MANUAL_PHASES: Phase[] = [
     patch: {
       edges: [],
       badges: {
-        "app-report": { tone: "danger", text: "數字對不上" },
-        "app-claim": { tone: "warn", text: "需人工核對" },
+        "app-claim": { tone: "danger", text: "數字對不上" },
         "app-accredit": { tone: "warn", text: "版本不一" },
       },
       callouts: { manual: { tone: "danger", q: "主管：數字對不上，重拉一次", time: "從頭來過" } },
@@ -314,13 +312,13 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 4. 手工合併資料:人工逐一匯出 → 手動合併 → 產出(戰情室、健保申報、評鑑資料),數字對不上再重來 → Plasma 自動整合
+  // 4. 手工合併資料:人工逐一匯出 → 手動合併 → 產出(健保申報、評鑑資料),數字對不上再重來 → Plasma 自動整合
   {
     id: "manual",
     title: "手工合併資料",
     short: "手工合併",
     pain: "人工逐一到各資料庫匯出，再手動合併，數字要等好幾天。",
-    fix: "Plasma 自動整合，戰情室、健保申報、評鑑資料一次到位。",
+    fix: "Plasma 自動整合，健保申報、評鑑資料一次到位。",
     nodes: { ...dbCol(260), manual: { x: 800, y: MID }, ...OUT_POS },
     active: [...dbIds, "manual", ...outIds],
     edges: [],
@@ -332,7 +330,6 @@ export const SCENES: SceneDef[] = [
       edges: viaPlasma(outIds),
       badges: {
         plasma: { tone: "ok", text: "自動整合 5 套資料庫" },
-        "app-report": { tone: "ok", text: "即時更新" },
         "app-claim": { tone: "ok", text: "自動產出" },
         "app-accredit": { tone: "ok", text: "單一版本" },
       },

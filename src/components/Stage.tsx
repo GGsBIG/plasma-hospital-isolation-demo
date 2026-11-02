@@ -12,6 +12,7 @@ import { Edge } from "./Edge"
 
 const HOT = 80
 const SAFE = 40 // 桌機舞台四周的安全邊距(螢幕 px)
+const REVEAL_MS = 900 // 連線逐步畫出的時間
 
 function loadBadge(v: number): Badge {
   // 數字(load)每格由 Stage 直接改 DOM,這裡只決定文字與色調
@@ -155,7 +156,8 @@ export function Stage() {
   // 防護框:圍住指定節點,跟著節點位置走,濃淡依各狀態有沒有這個框
   const zoneRef = useRef<HTMLDivElement>(null)
   const nodeEls = useRef(new Map<string, { el: HTMLDivElement; num: Element | null; last: string; load: string }>())
-  const edgeEls = useRef(new Map<string, { g: SVGGElement; path: SVGPathElement | null; last: string; d: string }>())
+  // reveal:出現時逐步畫出的連線(mask 為遮罩裡的路徑,shown 記錄目前是否已畫出)
+  const edgeEls = useRef(new Map<string, { g: SVGGElement; path: SVGPathElement | null; mask: SVGPathElement | null; reveal?: number; shown: boolean; last: string; d: string }>())
   const lastKey = useRef("")
   // 重繪後可能有新節點/連線還沒套樣式,下一次一定要完整套一次
   lastKey.current = ""
@@ -237,14 +239,28 @@ export function Stage() {
       const op = e.opacity.toFixed(3)
       if (op !== rec.last) {
         rec.last = op
-        // 完全看不見的連線不顯示,光點動畫也不必繪製
-        rec.g.style.display = e.opacity < 0.001 ? "none" : ""
+        // 完全看不見的連線不顯示,光點動畫也不必繪製(逐步畫出的連線要留著淡出,不隱藏)
+        if (rec.reveal === undefined) rec.g.style.display = e.opacity < 0.001 ? "none" : ""
         rec.g.style.opacity = op
       }
       // 兩端都沒移動的連線形狀不變,不必重設
       if (e.d !== rec.d) {
         rec.d = e.d
         rec.path?.setAttribute("d", e.d)
+        rec.mask?.setAttribute("d", e.d)
+      }
+      // 剛出現:遮罩先歸零,再沿路徑畫到終點(像文字逐字浮現);消失時由 CSS 淡出,下次出現再重畫
+      if (rec.mask && rec.reveal !== undefined) {
+        const vis = e.opacity > 0.5
+        if (vis && !rec.shown) {
+          const m = rec.mask
+          m.style.transition = "none"
+          m.style.strokeDashoffset = "1"
+          m.getBoundingClientRect()
+          m.style.transition = `stroke-dashoffset ${REVEAL_MS}ms cubic-bezier(0.22, 1, 0.36, 1) ${rec.reveal}ms`
+          m.style.strokeDashoffset = "0"
+        }
+        rec.shown = vis
       }
     }
   }, [])
@@ -268,14 +284,22 @@ export function Stage() {
         </div>
         {/* 連線可能延伸到舞台座標範圍外(手機版最左欄),不裁切 */}
         <svg className="pointer-events-none absolute inset-0 overflow-visible" width={w} height={h}>
+          {/* 逐步畫出時遮罩前緣的柔邊 */}
+          <defs>
+            {/* 用舞台座標當濾鏡範圍:水平的連線外框高度為 0,用比例會整條被裁掉 */}
+            <filter id="reveal-soft" filterUnits="userSpaceOnUse" x={-4000} y={-4000} width={12000} height={12000}>
+              <feGaussianBlur stdDeviation={compact ? 22 : 14} />
+            </filter>
+          </defs>
           {edges.map((e) => (
             <Edge
               // 攻擊封包每一幕重新掛上,動畫才會從頭播
               key={e.state === "attack" ? `${e.key}#${cycle}` : e.key}
               id={`edge-${e.key}`}
               from={e.from}
+              reveal={e.reveal !== undefined}
               gRef={(el) => {
-                if (el) edgeEls.current.set(e.key, { g: el, path: el.querySelector("path"), last: "", d: "" })
+                if (el) edgeEls.current.set(e.key, { g: el, path: el.querySelector(":scope > g > path"), mask: el.querySelector("[data-reveal]"), reveal: e.reveal, shown: false, last: "", d: "" })
                 else edgeEls.current.delete(e.key)
               }}
               length={e.length}

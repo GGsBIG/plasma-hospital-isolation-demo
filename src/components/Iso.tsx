@@ -77,37 +77,7 @@ const FILE_STYLE: Record<string, { fill: string; text: string }> = {
   txt: { fill: "#9ca3af", text: "≡" },
 }
 
-// 戰情室:直立的面板與長條圖;live 時長條上下跳動(數字即時更新),否則靜止
-const BARS = [
-  { h: 14, values: "14;22;10;18;14", dur: 1.6 },
-  { h: 22, values: "22;12;26;16;22", dur: 1.9 },
-  { h: 10, values: "10;18;24;12;10", dur: 1.4 },
-  { h: 18, values: "18;26;14;22;18", dur: 2.1 },
-]
-
-function Dashboard({ live }: { live: boolean }) {
-  const w = 52
-  const h = 36
-  const base = h - 5
-  return (
-    <g transform={`translate(${-w / 2} ${-h - 10})`}>
-      <rect width={w} height={h} rx={4} strokeWidth={1} style={{ fill: C.top, stroke: C.line }} />
-      {BARS.map((b, i) => (
-        <rect key={i} x={7 + i * 10} y={base - b.h} width={6} height={b.h} rx={1} style={{ fill: live ? "hsl(var(--ok))" : C.line }}>
-          {live && (
-            <>
-              <animate attributeName="height" values={b.values} dur={`${b.dur}s`} repeatCount="indefinite" />
-              <animate attributeName="y" values={b.values.split(";").map((v) => base - Number(v)).join(";")} dur={`${b.dur}s`} repeatCount="indefinite" />
-            </>
-          )}
-        </rect>
-      ))}
-      <path d={`M ${w / 2} ${h} V ${h + 8}`} strokeWidth={2} style={{ stroke: C.line }} />
-    </g>
-  )
-}
-
-function Decor({ kind, a, hot, variant, live }: { kind: NodeKind; a: number; hot: boolean; variant?: string; live: boolean }) {
+function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: boolean; variant?: string }) {
   const s = a * 0.25
   switch (kind) {
     case "db":
@@ -117,7 +87,6 @@ function Decor({ kind, a, hot, variant, live }: { kind: NodeKind; a: number; hot
       return <>{spots.map(([x, y], i) => <Cylinder key={i} cx={x} cy={y} r={10} h={16} hot={hot} />)}</>
     }
     case "app": {
-      if (variant === "dashboard") return <Dashboard live={live} />
       const spots = [p(-s, -s), p(s, -s * 0.2), p(-s * 0.4, s)]
       return <>{spots.map(([x, y], i) => <Box key={i} cx={x} cy={y} w={11} h={13} />)}</>
     }
@@ -210,7 +179,7 @@ function Smoke({ a }: { a: number }) {
   )
 }
 
-export function Platform({ kind, hot = false, variant, down = false, live = false }: { kind: NodeKind; hot?: boolean; variant?: string; down?: boolean; live?: boolean }) {
+export function Platform({ kind, hot = false, variant, down = false }: { kind: NodeKind; hot?: boolean; variant?: string; down?: boolean }) {
   const { a, t } = sizeOf(kind)
   // 裝飾(圓柱、圓環…)跟著平台一起放大:基本倍率 × 直式圖示倍率
   const k = NODE_SCALE * iconScale(kind)
@@ -235,7 +204,7 @@ export function Platform({ kind, hot = false, variant, down = false, live = fals
         <Box cx={0} cy={t} w={a} h={t} line={hot ? C.hot : C.line} />
         {/* 裝飾以未縮放尺寸繪製,再整組放大 */}
         <g transform={`scale(${k})`}>
-          <Decor kind={kind} a={a / k} hot={hot} variant={variant} live={live} />
+          <Decor kind={kind} a={a / k} hot={hot} variant={variant} />
         </g>
       </g>
       {/* 停機:頂面裂開 */}

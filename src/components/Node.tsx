@@ -70,8 +70,7 @@ export function Node({
           style={{ transform: hovered ? "translateY(-12px) scale(1.07)" : undefined }}
           data-hovered={hovered || undefined}
         >
-          {/* live:徽章為正常(綠)時,戰情室的長條才跳動 */}
-          <Platform kind={node.kind} hot={hot} variant={node.icon} down={down} live={badge?.tone === "ok"} />
+          <Platform kind={node.kind} hot={hot} variant={node.icon} down={down} />
         </div>
 
         {callout?.seq && <SeqBubble callout={callout} nodeId={node.id} a={a} compact={compact} bubble={s.bubble} />}

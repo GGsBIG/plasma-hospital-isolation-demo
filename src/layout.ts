@@ -96,10 +96,10 @@ const SLOT: Record<string, { y: number; b: boolean; x?: number }> = {
 }
 // 情境 3 的停用系統:應用欄的上方與下方之外,放在中間
 const GHOST: Record<string, number> = { "ghost-1": -130, "ghost-2": 1160 }
-// 情境 4 的三種產出:戰情室在上、健保申報與 Plasma 同列(依情境資料的 y 判斷)、評鑑資料在下
+// 情境 4 的兩種產出:健保申報在 Plasma 那列上方、評鑑資料在下方
 const APP_SLOT: Record<string, number> = {
   "app-ap": APP_ROW[0], "app-fhir": APP_ROW[1], "app-bi": APP_ROW[2], "app-ai": APP_ROW[3],
-  "app-report": ROW_A[1] - 300, "app-claim": ROW_A[1], "app-accredit": ROW_A[1] + 300,
+  "app-claim": ROW_A[1] - 170, "app-accredit": ROW_A[1] + 170,
 }
 
 // 情境資料的桌機 x(流向上的那一欄)→ 緊湊版橫軸

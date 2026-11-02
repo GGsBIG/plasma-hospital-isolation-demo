@@ -47,8 +47,7 @@ export const APPS: NodeDef[] = [
   { id: "app-fhir", kind: "app", label: "FHIR Server",  icon: "share-2" },
   { id: "app-bi",   kind: "app", label: "BI Dashboard", icon: "bar-chart-3" },
   { id: "app-ai",   kind: "app", label: "AI",           icon: "sparkles" },
-  // 情境 4:手工整併後的產出(icon dashboard:平台上畫一面長條圖)
-  { id: "app-report", kind: "app", label: "戰情室",     icon: "dashboard" },
+  // 情境 4:手工整併後的產出
   { id: "app-claim",  kind: "app", label: "健保申報",   icon: "receipt" },
   { id: "app-accredit", kind: "app", label: "評鑑資料", icon: "clipboard-check" },
   // 情境 3:沒人在用、也沒人維護的舊系統,API 還接著

@@ -21,6 +21,7 @@ export interface EdgeDef {
   to: string
   state: EdgeState
   lane?: number                    // 上下平移(px),讓一來一回的兩條線並排不重疊
+  reveal?: number                  // 出現時從起點往終點逐步畫出(柔邊),數字為延遲毫秒;消失時淡出
 }
 
 export interface Pos { x: number; y: number }   // 舞台座標 px(見 layout.ts 的 stageSize)

@@ -69,9 +69,10 @@ const BEFORE = `0;${ARRIVE - 0.01};${ARRIVE};1`
 // 連線 + 沿線流動的光點(SMIL animateMotion 跟著 path 走,path 變形時光點會跟著)。
 // 形狀 d 與透明度每格由 Stage 直接寫進 DOM(gRef),這裡不帶,捲動時不重繪;
 // highlight / faded 是滑鼠停在節點上時的強調,用 CSS transition
-export function Edge({ id, from, gRef, length, state, highlight, faded }: {
+export function Edge({ id, from, reveal, gRef, length, state, highlight, faded }: {
   id: string
   from: string
+  reveal: boolean
   gRef: (el: SVGGElement | null) => void
   length: number
   state: EdgeDef["state"]
@@ -89,7 +90,23 @@ export function Edge({ id, from, gRef, length, state, highlight, faded }: {
   const dashed = state === "risk" || state === "dead"
   const dot = state === "raw" ? RAW[from] ?? DOT.raw : DOT[state]
   return (
-    <g ref={gRef}>
+    // reveal:整組套上遮罩,遮罩是一條沿同一路徑、模糊柔邊的粗線,由 Stage 控制它從起點畫到終點
+    <g ref={gRef} className={reveal ? "edge-reveal" : undefined} mask={reveal ? `url(#${id}-mask)` : undefined}>
+      {reveal && (
+        <mask id={`${id}-mask`} maskUnits="userSpaceOnUse" x={-4000} y={-4000} width={12000} height={12000}>
+          <path
+            data-reveal
+            fill="none"
+            stroke="#fff"
+            strokeWidth={40 * lw}
+            strokeLinecap="round"
+            pathLength={1}
+            strokeDasharray="1 1"
+            strokeDashoffset={1}
+            filter="url(#reveal-soft)"
+          />
+        </mask>
+      )}
       <g className={`transition-opacity duration-300 ${faded ? "opacity-20" : state === "dead" ? "opacity-60" : "opacity-100"}`}>
         <path
           id={id}

@@ -84,7 +84,7 @@ export const dominantStates = (p: number) => statesAt(p).sort((x, y) => y.w - x.
 
 // ---- 結構:只跟「在哪兩頁之間」有關,整段過場不變,所以只在換段時算一次、React 才重繪 ----
 
-export interface EdgeSlot { key: string; from: string; to: string; state: EdgeState; length: number; lane: number }
+export interface EdgeSlot { key: string; from: string; to: string; state: EdgeState; length: number; lane: number; reveal?: number }
 export interface Structure { nodeIds: string[]; edges: EdgeSlot[] }
 
 const edgeKey = (e: SceneState["edges"][number]) => `${e.from}--${e.to}--${e.state}`
@@ -105,7 +105,7 @@ export function structureAt(i: number): Structure {
       if (edges.has(k)) continue
       const from = place(e.from, scene.nodes[e.from])
       const to = place(e.to, scene.nodes[e.to])
-      edges.set(k, { key: k, from: e.from, to: e.to, state: e.state, length: Math.hypot(to.x - from.x, to.y - from.y), lane: e.lane ?? 0 })
+      edges.set(k, { key: k, from: e.from, to: e.to, state: e.state, length: Math.hypot(to.x - from.x, to.y - from.y), lane: e.lane ?? 0, reveal: e.reveal })
     }
   }
   const s = { nodeIds, edges: [...edges.values()] }
