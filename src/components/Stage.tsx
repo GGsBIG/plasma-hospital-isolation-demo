@@ -1,23 +1,25 @@
-import { useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import type { SceneState } from "../types"
 import { DOC_FILES, NODE_BY_ID } from "../data"
 import { SCENES } from "../scenes"
 import { ShieldCheck } from "lucide-react"
 import { FILE_ICONS, FILE_ICON_VIEWBOX } from "../fileIcons"
-import { iconScale, place, sceneBox, stageSize, useLayoutMode, zoneRect, type Box } from "../layout"
-import { dominantStates, frameAt, loadsAt, segmentAt, segmentIndex, stageKey, statesAt, structureAt } from "../timeline"
+import { dotScale, iconScale, place, sceneBox, stageSize, useLayoutMode, zoneRect, type Box } from "../layout"
+import { dominantStates, frameAt, loadsAt, recapAt, segmentAt, segmentIndex, stageKey, statesAt, structureAt } from "../timeline"
 import { plasmaMix } from "../plasma"
 import { phaseOf } from "../phase"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
 import { Node, type Badge } from "./Node"
 import { Edge } from "./Edge"
-import { BrainNet } from "./BrainNet"
+import { drawDots, dotLen, lutOf, type DotEdge, type Lut } from "./dots"
+import { BrainNet, brainVisibility } from "./BrainNet"
 
 const HOT = 80
 // 任何畫面狀態裡會疊到 Plasma 上合體的節點
 const mergedIds = new Set(SCENES.flatMap((s) => [...(s.merged ?? []), ...(s.plasma?.merged ?? [])]))
 const SAFE = 40 // 桌機舞台四周的安全邊距(螢幕 px)
 const REVEAL_MS = 900 // 連線逐步畫出的時間
+const DOT_PAD = (compact: boolean) => (compact ? 700 : 80) // 光點 canvas 超出舞台的邊(手機版連線會延伸到舞台外)
 // 文件上傳:第一份開始飛的時間、每份間隔(秒),各份的起點(相對大腦中心,舞台 px)
 const DOC_DELAY = 1.3
 const DOC_STEP = 0.5
@@ -79,6 +81,7 @@ function useFit(w: number, h: number, compact: boolean) {
   const innerRef = useRef<HTMLDivElement>(null)
   const size = useRef({ width: 0, height: 0 })
   const lastBox = useRef<Box | null>(null)
+  const scale = useRef(1) // 目前的縮放倍率(canvas 依此決定解析度)
 
   const apply = (box: Box | null) => {
     const el = innerRef.current
@@ -91,6 +94,7 @@ function useFit(w: number, h: number, compact: boolean) {
     const tx = (width - (b.x1 - b.x0) * s) / 2 - b.x0 * s
     const ty = (height - (b.y1 - b.y0) * s) / 2 - b.y0 * s
     el.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`
+    scale.current = s
   }
 
   useLayoutEffect(() => {
@@ -110,7 +114,7 @@ function useFit(w: number, h: number, compact: boolean) {
     lastBox.current = box
     apply(box)
   }
-  return { ref, innerRef, setBox }
+  return { ref, innerRef, setBox, scale }
 }
 
 // 每個畫面狀態的內容外框,依版面快取
@@ -136,7 +140,7 @@ export function Stage() {
   const mode = useLayoutMode()
   const compact = mode !== "desktop"
   const { w, h } = stageSize()
-  const { ref, innerRef, setBox } = useFit(w, h, compact)
+  const { ref, innerRef, setBox, scale } = useFit(w, h, compact)
   // 只在離散狀態改變時重繪:換段、徽章文字改用另一端情境、負載跨過門檻
   useScrollSelector(stageKey)
   const p = scrollStore.get()
@@ -171,7 +175,12 @@ export function Stage() {
   const zoneRef = useRef<HTMLDivElement>(null)
   const nodeEls = useRef(new Map<string, { el: HTMLDivElement; num: Element | null; last: string; load: string }>())
   // reveal:出現時逐步畫出的連線(mask 為遮罩裡的路徑,shown 記錄目前是否已畫出)
-  const edgeEls = useRef(new Map<string, { g: SVGGElement; path: SVGPathElement | null; mask: SVGPathElement | null; reveal?: number; last: string; d: string }>())
+  // 每條連線也是一個 DotEdge:canvas 光點層每格讀它的透明度、形狀查表、逐步畫出進度
+  type EdgeRec = DotEdge & { g: SVGGElement; path: SVGPathElement | null; mask: SVGPathElement | null; to: string; last: string; d: string; lut: Lut | null }
+  const edgeEls = useRef(new Map<string, EdgeRec>())
+  const hoverRef = useRef<string | null>(null)
+  hoverRef.current = hover
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   // 已畫出的連線:另外記,重繪時(ref 重新掛上)不會被清掉而重畫一次;換成新的 DOM 元素才重新畫
   const revealed = useRef(new Set<string>())
   const revealEl = useRef(new Map<string, SVGGElement>())
@@ -196,6 +205,13 @@ export function Stage() {
     setBox(box)
   }, [compact, mode])
 
+  // 結尾總覽完全蓋住時,舞台整個隱藏:底下的動畫都不必再畫
+  useScrollEffect((p) => {
+    const el = ref.current
+    // display:none 才會連 SVG 與 CSS 動畫一起停(visibility:hidden 底下的動畫仍在跑)
+    if (el) el.style.display = recapAt(p) >= 0.99 ? "none" : ""
+  }, [])
+
   useScrollEffect((p) => {
     // 過場前後的停留區畫面完全不變,整格略過
     const i = segmentIndex(p)
@@ -212,6 +228,8 @@ export function Stage() {
         rec.last = sig
         rec.el.style.transform = `translate3d(${n.pos.x}px, ${n.pos.y}px, 0)`
         rec.el.style.opacity = `${n.opacity}`
+        // 完全看不見的節點不顯示:裡面的動畫(冒煙、紅點、轉圈)也就停了,不佔資源
+        rec.el.style.display = n.opacity < 0.01 ? "none" : ""
         // 過場中幾乎看不見的節點不接受滑鼠,免得游標停在空白處也觸發
         rec.el.style.pointerEvents = n.opacity < 0.15 ? "none" : ""
       }
@@ -244,8 +262,10 @@ export function Stage() {
         aura.style.setProperty("--kb-dy", `${kb ? kb.pos.y - cy : 0}px`)
         aura.style.opacity = `${brain}`
         aura.style.display = ""
+        brainVisibility.shown = true
       } else {
         aura.style.display = "none"
+        brainVisibility.shown = false
       }
     }
     const zoneEl = zoneRef.current
@@ -268,6 +288,7 @@ export function Stage() {
     for (const e of f.edges) {
       const rec = edgeEls.current.get(e.key)
       if (!rec) continue
+      rec.opacity = e.opacity
       const op = e.opacity.toFixed(3)
       if (op !== rec.last) {
         rec.last = op
@@ -286,6 +307,7 @@ export function Stage() {
         rec.d = e.d
         rec.path?.setAttribute("d", e.d)
         rec.mask?.setAttribute("d", e.d)
+        rec.lut = lutOf(e.d)
       }
       // 剛出現:遮罩先歸零,再沿路徑畫到終點(像文字逐字浮現);消失時由 CSS 淡出,下次出現再重畫
       if (rec.mask && rec.reveal !== undefined) {
@@ -302,6 +324,7 @@ export function Stage() {
           m.style.strokeDashoffset = "0"
           window.clearTimeout(revealTimers.current.get(e.key))
           revealTimers.current.set(e.key, window.setTimeout(() => g.removeAttribute("mask"), REVEAL_MS + rec.reveal + 50))
+          rec.revealStart = performance.now()
           revealed.current.add(e.key)
         } else if (!vis && revealed.current.has(e.key)) {
           // 淡出後下次出現要重畫:先把遮罩套回去(歸零),免得出現的瞬間整條閃一下
@@ -315,6 +338,38 @@ export function Stage() {
       }
     }
   }, [])
+
+  // 光點動畫:每秒 30 格畫在 canvas 上;分頁在背景時 requestAnimationFrame 自動暫停,結尾總覽蓋住時清空不畫
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext("2d")
+    if (!canvas || !ctx) return
+    const pad = DOT_PAD(compact)
+    let raf = 0
+    let last = 0
+    const frame = (now: number) => {
+      raf = requestAnimationFrame(frame)
+      if (now - last < 33) return
+      last = now
+      // 解析度 = 縮放倍率 × 螢幕密度(以 0.25 為一級,避免每格重設畫布大小)
+      const k = Math.min(2.5, Math.max(0.5, Math.ceil(scale.current * (window.devicePixelRatio || 1) * 4) / 4))
+      const cw = Math.round((w + 2 * pad) * k)
+      const ch = Math.round((h + 2 * pad) * k)
+      if (canvas.width !== cw || canvas.height !== ch) {
+        canvas.width = cw
+        canvas.height = ch
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, cw, ch)
+      if (recapAt(scrollStore.get()) >= 0.99) return
+      ctx.setTransform(k, 0, 0, k, pad * k, pad * k)
+      const hv = hoverRef.current
+      for (const e of edgeEls.current.values()) e.faded = hv !== null && e.from !== hv && e.to !== hv
+      drawDots(ctx, edgeEls.current.values(), now, dotScale(), compact)
+    }
+    raf = requestAnimationFrame(frame)
+    return () => cancelAnimationFrame(raf)
+  }, [compact, w, h, scale])
 
   return (
     <div ref={ref} data-stage className="relative h-full w-full overflow-hidden">
@@ -337,6 +392,11 @@ export function Stage() {
         <svg className="pointer-events-none absolute inset-0 overflow-visible" width={w} height={h}>
           {/* 逐步畫出時遮罩前緣的柔邊 */}
           <defs>
+            {/* Plasma 底下的光暈(漸層取代模糊濾鏡) */}
+            <radialGradient id="plasma-glow">
+              <stop offset="0" style={{ stopColor: "var(--iso-glow)", stopOpacity: "var(--iso-glow-opacity)" }} />
+              <stop offset="1" style={{ stopColor: "var(--iso-glow)", stopOpacity: 0 }} />
+            </radialGradient>
             {/* 用舞台座標當濾鏡範圍:水平的連線外框高度為 0,用比例會整條被裁掉 */}
             <filter id="reveal-soft" filterUnits="userSpaceOnUse" x={-4000} y={-4000} width={12000} height={12000}>
               <feGaussianBlur stdDeviation={compact ? 22 : 14} />
@@ -347,11 +407,14 @@ export function Stage() {
               // 攻擊封包每一幕重新掛上,動畫才會從頭播
               key={e.state === "attack" ? `${e.key}#${cycle}` : e.key}
               id={`edge-${e.key}`}
-              from={e.from}
               reveal={e.reveal !== undefined}
               gRef={(el) => {
                 if (el) {
-                  edgeEls.current.set(e.key, { g: el, path: el.querySelector(":scope > g > path"), mask: el.querySelector("[data-reveal]"), reveal: e.reveal, last: "", d: "" })
+                  edgeEls.current.set(e.key, {
+                    g: el, path: el.querySelector(":scope > g > path"), mask: el.querySelector("[data-reveal]"), last: "", d: "",
+                    state: e.state, from: e.from, to: e.to, len: dotLen(e.length), lut: null, opacity: 0, faded: false,
+                    reveal: e.reveal, revealStart: -Infinity,
+                  })
                   if (revealEl.current.get(e.key) !== el) {
                     revealEl.current.set(e.key, el)
                     revealed.current.delete(e.key)
@@ -359,13 +422,19 @@ export function Stage() {
                 }
                 else edgeEls.current.delete(e.key)
               }}
-              length={e.length}
               state={e.state}
               highlight={hover !== null && (e.from === hover || e.to === hover)}
               faded={hover !== null && e.from !== hover && e.to !== hover}
             />
           ))}
         </svg>
+        {/* 光點層:所有連線上流動的光點畫在這張 canvas(四周多留一圈,手機版延伸到舞台外的連線也畫得到) */}
+        <canvas
+          ref={canvasRef}
+          aria-hidden
+          className="pointer-events-none absolute"
+          style={{ left: -DOT_PAD(compact), top: -DOT_PAD(compact), width: w + 2 * DOT_PAD(compact), height: h + 2 * DOT_PAD(compact) }}
+        />
 
         {/* 資料大腦光暈:在連線之上、節點之下 */}
         <div ref={auraRef} aria-hidden className="pointer-events-none absolute left-0 top-0 h-0 w-0" style={{ display: "none" }}>

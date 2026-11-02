@@ -58,15 +58,16 @@ function gearPath(r: number, teeth: number) {
   return `M ${pts.join(" L ")} Z`
 }
 
+// 轉動的齒輪:畫在獨立的 HTML 圖層上,用 CSS 旋轉(交給 GPU 合成,不必每格重畫整個平台 SVG)。
+// x、y、r 為平台座標(px)
 function Gear({ x, y, r, dur, reverse = false }: { x: number; y: number; r: number; dur: number; reverse?: boolean }) {
   return (
-    <g transform={`translate(${x} ${y})`}>
-      <g>
-        <animateTransform attributeName="transform" type="rotate" from="0" to={reverse ? -360 : 360} dur={`${dur}s`} repeatCount="indefinite" />
-        <path d={gearPath(r, 8)} style={{ fill: "var(--iso-line)" }} />
-        <circle r={r * 0.32} style={{ fill: "var(--iso-top)" }} />
-      </g>
-    </g>
+    <div className="spin" style={{ left: x - r, top: y - r, width: 2 * r, height: 2 * r, animationDuration: `${dur}s`, animationDirection: reverse ? "reverse" : undefined }}>
+      <svg viewBox="-1 -1 2 2" width="100%" height="100%" className="block overflow-visible">
+        <path d={gearPath(1, 8)} style={{ fill: "var(--iso-line)" }} />
+        <circle r={0.32} style={{ fill: "var(--iso-top)" }} />
+      </svg>
+    </div>
   )
 }
 
@@ -120,8 +121,6 @@ function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: bool
       // 人員 + 轉動的齒輪(人工作業);person-clock 再加上紅色時鐘(耗時)
       return (
         <>
-          <Gear x={-a * 0.62} y={-30} r={9} dur={4} />
-          <Gear x={a * 0.6} y={-8} r={7} dur={3} reverse />
           <g transform="translate(0 -6)">
             <circle cx={0} cy={-34} r={8} fill="#f59e0b" />
             <path d="M -14 -6 Q -14 -22 0 -22 Q 14 -22 14 -6 Z" fill="#f59e0b" />
@@ -146,19 +145,13 @@ function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: bool
       )
     }
     case "plasma": {
-      // 隆起的核心 + 旋轉的等角圓環
+      // 隆起的核心 + 等角圓環的底圈(轉動的那一段畫在 Platform 的 HTML 圖層上)
       const lift = 14
       return (
         <>
           <Box cx={0} cy={0} w={a * 0.5} h={lift} top={C.raised} />
           <g transform={`matrix(1 0.5 -1 0.5 0 ${-lift})`}>
             <circle r={22} fill="none" style={{ stroke: "var(--iso-ring-track)" }} strokeWidth={2} vectorEffect="non-scaling-stroke" />
-            <circle
-              r={22} fill="none" style={{ stroke: "var(--iso-ring)" }} strokeWidth={2.5} strokeLinecap="round"
-              strokeDasharray="95 43" vectorEffect="non-scaling-stroke"
-            >
-              <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="2.4s" repeatCount="indefinite" />
-            </circle>
             <circle r={3.2} style={{ fill: "var(--iso-ring)" }} />
           </g>
         </>
@@ -168,17 +161,8 @@ function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: bool
 }
 
 // 節點平台:座標原點為頂面中心
-// 過載冒煙:幾團灰色煙從平台上方緩緩升起、變大、淡出
-function Smoke({ a }: { a: number }) {
-  return (
-    <g aria-hidden>
-      {[-0.35, 0.1, 0.45].map((dx, i) => (
-        <circle key={i} className="smoke" cx={dx * a} cy={-a * 0.55} r={a * 0.22} style={{ animationDelay: `${i * 0.7}s` }} />
-      ))}
-    </g>
-  )
-}
-
+// 會動的部分(過載紅光、冒煙、齒輪、Plasma 的轉動圓環)都放在 SVG 外的 HTML 圖層,只動 transform / opacity,
+// 由 GPU 合成,不會每格重畫平台 SVG
 export function Platform({ kind, hot = false, variant, down = false }: { kind: NodeKind; hot?: boolean; variant?: string; down?: boolean }) {
   const { a, t } = sizeOf(kind)
   // 裝飾(圓柱、圓環…)跟著平台一起放大:基本倍率 × 直式圖示倍率
@@ -187,6 +171,8 @@ export function Platform({ kind, hot = false, variant, down = false }: { kind: N
   const padTop = 48 * k
   const vb = { x: -a - 4, y: -b - padTop, w: 2 * a + 8, h: 2 * b + t + padTop + 4 }
   return (
+    <>
+    {hot && <div className="hot-glow" style={{ left: -a * 1.25, top: t / 2 - b * 1.25, width: a * 2.5, height: b * 2.5 }} />}
     <svg
       width={vb.w}
       height={vb.h}
@@ -194,11 +180,8 @@ export function Platform({ kind, hot = false, variant, down = false }: { kind: N
       className="absolute overflow-visible"
       style={{ left: vb.x, top: vb.y }}
     >
-      {hot && (
-        <ellipse cx={0} cy={t / 2} rx={a * 1.1} ry={b * 1.1} fill="#f87171" className="hot-pulse" style={{ filter: "blur(14px)" }} />
-      )}
       {kind === "plasma" && (
-        <ellipse cx={0} cy={t / 2} rx={a * 1.2} ry={b * 1.2} style={{ fill: "var(--iso-glow)", opacity: "var(--iso-glow-opacity)", filter: "blur(18px)" }} />
+        <ellipse cx={0} cy={t / 2} rx={a * 1.4} ry={b * 1.4} fill="url(#plasma-glow)" />
       )}
       <g className={down ? "iso-down" : undefined}>
         <Box cx={0} cy={t} w={a} h={t} line={hot ? C.hot : C.line} />
@@ -217,7 +200,26 @@ export function Platform({ kind, hot = false, variant, down = false }: { kind: N
           strokeLinejoin="round"
         />
       )}
-      {hot && <Smoke a={a} />}
     </svg>
+    {kind === "person" && (
+      <>
+        <Gear x={-a * 0.62} y={-30 * k} r={9 * k} dur={4} />
+        <Gear x={a * 0.6} y={-8 * k} r={7 * k} dur={3} reverse />
+      </>
+    )}
+    {kind === "plasma" && (
+      // 等角平面上轉動的圓環:外層壓成等角,內層旋轉
+      <div className="absolute left-0 h-0 w-0" style={{ top: -14 * k, transform: "matrix(1, 0.5, -1, 0.5, 0, 0)" }}>
+        <div className="spin" style={{ left: -22 * k, top: -22 * k, width: 44 * k, height: 44 * k, animationDuration: "2.4s" }}>
+          <svg viewBox="-23 -23 46 46" width="100%" height="100%" className="block overflow-visible">
+            <circle r={22} fill="none" style={{ stroke: "var(--iso-ring)" }} strokeWidth={2.5 / k} strokeLinecap="round" strokeDasharray="95 43" />
+          </svg>
+        </div>
+      </div>
+    )}
+    {hot && [-0.35, 0.1, 0.45].map((dx, i) => (
+      <div key={i} className="smoke-puff" style={{ left: dx * a - a * 0.3, top: -a * 0.55 - a * 0.3, width: a * 0.6, height: a * 0.6, animationDelay: `${i * 0.7}s` }} />
+    ))}
+    </>
   )
 }

@@ -9,7 +9,7 @@ import { BRAIN_LINES, BRAIN_NODES } from "../brainNet"
 //   D 點一下:從點擊處向外一圈圈亮起
 //   E 回答串連:一道訊號從知識庫經過大腦傳到右緣(AI 那側),定時重播
 // idle(跨部門頁):直接顯示,只有 B
-// 大腦光暈出現時 display 由 none 變回來,CSS 的長出動畫自動重播;JS 的效果在看不見時(寬度 0)自動略過
+// 大腦光暈出現時 display 由 none 變回來,CSS 的長出動畫自動重播;JS 的效果在看不見時(brainVisibility.shown 為 false)自動略過
 
 const SQ = 0.7 // 垂直壓扁比例
 const X0 = 4
@@ -69,11 +69,16 @@ const MAX_D = Math.max(...nodes.map((n) => dist(n, ORIGIN)))
 
 const GROW = 1.3 // 長出動畫:最遠的節點延遲多少秒
 
+// 大腦目前是否看得見:由 Stage 在光暈出現/消失時設定(不必每次量元素尺寸,量尺寸會逼瀏覽器重算版面)
+export const brainVisibility = { shown: false }
+
 export function BrainNet({ width, delay, mode }: { width: number; delay: number; mode: "full" | "idle" }) {
   const svgRef = useRef<SVGSVGElement>(null)
   const nodeRefs = useRef<(SVGGElement | null)[]>([])
   const lineRefs = useRef<(SVGLineElement | null)[]>([])
   const pulseRef = useRef<SVGGElement>(null)
+  // 訊號光點放在 SVG 外的 HTML 圖層:只動 transform,交給 GPU 合成,不必每格重畫整張大腦 SVG
+  const dotsRef = useRef<HTMLDivElement>(null)
   const height = (width * VH) / VW
   const full = mode === "full"
 
@@ -85,22 +90,24 @@ export function BrainNet({ width, delay, mode }: { width: number; delay: number;
   useEffect(() => {
     const svg = svgRef.current
     if (!svg || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
-    const shown = () => svg.getBoundingClientRect().width > 0 && !document.hidden
+    const shown = () => brainVisibility.shown && !document.hidden
     const timers: number[] = []
     const later = (fn: () => void, ms: number) => timers.push(window.setTimeout(fn, ms))
 
-    // 一顆光點沿連線從 a 走到 b,抵達的節點閃一下
+    // 一顆光點沿連線從 a 走到 b(大腦座標 → 圖層 px);回答訊號抵達的節點閃一下
+    const kx = width / VW
+    const ky = height / VH
     const fire = (a: { x: number; y: number }, b: { x: number; y: number }, ms: number, strong = false, land?: number) => {
-      const g = pulseRef.current
-      if (!g) return
-      const c = document.createElementNS("http://www.w3.org/2000/svg", "circle")
-      c.setAttribute("r", strong ? "0.85" : "0.55")
-      c.setAttribute("class", strong ? "brain-pulse strong" : "brain-pulse")
-      g.appendChild(c)
-      c.animate([{ transform: `translate(${a.x}px, ${a.y}px)` }, { transform: `translate(${b.x}px, ${b.y}px)` }], { duration: ms, easing: "ease-in-out" })
+      const box = dotsRef.current
+      if (!box) return
+      const c = document.createElement("span")
+      c.className = strong ? "brain-dot strong" : "brain-dot"
+      box.appendChild(c)
+      const px = (p: { x: number; y: number }) => `translate(${(p.x - X0) * kx}px, ${(p.y - Y0) * ky}px)`
+      c.animate([{ transform: px(a) }, { transform: px(b) }], { duration: ms, easing: "ease-in-out" })
         .finished.then(() => {
           c.remove()
-          if (land !== undefined) flash(land, strong ? 2 : 1.6)
+          if (strong && land !== undefined) flash(land, 2)
         })
         .catch(() => c.remove())
     }
@@ -109,7 +116,7 @@ export function BrainNet({ width, delay, mode }: { width: number; delay: number;
       el?.animate([{ transform: "scale(1)" }, { transform: `scale(${s})`, opacity: 1 }, { transform: "scale(1)" }], { duration: 600, delay: d, easing: "ease-out" })
     }
 
-    // B 神經訊號:隨機挑一條連線,每 0.35 秒一顆(看不見時略過)
+    // B 神經訊號:隨機挑一條連線,每 0.5 秒一顆(看不見時略過)
     const start = (full ? delay + GROW + 1 : 0.5) * 1000
     later(() => {
       const id = window.setInterval(() => {
@@ -119,7 +126,7 @@ export function BrainNet({ width, delay, mode }: { width: number; delay: number;
         const [a, b] = edges[li]
         const fwd = Math.random() < 0.5
         fire(fwd ? { x: l.x1, y: l.y1 } : { x: l.x2, y: l.y2 }, fwd ? { x: l.x2, y: l.y2 } : { x: l.x1, y: l.y1 }, 700 + Math.random() * 500, false, (fwd ? b : a).i)
-      }, 350)
+      }, 500)
       timers.push(id)
     }, start)
 
@@ -213,9 +220,10 @@ export function BrainNet({ width, delay, mode }: { width: number; delay: number;
       stage?.removeEventListener("pointerleave", reset)
       stage?.removeEventListener("pointerdown", onDown)
     }
-  }, [full, delay])
+  }, [full, delay, width, height])
 
   return (
+    <>
     <svg
       ref={svgRef}
       aria-hidden
@@ -251,5 +259,12 @@ export function BrainNet({ width, delay, mode }: { width: number; delay: number;
       </g>
       <g ref={pulseRef} />
     </svg>
+    <div
+      ref={dotsRef}
+      aria-hidden
+      className="brain-net pointer-events-none absolute"
+      style={{ left: -((CORE.x - X0) / VW) * width, top: -((CORE.y - Y0) / VH) * height, width, height }}
+    />
+    </>
   )
 }

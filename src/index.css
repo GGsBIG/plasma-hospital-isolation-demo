@@ -146,16 +146,23 @@ html, body, #root { min-height: 100%; }
   }
 }
 
-/* 過載平台底下的紅色光暈 */
+/* 過載平台底下的紅色光暈(HTML 圖層,漸層 + 透明度動畫,交給 GPU 合成) */
+.hot-glow {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(248 113 113 / 0.9), rgb(248 113 113 / 0));
+  animation: hot-pulse 1.2s ease-in-out infinite;
+  will-change: opacity;
+}
 @keyframes hot-pulse {
   0%, 100% { opacity: 0.18; }
   50% { opacity: 0.42; }
 }
-.hot-pulse { animation: hot-pulse 1.2s ease-in-out infinite; }
-
-
+/* 轉動的齒輪、Plasma 圓環 */
+.spin { position: absolute; animation: spin linear infinite; will-change: transform; }
+@keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .hot-pulse { animation: none; }
+  .hot-glow, .spin { animation: none; }
 }
 
 /* uiarc 元件(src/components/arc)用到的設計變數。uiarc 的 --foreground 等是完整顏色值,
@@ -383,8 +390,9 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 @keyframes brain-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes brain-pop { from { transform: scale(0); } }
 @keyframes brain-fade { from { opacity: 0; } }
-.brain-pulse { fill: currentColor; }
-.brain-pulse.strong { fill: #10b981; }
+/* 訊號光點(HTML,交給 GPU 合成):原點在左上,用 transform 移動到連線上的位置 */
+.brain-dot { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; will-change: transform; }
+.brain-dot.strong { left: -4.5px; top: -4.5px; width: 9px; height: 9px; background: #10b981; }
 .brain-ring { fill: none; stroke: currentColor; stroke-width: 0.3; transform-box: fill-box; transform-origin: center; }
 /* 知識庫落下、疊到 Plasma 上合體 */
 .kb-drop { animation: kb-drop 0.9s cubic-bezier(0.34, 1.3, 0.64, 1) backwards; }
@@ -424,24 +432,26 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 }
 
 /* 過載冒煙 */
-.smoke {
-  fill: #a1a1aa;
+/* 過載冒煙(HTML 圖層,漸層柔邊,只動 transform / opacity) */
+:root { --smoke: #a1a1aa; }
+.dark { --smoke: #d4d4d8; }
+.smoke-puff {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--smoke), transparent);
   opacity: 0;
-  filter: blur(7px);
-  transform-box: fill-box;
-  transform-origin: center;
   animation: smoke-rise 2.1s ease-out infinite;
+  will-change: transform, opacity;
 }
-.dark .smoke { fill: #d4d4d8; }
 @keyframes smoke-rise {
   0% { opacity: 0; transform: translateY(0) scale(0.5); }
-  25% { opacity: 0.32; }
+  25% { opacity: 0.45; }
   100% { opacity: 0; transform: translateY(-70px) scale(1.7); }
 }
 /* 停機的節點:褪色變暗 */
 .iso-down { filter: grayscale(1) brightness(0.75); }
 @media (prefers-reduced-motion: reduce) {
-  .smoke { animation: none; opacity: 0.3; }
+  .smoke-puff { animation: none; opacity: 0.3; }
 }
 
 /* 資料庫垮掉的瞬間:平台劇烈晃動一下,再停在變暗的狀態 */

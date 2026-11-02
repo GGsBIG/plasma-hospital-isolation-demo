@@ -77,7 +77,7 @@ export function Node({
             className={`inline-flex items-center gap-2 rounded-full border bg-card ${s.badge} text-foreground/90 transition-[border-color,box-shadow] duration-300
               ${hovered ? "border-foreground/30" : "border-border"}`}
           >
-            <span className={`h-2.5 w-2.5 rounded-full ${DOT[badge.tone]} ${badge.tone === "danger" ? "animate-pulse" : ""}`} />
+            <span className={`h-2.5 w-2.5 rounded-full ${DOT[badge.tone]}`} />
             {badge.text}
             {badge.load !== undefined && <span data-load className="tabular-nums">{badge.load}%</span>}
           </span>

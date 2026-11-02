@@ -3,7 +3,6 @@ import { SCENES } from "../scenes"
 import type { SceneDef } from "../types"
 import { clamp01, clampProgress } from "../timeline"
 import { useScrollEffect, useScrollSelector } from "../scroll"
-import { isCompact } from "../layout"
 import { plasmaMix } from "../plasma"
 
 // 英數連成一個單位(避免單字被拆行),其餘逐字;句讀黏在前一個字上,避免標點落在行首
@@ -29,7 +28,7 @@ const SWAP = 0.3
 
 // 把一串字的浮現位置從 prev 移到 head:第 k 個字的浮現程度 v 只在 head - SOFT < k < head 之間介於 0~1,
 // 所以只有新舊位置之間的字需要改,其餘不動
-function paint(spans: HTMLElement[], prev: number | null, head: number, lite: boolean, blur: boolean) {
+function paint(spans: HTMLElement[], prev: number | null, head: number, lite: boolean) {
   const n = spans.length
   const from = prev === null ? 0 : Math.max(0, Math.floor(Math.min(prev, head) - SOFT))
   const to = prev === null ? n - 1 : Math.min(n - 1, Math.ceil(Math.max(prev, head)))
@@ -38,7 +37,6 @@ function paint(spans: HTMLElement[], prev: number | null, head: number, lite: bo
     const st = spans[k].style
     st.opacity = `${v}`
     st.transform = lite || v === 1 || v === 0 ? "" : `translateY(${(1 - v) * 6}px)`
-    st.filter = blur && v > 0 && v < 1 ? `blur(${(1 - v) * 6}px)` : ""
   }
 }
 const TITLE_LENS = SCENES.map((s) => tokens(s.title).length)
@@ -161,15 +159,14 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
       // 直接寫 px 的 transform,不用 CSS 變數:變數會繼承到底下每個字,每格都要重算全部樣式
       list.style.transform = `translateY(${view / 2 - (p + 0.5) * section}px)`
     }
-    // 減少動態:只淡入;手機:不加模糊(每個模糊字都是一個圖層,合成成本高)
+    // 減少動態:只淡入;逐字浮現不加模糊(模糊的字每格都要重算,捲動會卡)
     const lite = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    const blur = !lite && !isCompact()
     cards.current.forEach((card, i) => {
       if (!card) return
       // 從前一段過場到一半起開始浮現,接近置中時完整;以 1/4 個字為單位
       const head = Math.round(clamp01((p - (i - 0.75)) / 0.6) * (TOTALS[i] + SOFT) * 4) / 4
       if (head !== card.head) {
-        paint(card.spans, card.head, head, lite, blur)
+        paint(card.spans, card.head, head, lite)
         if (card.line) card.line.style.transform = `scaleX(${clamp01((head - TITLE_LENS[i]) / SOFT)})`
         card.head = head
       }
@@ -182,7 +179,7 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
         card.pain.style.visibility = out === 1 ? "hidden" : ""
         const fixHead = Math.round(clamp01((m - SWAP) / (1 - SWAP)) * (card.fixSpans.length + SOFT) * 4) / 4
         if (fixHead !== card.fixHead) {
-          paint(card.fixSpans, card.fixHead, fixHead, lite, blur)
+          paint(card.fixSpans, card.fixHead, fixHead, lite)
           card.fixHead = fixHead
         }
         card.m = m
