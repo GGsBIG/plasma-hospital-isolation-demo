@@ -9,14 +9,10 @@ import { phaseOf, phasesOf } from "./phase"
 // 捲動進度 p:0 = 情境 1 置中,1 = 情境 2 置中…,小數就是卡在兩個情境之間。
 // 所有過場都由 p 直接算出畫面,不再依時間播放,所以停在中途就會停在過場的一半。
 
-// 每段過場只在中間這段捲動距離內進行,頭尾各留一小段停在完整情境上,比較好停
-const HOLD = 0.15
 const DIM = 0.28          // 非重點節點的透明度(情境可用 dimOpacity 覆寫)
 const ENTER_OFFSET = 24   // 節點進出場時的位移(舞台 px)
 
 export const clamp01 = (x: number) => Math.min(1, Math.max(0, x))
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t
-const smoothstep = (x: number) => x * x * (3 - 2 * x)
 
 export const LAST = SCENES.length - 1
 export const clampProgress = (p: number) => Math.min(LAST, Math.max(0, p))
@@ -27,20 +23,13 @@ export const CHAT_SPAN = 2.5
 export const RECAP_AT = LAST + CHAT_SPAN
 export const END = RECAP_AT + 1
 export const RECAP_INDEX = SCENES.length
-export const recapAt = (p: number) => smoothstep(clamp01((p - RECAP_AT - HOLD) / (1 - 2 * HOLD)))
+export const recapAt = (p: number) => clamp01(p - RECAP_AT)
 
-// 目前所在的兩個情境與兩者之間的過場進度(已 ease)
+// 目前所在的兩個情境與兩者之間的過場進度:與捲動等速,畫面跟著滾輪與手指走
 export function segmentAt(p: number): { a: SceneDef; b: SceneDef; t: number } {
   const q = clampProgress(p)
   const i = Math.min(Math.floor(q), LAST - 1)
-  return { a: SCENES[i], b: SCENES[i + 1], t: smoothstep(clamp01((q - i - HOLD) / (1 - 2 * HOLD))) }
-}
-
-// 套用與舞台相同緩動後的進度(整數停留、中間加速),給需要跟著過場走的 UI 用
-export function easedProgress(p: number): number {
-  const q = clampProgress(p)
-  const i = Math.min(Math.floor(q), LAST - 1)
-  return i + segmentAt(q).t
+  return { a: SCENES[i], b: SCENES[i + 1], t: clamp01(q - i) }
 }
 
 export const segmentIndex = (p: number) => Math.min(Math.floor(clampProgress(p)), LAST - 1)
@@ -82,23 +71,21 @@ export function statesAt(p: number): Weighted[] {
 // 權重最高的狀態排前面:徽章文字、滑鼠停留的連線都依「目前看起來最像」的那個狀態
 export const dominantStates = (p: number) => statesAt(p).sort((x, y) => y.w - x.w)
 
-// ---- 結構:只跟「在哪兩頁之間」有關,整段過場不變,所以只在換段時算一次、React 才重繪 ----
+// ---- 結構:全站所有節點與連線,依版面只算一次;舞台一次建好,之後只切換顯示,跨頁時不必拆掉重建 ----
 
 export interface EdgeSlot { key: string; from: string; to: string; state: EdgeState; length: number; lane: number; reveal?: number }
 export interface Structure { nodeIds: string[]; edges: EdgeSlot[] }
 
 const edgeKey = (e: SceneState["edges"][number]) => `${e.from}--${e.to}--${e.state}`
 
-// 依「段落 + 版面」快取
 const structures = new Map<string, Structure>()
-export function structureAt(i: number): Structure {
-  const cacheKey = `${i}|${layoutMode()}`
-  const cached = structures.get(cacheKey)
+export function structure(): Structure {
+  const cached = structures.get(layoutMode())
   if (cached) return cached
-  const states = [...allStates(SCENES[i]), ...allStates(SCENES[i + 1])]
+  const states = SCENES.flatMap(allStates)
   const nodeIds = [...new Set(states.flatMap((s) => Object.keys(s.nodes)))]
   const edges = new Map<string, EdgeSlot>()
-  // 光點速度與數量依「所在狀態裡」的連線長度決定,過場中不變,SMIL 動畫才不會一直重啟
+  // 同一條連線出現在多個畫面時,取第一次出現的長度(決定光點速度與數量)
   for (const scene of states) {
     for (const e of scene.edges) {
       const k = edgeKey(e)
@@ -109,7 +96,7 @@ export function structureAt(i: number): Structure {
     }
   }
   const s = { nodeIds, edges: [...edges.values()] }
-  structures.set(cacheKey, s)
+  structures.set(layoutMode(), s)
   return s
 }
 
@@ -148,39 +135,46 @@ export function agentAt(p: number): number {
 // 並排連線的上下平移;手機版線較粗,間距跟著放大
 const shift = (p: Pos, lane: number) => (lane ? { x: p.x, y: p.y + lane * lineScale() } : p)
 
+// 只算這一格看得到的:出現在目前四個畫面狀態裡的節點與連線(其餘由舞台隱藏)
 export function frameAt(p: number): Frame {
-  const states = statesAt(p)
-  const { nodeIds, edges: slots } = structureAt(segmentIndex(p))
+  const states = statesAt(p).filter((x) => x.w > 0)
 
+  const nodeIds = new Set(states.flatMap((x) => Object.keys(x.s.nodes)))
   const nodes: NodeFrame[] = []
   const posById: Record<string, Pos> = {}
   for (const id of nodeIds) {
     // 位置 = 有這個節點的狀態加權平均;不在的狀態佔的權重讓它淡出並略為下沉
     let x = 0, y = 0, w = 0, opacity = 0
-    let any: Pos | undefined
     for (const st of states) {
       const at = st.s.nodes[id]
       if (!at) continue
       const P = place(id, at)
-      any ??= P
       x += P.x * st.w
       y += P.y * st.w
       w += st.w
       opacity += st.w * (st.s.active.includes(id) ? 1 : st.s.dimOpacity ?? DIM)
     }
-    const base = w > 0 ? { x: x / w, y: y / w } : any!
-    const pos = { x: base.x, y: base.y + ENTER_OFFSET * (1 - w) }
+    const pos = { x: x / w, y: y / w + ENTER_OFFSET * (1 - w) }
     posById[id] = pos
     nodes.push({ id, pos, opacity })
   }
 
   // 同一條連線在各狀態有無不同時交叉淡化(例如過載 → 隔離)
-  const keySets = states.map((x) => new Set(x.s.edges.map(edgeKey)))
-  const edges = slots.map((e) => ({
-    key: e.key,
-    opacity: states.reduce((n, x, k) => n + (keySets[k].has(e.key) ? x.w : 0), 0),
-    d: edgePath(shift(posById[e.from], e.lane), NODE_BY_ID[e.from].kind, shift(posById[e.to], e.lane), NODE_BY_ID[e.to].kind, verticalFlow()),
-  }))
+  const opacity = new Map<string, number>()
+  const lane = new Map<string, number>()
+  for (const st of states) {
+    for (const e of st.s.edges) {
+      const k = edgeKey(e)
+      opacity.set(k, (opacity.get(k) ?? 0) + st.w)
+      lane.set(k, e.lane ?? 0)
+    }
+  }
+  const edges: EdgeFrame[] = []
+  for (const [key, op] of opacity) {
+    const [from, to] = key.split("--")
+    const l = lane.get(key)!
+    edges.push({ key, opacity: op, d: edgePath(shift(posById[from], l), NODE_BY_ID[from].kind, shift(posById[to], l), NODE_BY_ID[to].kind, verticalFlow()) })
+  }
 
   return { nodes, edges, loads: loadsAt(p) }
 }

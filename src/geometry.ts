@@ -16,7 +16,7 @@ const BASE_SIZE: Record<NodeKind, { a: number; t: number }> = {
   serving: { a: 54, t: 12 },
 }
 
-export const SIZE = Object.fromEntries(
+const SIZE = Object.fromEntries(
   Object.entries(BASE_SIZE).map(([k, { a, t }]) => [k, { a: a * NODE_SCALE, t: t * NODE_SCALE }]),
 ) as Record<NodeKind, { a: number; t: number }>
 

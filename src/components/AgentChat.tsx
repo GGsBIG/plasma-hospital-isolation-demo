@@ -81,7 +81,7 @@ export function AgentChat({ progress }: { progress: number }) {
           ))}
         </span>
       </div>
-      <div ref={listRef} data-lenis-prevent className="no-scrollbar flex-1 space-y-2.5 overflow-y-auto pr-1">
+      <div ref={listRef} className="no-scrollbar flex-1 space-y-2.5 overflow-y-auto pr-1">
         {AGENT_SCRIPT.map((t, i) => {
           const v = steps[i]
           if (v <= 0) return null

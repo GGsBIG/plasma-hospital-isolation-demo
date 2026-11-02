@@ -1,4 +1,4 @@
-import { Fragment } from "react"
+import { Fragment, memo } from "react"
 import { Siren, Timer } from "lucide-react"
 import type { Callout, NodeDef } from "../types"
 import { useTick } from "../ticker"
@@ -24,9 +24,7 @@ const SPRING = "ease-[cubic-bezier(0.34,1.56,0.64,1)]"
 
 // 位置與透明度每格由 Stage 直接寫進外層 div(elRef),這裡不帶這兩個值,捲動時不重繪;
 // hovered / faded 是滑鼠互動,放在內層用 CSS transition,跟捲動驅動的外層互不干擾
-export function Node({
-  node, elRef, compact, hot, badge, stat, callout, down = false, stack = false, merged = false, hovered, faded, onHover,
-}: {
+interface NodeProps {
   node: NodeDef
   elRef: (el: HTMLDivElement | null) => void
   compact: boolean
@@ -40,7 +38,11 @@ export function Node({
   hovered: boolean
   faded: boolean
   onHover: (id: string | null) => void
-}) {
+}
+
+export const Node = memo(function Node({
+  node, elRef, compact, hot, badge, stat, callout, down = false, stack = false, merged = false, hovered, faded, onHover,
+}: NodeProps) {
   const { a, t } = sizeOf(node.kind)
   // 知識庫在 Plasma 正上方,標籤放右側避免擋到往下的連線
   const side = !compact && node.kind === "kb"
@@ -84,7 +86,8 @@ export function Node({
 
   return (
     // 位置用 transform(由 Stage 寫入),自己一個圖層:移動與淡入淡出都交給 GPU 合成,不重排版面
-    <div ref={elRef} className="absolute left-0 top-0 h-0 w-0 will-change-[transform,opacity]">
+    // 一開始隱藏,由 Stage 依畫面狀態顯示
+    <div ref={elRef} className="absolute left-0 top-0 h-0 w-0 will-change-[transform,opacity]" style={{ display: "none" }}>
       <div
         className={`absolute h-0 w-0 transition-opacity duration-300 motion-reduce:transition-none ${faded ? "opacity-[0.35]" : "opacity-100"}`}
         onMouseEnter={() => CAN_HOVER && onHover(node.id)}
@@ -188,6 +191,17 @@ export function Node({
       </div>
     </div>
   )
+}, sameNode)
+
+// 只有畫面內容真的改變才重繪(徽章每次都是新物件,比內容;負載數字由 Stage 直接改 DOM,不必重繪)
+function sameNode(a: NodeProps, b: NodeProps) {
+  for (const k of Object.keys(a) as (keyof NodeProps)[]) {
+    if (k === "badge") continue
+    if (a[k] !== b[k]) return false
+  }
+  const x = a.badge
+  const y = b.badge
+  return x === y || (!!x && !!y && x.tone === y.tone && x.text === y.text && (x.load === undefined) === (y.load === undefined))
 }
 
 // 對話輪播:依共用節拍輪流顯示每一步,輪到這個節點說話時才出現泡泡;下方一行是累計花費的時間

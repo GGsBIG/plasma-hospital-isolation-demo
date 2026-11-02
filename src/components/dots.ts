@@ -1,15 +1,14 @@
 import type { EdgeState } from "../types"
 
 // 連線上流動的光點:全部畫在同一張 canvas 上(每秒 30 格),連線本身是靜態 SVG,不必每格重畫整張連線圖。
-// 速度、密度、過載的卡頓節奏與原本 SMIL 版本相同
 
 // 每秒移動的 px:過載時資料流明顯更急
-export const SPEED: Record<EdgeState, number> = {
+const SPEED: Record<EdgeState, number> = {
   normal: 110, overload: 320, isolated: 150, risk: 110, slow: 70, dead: 0, attack: 260, raw: 150,
 }
 
 // 每 px 的光點密度(有風險的直連常常一次很多條,光點要稀;slow 只有一顆,另外畫)
-export const DENSITY: Record<EdgeState, number> = {
+const DENSITY: Record<EdgeState, number> = {
   normal: 1 / 170, overload: 1 / 55, isolated: 1 / 140, risk: 1 / 320, slow: 0, dead: 0, attack: 0, raw: 1 / 140,
 }
 
@@ -25,7 +24,7 @@ const RAW: Record<string, string> = {
   "db-oracle": "#f59e0b", "db-postgres": "#8b5cf6", "db-mssql": "#0ea5e9", "db-mysql": "#ec4899", "db-informix": "#14b8a6",
 }
 
-// 光點長度單位:連線長度取 40 的倍數(過場中不變),與原本 SMIL 版本一致
+// 光點長度單位:連線長度取 40 的倍數,過場中不變,速度與數量才不會跟著跳
 export const dotLen = (length: number) => Math.max(40, Math.round(length / 40) * 40)
 
 // 三次貝茲曲線(edgePath 產生的 "M x y C ...")→ 依弧長取點的查表

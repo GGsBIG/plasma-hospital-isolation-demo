@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { memo, useEffect, useRef } from "react"
 import type { EdgeDef } from "../types"
 import { dotScale, lineScale } from "../layout"
 
@@ -28,7 +28,7 @@ const DOT: Record<EdgeDef["state"], string> = {
 // 這裡只剩線本身、逐步畫出的遮罩,以及攻擊封包。
 // 形狀 d 與透明度每格由 Stage 直接寫進 DOM(gRef),這裡不帶,捲動時不重繪;
 // highlight / faded 是滑鼠停在節點上時的強調,用 CSS transition
-export function Edge({ id, reveal, gRef, state, highlight, faded }: {
+export const Edge = memo(function Edge({ id, reveal, gRef, state, highlight, faded }: {
   id: string
   reveal: boolean
   gRef: (el: SVGGElement | null) => void
@@ -42,7 +42,8 @@ export function Edge({ id, reveal, gRef, state, highlight, faded }: {
   const dashed = state === "risk" || state === "dead"
   return (
     // reveal:整組套上遮罩,遮罩是一條沿同一路徑、模糊柔邊的粗線,由 Stage 控制它從起點畫到終點
-    <g ref={gRef} className={reveal ? "edge-reveal" : undefined} mask={reveal ? `url(#${id}-mask)` : undefined}>
+    // 一開始隱藏,由 Stage 依畫面狀態顯示
+    <g ref={gRef} className={reveal ? "edge-reveal" : undefined} mask={reveal ? `url(#${id}-mask)` : undefined} style={{ display: "none" }}>
       {reveal && (
         <mask id={`${id}-mask`} maskUnits="userSpaceOnUse" x={-4000} y={-4000} width={12000} height={12000}>
           <path
@@ -71,7 +72,7 @@ export function Edge({ id, reveal, gRef, state, highlight, faded }: {
       </g>
     </g>
   )
-}
+})
 
 // 破壞性指令:紅色 DELETE 封包衝向資料庫一次,抵達後消失。
 // 每一輪由 Stage 重新掛上;begin="indefinite" + 掛上時 beginElement,動畫才會從頭播(否則會接續文件時間軸、從中途開始)

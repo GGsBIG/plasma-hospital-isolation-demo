@@ -5,7 +5,7 @@ import { SCENES } from "../scenes"
 import { ShieldCheck } from "lucide-react"
 import { FILE_ICONS, FILE_ICON_VIEWBOX } from "../fileIcons"
 import { dotScale, iconScale, place, sceneBox, stageSize, useLayoutMode, zoneRect, type Box } from "../layout"
-import { dominantStates, frameAt, loadsAt, recapAt, segmentAt, segmentIndex, stageKey, statesAt, structureAt } from "../timeline"
+import { dominantStates, frameAt, loadsAt, recapAt, segmentAt, segmentIndex, stageKey, statesAt, structure, type EdgeSlot } from "../timeline"
 import { plasmaMix } from "../plasma"
 import { phaseOf } from "../phase"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
@@ -144,7 +144,7 @@ export function Stage() {
   // 只在離散狀態改變時重繪:換段、徽章文字改用另一端情境、負載跨過門檻
   useScrollSelector(stageKey)
   const p = scrollStore.get()
-  const { nodeIds, edges } = structureAt(segmentIndex(p))
+  const { nodeIds, edges } = structure()
   // 目前的幕與輪次:攻擊封包在進入那一幕時重新掛上,動畫才會剛好在那一幕從頭播
   const pa = phaseOf(segmentIndex(p))
   const pb = phaseOf(segmentIndex(p) + 1)
@@ -186,6 +186,8 @@ export function Stage() {
   const revealEl = useRef(new Map<string, SVGGElement>())
   const revealTimers = useRef(new Map<string, number>())
   const merging = useRef(new Set<string>())
+  const shownNodes = useRef(new Set<string>())
+  const shownEdges = useRef(new Set<string>())
   const hideTimers = useRef(new Map<string, number>())
   const lastKey = useRef("")
   // 重繪後可能有新節點/連線還沒套樣式,下一次一定要完整套一次
@@ -205,6 +207,43 @@ export function Stage() {
     setBox(box)
   }, [compact, mode])
 
+  // 節點與連線的 ref 回呼:每個 id 固定一個函式(Node、Edge 有 memo,回呼每次都換新會讓它們每次都重繪)
+  const refFns = useRef(new Map<string, (el: never) => void>())
+  const nodeRef = (id: string) => {
+    let f = refFns.current.get(`n|${id}`)
+    if (!f) {
+      f = (el: HTMLDivElement | null) => {
+        if (el) nodeEls.current.set(id, { el, num: null, last: "", load: "" })
+        else nodeEls.current.delete(id)
+      }
+      refFns.current.set(`n|${id}`, f)
+    }
+    return f as (el: HTMLDivElement | null) => void
+  }
+  const edgeRef = (e: EdgeSlot) => {
+    const k = `e|${mode}|${e.key}`
+    let f = refFns.current.get(k)
+    if (!f) {
+      f = (el: SVGGElement | null) => {
+        if (!el) {
+          edgeEls.current.delete(e.key)
+          return
+        }
+        edgeEls.current.set(e.key, {
+          g: el, path: el.querySelector(":scope > g > path"), mask: el.querySelector("[data-reveal]"), last: "", d: "",
+          state: e.state, from: e.from, to: e.to, len: dotLen(e.length), lut: null, opacity: 0, faded: false,
+          reveal: e.reveal, revealStart: -Infinity,
+        })
+        if (revealEl.current.get(e.key) !== el) {
+          revealEl.current.set(e.key, el)
+          revealed.current.delete(e.key)
+        }
+      }
+      refFns.current.set(k, f)
+    }
+    return f as (el: SVGGElement | null) => void
+  }
+
   // 結尾總覽完全蓋住時,舞台整個隱藏:底下的動畫都不必再畫
   useScrollEffect((p) => {
     const el = ref.current
@@ -213,12 +252,24 @@ export function Stage() {
   }, [])
 
   useScrollEffect((p) => {
-    // 過場前後的停留區畫面完全不變,整格略過
+    // 畫面沒有任何變化(同一捲動位置、同一切換進度、同一幕)就整格略過
     const i = segmentIndex(p)
     const key = `${i}|${segmentAt(p).t.toFixed(4)}|${plasmaMix(i).toFixed(4)}|${plasmaMix(i + 1).toFixed(4)}|${phaseOf(i).idx}|${phaseOf(i + 1).idx}`
     if (key === lastKey.current) return
     lastKey.current = key
     const f = frameAt(p)
+    // 上一格看得到、這一格不在任何畫面狀態裡的節點:隱藏(全部節點一次建好,不在畫面上的一律 display:none)
+    const seen = new Set(f.nodes.map((n) => n.id))
+    for (const id of shownNodes.current) {
+      if (seen.has(id)) continue
+      const rec = nodeEls.current.get(id)
+      if (rec) {
+        rec.el.style.display = "none"
+        rec.last = ""
+      }
+      merging.current.delete(id)
+    }
+    shownNodes.current = seen
     for (const n of f.nodes) {
       const rec = nodeEls.current.get(n.id)
       if (!rec) continue
@@ -245,6 +296,8 @@ export function Stage() {
         } else if (!vis) merging.current.delete(n.id)
       }
       const load = f.loads[n.id]
+      // 負載數字的元素在徽章出現時才有,找不到就重找一次
+      if (load !== undefined && !rec.num?.isConnected) rec.num = rec.el.querySelector("[data-load]")
       if (load !== undefined && rec.num && rec.load !== `${load}`) {
         rec.load = `${load}`
         rec.num.textContent = `${load}%`
@@ -285,7 +338,11 @@ export function Stage() {
         zoneEl.style.display = "none"
       }
     }
-    for (const e of f.edges) {
+    // 上一格看得到、這一格不在畫面狀態裡的連線:當作透明度 0 處理(逐步畫出的連線照樣淡出)
+    const now = new Set(f.edges.map((e) => e.key))
+    const gone = [...shownEdges.current].filter((k) => !now.has(k)).map((key) => ({ key, opacity: 0, d: edgeEls.current.get(key)?.d ?? "" }))
+    shownEdges.current = now
+    for (const e of [...f.edges, ...gone]) {
       const rec = edgeEls.current.get(e.key)
       if (!rec) continue
       rec.opacity = e.opacity
@@ -408,20 +465,7 @@ export function Stage() {
               key={e.state === "attack" ? `${e.key}#${cycle}` : e.key}
               id={`edge-${e.key}`}
               reveal={e.reveal !== undefined}
-              gRef={(el) => {
-                if (el) {
-                  edgeEls.current.set(e.key, {
-                    g: el, path: el.querySelector(":scope > g > path"), mask: el.querySelector("[data-reveal]"), last: "", d: "",
-                    state: e.state, from: e.from, to: e.to, len: dotLen(e.length), lut: null, opacity: 0, faded: false,
-                    reveal: e.reveal, revealStart: -Infinity,
-                  })
-                  if (revealEl.current.get(e.key) !== el) {
-                    revealEl.current.set(e.key, el)
-                    revealed.current.delete(e.key)
-                  }
-                }
-                else edgeEls.current.delete(e.key)
-              }}
+              gRef={edgeRef(e)}
               state={e.state}
               highlight={hover !== null && (e.from === hover || e.to === hover)}
               faded={hover !== null && e.from !== hover && e.to !== hover}
@@ -479,10 +523,7 @@ export function Stage() {
           return (
             <Node
               key={id}
-              elRef={(el) => {
-                if (el) nodeEls.current.set(id, { el, num: el.querySelector("[data-load]"), last: "", load: "" })
-                else nodeEls.current.delete(id)
-              }}
+              elRef={nodeRef(id)}
               node={NODE_BY_ID[id]}
               compact={compact}
               hot={info.hot}

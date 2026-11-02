@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import Lenis from "lenis"
-import { SCENES, validateScenes } from "./scenes"
+import { validateScenes } from "./scenes"
 import { agentAt, CHAT_SPAN, clamp01, clampProgress, END, LAST, RECAP_AT, RECAP_INDEX, recapAt } from "./timeline"
 import { quantize, scrollStore, useScrollEffect, useScrollSelector } from "./scroll"
 import { useLayoutMode } from "./layout"
@@ -23,7 +22,6 @@ const AGENT_W = 380
 const CHAT_PLAY = 9
 const CHAT_DELAY = 600 // 等 Agent 面板滑出後再開始播
 
-const easeInOutCubic = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2)
 
 // 情境 6 的 Agent 對話:面板在情境 5→6 過場中滑出並擠窄舞台(舞台整體縮小左移,不會被擋住);
 // 抵達情境 6 後,再往下捲 CHAT_SPAN 段距離,對話才逐步播放完。
@@ -129,7 +127,6 @@ export function App() {
   const mode = useLayoutMode()
 
   const stepRef = useRef<HTMLDivElement>(null)
-  const lenisRef = useRef<Lenis | null>(null)
 
   // 情境 i 的捲動位置 = i × --scroll-step(由隱藏的量測元素取得 px 值)。
   // 快取起來,只在視窗大小改變時重量:捲動中讀 offsetHeight 會逼瀏覽器當場重算版面
@@ -140,10 +137,7 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    // 滾輪/觸控板用瀏覽器原生捲動(無阻尼):滾多少走多少,可停在任何位置(含過場中途);
-    // Lenis 只負責按鈕與方向鍵的平滑捲動
-    const lenis = new Lenis({ smoothWheel: false, autoRaf: true })
-    lenisRef.current = lenis
+    // 瀏覽器原生捲動(無阻尼):滾多少走多少,可停在任何位置(含過場中途),觸控板慣性照常
     const update = () => {
       const h = stepPx()
       if (h) scrollStore.set(window.scrollY / h)
@@ -152,14 +146,40 @@ export function App() {
       step.current = 0
       update()
     }
-    lenis.on("scroll", update)
+    window.addEventListener("scroll", update, { passive: true })
     window.addEventListener("resize", onResize)
     update()
     return () => {
-      lenis.destroy()
+      window.removeEventListener("scroll", update)
       window.removeEventListener("resize", onResize)
     }
   }, [stepPx])
+
+  // 對話自動播放:等速捲到對話播完;使用者一滾動、觸控或按鍵就停,交還手動控制
+  const autoRaf = useRef(0)
+  const stopAuto = useCallback(() => cancelAnimationFrame(autoRaf.current), [])
+  useEffect(() => {
+    const opts = { passive: true } as const
+    window.addEventListener("wheel", stopAuto, opts)
+    window.addEventListener("touchstart", stopAuto, opts)
+    window.addEventListener("keydown", stopAuto)
+    return () => {
+      window.removeEventListener("wheel", stopAuto)
+      window.removeEventListener("touchstart", stopAuto)
+      window.removeEventListener("keydown", stopAuto)
+    }
+  }, [stopAuto])
+  const autoScroll = useCallback((to: number, seconds: number) => {
+    stopAuto()
+    const from = window.scrollY
+    const start = performance.now()
+    const tick = (now: number) => {
+      const u = Math.min(1, (now - start) / (seconds * 1000))
+      window.scrollTo(0, from + (to - from) * u)
+      if (u < 1) autoRaf.current = requestAnimationFrame(tick)
+    }
+    autoRaf.current = requestAnimationFrame(tick)
+  }, [stopAuto])
 
   // 分頁在背景時暫停所有持續動畫(光點、光暈、閃爍、轉圈),不佔資源
   useEffect(() => {
@@ -172,42 +192,34 @@ export function App() {
     return () => document.removeEventListener("visibilitychange", onVisibility)
   }, [])
 
-  // 按鈕與方向鍵:平滑捲到目標情境,過場跟著捲動一路播放
+  // 按鈕與方向鍵:用瀏覽器原生的短平滑捲動到目標情境,過場跟著捲動一路播放
   const goTo = useCallback((i: number) => {
     const h = stepPx()
-    if (!h || !lenisRef.current) return
+    if (!h) return
+    stopAuto()
     // 最後一個情境之後可以再往下捲到對話播完(RECAP_AT),再往下是結尾總覽(END)
     const target = i === RECAP_INDEX ? END : Math.max(0, Math.min(i, END))
-    const distance = Math.abs(target - scrollStore.get())
-    lenisRef.current.scrollTo(target * h, {
-      duration: Math.min(1.8 + distance * 0.5, 4),
-      easing: easeInOutCubic,
-    })
-  }, [stepPx])
+    window.scrollTo({ top: target * h, behavior: "smooth" })
+  }, [stepPx, stopAuto])
 
   // 切換導入前後。最後一頁切到導入後:自動往下捲,讓 Agent 對話一路播完;
-  // 對話仍由捲動位置驅動,所以使用者隨時可以用滾輪/觸控接手(Lenis 收到滾動就停止自動捲動)
+  // 對話仍由捲動位置驅動,所以使用者隨時可以用滾輪/觸控接手
   const chatTimer = useRef(0)
   const togglePlasma = useCallback((i: number, on: boolean) => {
     setPlasma(i, on)
     if (i !== LAST) return
     window.clearTimeout(chatTimer.current)
-    const lenis = lenisRef.current
-    if (!lenis) return
-    if (!on) {
-      // 切回導入前:停在目前位置
-      lenis.scrollTo(window.scrollY, { immediate: true })
-      return
-    }
+    // 切回導入前:停在目前位置
+    if (!on) return stopAuto()
     chatTimer.current = window.setTimeout(() => {
       const h = stepPx()
       const end = (LAST + CHAT_SPAN) * h
       if (!h || !plasmaOn(LAST) || window.scrollY >= end - 1) return
       // 已經捲到一半就只播剩下的部分
       const left = (end - window.scrollY) / (CHAT_SPAN * h)
-      lenis.scrollTo(end, { duration: Math.max(1, CHAT_PLAY * Math.min(1, left)), easing: (x) => x })
+      autoScroll(end, Math.max(1, CHAT_PLAY * Math.min(1, left)))
     }, CHAT_DELAY)
-  }, [stepPx])
+  }, [stepPx, stopAuto, autoScroll])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

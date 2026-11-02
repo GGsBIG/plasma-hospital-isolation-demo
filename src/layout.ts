@@ -27,7 +27,6 @@ mqP.addEventListener("change", onChange)
 mqL.addEventListener("change", onChange)
 
 export const layoutMode = () => mode
-export const isCompact = () => mode !== "desktop"
 
 export function useLayoutMode() {
   return useSyncExternalStore(
