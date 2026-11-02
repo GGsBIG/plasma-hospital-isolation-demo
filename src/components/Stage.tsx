@@ -161,6 +161,8 @@ export function Stage() {
   // 已畫出的連線:另外記,重繪時(ref 重新掛上)不會被清掉而重畫一次;換成新的 DOM 元素才重新畫
   const revealed = useRef(new Set<string>())
   const revealEl = useRef(new Map<string, SVGGElement>())
+  const revealTimers = useRef(new Map<string, number>())
+  const hideTimers = useRef(new Map<string, number>())
   const lastKey = useRef("")
   // 重繪後可能有新節點/連線還沒套樣式,下一次一定要完整套一次
   lastKey.current = ""
@@ -242,8 +244,14 @@ export function Stage() {
       const op = e.opacity.toFixed(3)
       if (op !== rec.last) {
         rec.last = op
-        // 完全看不見的連線不顯示,光點動畫也不必繪製(逐步畫出的連線要留著淡出,不隱藏)
+        // 完全看不見的連線不顯示,光點動畫也不必繪製(逐步畫出的連線等 CSS 淡出完再隱藏)
         if (rec.reveal === undefined) rec.g.style.display = e.opacity < 0.001 ? "none" : ""
+        else {
+          const g = rec.g
+          window.clearTimeout(hideTimers.current.get(e.key))
+          if (e.opacity < 0.001) hideTimers.current.set(e.key, window.setTimeout(() => (g.style.display = "none"), 480))
+          else g.style.display = ""
+        }
         rec.g.style.opacity = op
       }
       // 兩端都沒移動的連線形狀不變,不必重設
@@ -257,13 +265,26 @@ export function Stage() {
         const vis = e.opacity > 0.5
         if (vis && !revealed.current.has(e.key)) {
           const m = rec.mask
+          const g = rec.g
+          // 畫的時候才套遮罩,畫完拿掉:模糊遮罩每格都要重算,常駐會拖慢光點動畫
+          g.setAttribute("mask", `url(#edge-${e.key}-mask)`)
           m.style.transition = "none"
           m.style.strokeDashoffset = "1"
           m.getBoundingClientRect()
           m.style.transition = `stroke-dashoffset ${REVEAL_MS}ms cubic-bezier(0.22, 1, 0.36, 1) ${rec.reveal}ms`
           m.style.strokeDashoffset = "0"
+          window.clearTimeout(revealTimers.current.get(e.key))
+          revealTimers.current.set(e.key, window.setTimeout(() => g.removeAttribute("mask"), REVEAL_MS + rec.reveal + 50))
           revealed.current.add(e.key)
-        } else if (!vis) revealed.current.delete(e.key)
+        } else if (!vis && revealed.current.has(e.key)) {
+          // 淡出後下次出現要重畫:先把遮罩套回去(歸零),免得出現的瞬間整條閃一下
+          window.clearTimeout(revealTimers.current.get(e.key))
+          rec.mask.style.transition = "none"
+          rec.mask.style.strokeDashoffset = "1"
+          revealed.current.delete(e.key)
+          const g = rec.g
+          revealTimers.current.set(e.key, window.setTimeout(() => g.setAttribute("mask", `url(#edge-${e.key}-mask)`), 460))
+        }
       }
     }
   }, [])

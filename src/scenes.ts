@@ -512,6 +512,32 @@ export const SCENES: SceneDef[] = [
   },
 ]
 
+// 每頁切到「導入 Plasma 後」時,新出現的連線依資料流的先後逐步畫出:
+// 起點離源頭越遠越晚畫(源頭資料庫 → Plasma → 應用…),同一層再依序錯開一點。已自訂 reveal 的頁面不動
+const HOP_MS = 450
+const STEP_MS = 70
+for (const scene of SCENES) {
+  const st = scene.plasma
+  if (!st || st.edges.some((e) => e.reveal !== undefined)) continue
+  const depth = new Map<string, number>()
+  const depthOf = (id: string, seen = new Set<string>()): number => {
+    if (depth.has(id)) return depth.get(id)!
+    if (seen.has(id)) return 0
+    seen.add(id)
+    const ins = st.edges.filter((e) => e.to === id)
+    const d = ins.length ? Math.max(...ins.map((e) => depthOf(e.from, seen) + 1)) : 0
+    depth.set(id, d)
+    return d
+  }
+  const perHop = new Map<number, number>()
+  st.edges = st.edges.map((e) => {
+    const hop = depthOf(e.from)
+    const k = perHop.get(hop) ?? 0
+    perHop.set(hop, k + 1)
+    return { ...e, reveal: hop * HOP_MS + k * STEP_MS }
+  })
+}
+
 // ponytail: 完整性檢查,每次載入都跑;edge 參照到不存在的節點直接 throw
 export function validateScenes(scenes: SceneDef[] = SCENES): void {
   for (const s of scenes.flatMap((sc) => (sc.plasma ? [sc, { ...sc.plasma, id: `${sc.id}+plasma` }] : [sc]))) {
