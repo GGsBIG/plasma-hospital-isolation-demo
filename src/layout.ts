@@ -91,17 +91,16 @@ const SLOT: Record<string, { y: number; b: boolean; x?: number }> = {
   // 情境 4、8 的 IT 部門、情境 8 的 AI 部門:和 Plasma 同一列
   "ds-it": { y: ROW_A[1], b: false },
   "ds-aiteam": { y: ROW_A[1], b: false },
-  // 情境 4 的匯出檔:各自和來源資料庫同高,排成一欄;人工處理在匯出檔與報表之間
-  "file-1": { y: ROW_A[0], b: false, x: 560 },
-  "file-2": { y: ROW_A[1], b: false, x: 560 },
-  "file-3": { y: ROW_A[2], b: false, x: 560 },
-  "file-4": { y: ROW_B[0], b: false, x: 560 },
-  "file-5": { y: ROW_B[1], b: false, x: 560 },
+  // 情境 4 的人工處理:和 Plasma 同一位置(導入後由 Plasma 取代)
   manual: { y: ROW_A[1], b: false },
 }
 // 情境 3 的停用系統:應用欄的上方與下方之外,放在中間
 const GHOST: Record<string, number> = { "ghost-1": -130, "ghost-2": 1160 }
-const APP_SLOT: Record<string, number> = { "app-ap": APP_ROW[0], "app-fhir": APP_ROW[1], "app-bi": APP_ROW[2], "app-ai": APP_ROW[3], "app-report": APP_ROW[1] }
+// 情境 4 的三種產出:戰情室在上、健保申報與 Plasma 同列(依情境資料的 y 判斷)、評鑑資料在下
+const APP_SLOT: Record<string, number> = {
+  "app-ap": APP_ROW[0], "app-fhir": APP_ROW[1], "app-bi": APP_ROW[2], "app-ai": APP_ROW[3],
+  "app-report": ROW_A[1] - 300, "app-claim": ROW_A[1], "app-accredit": ROW_A[1] + 300,
+}
 
 // 情境資料的桌機 x(流向上的那一欄)→ 緊湊版橫軸
 function flowX(x: number): number {

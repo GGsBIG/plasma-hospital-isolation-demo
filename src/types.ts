@@ -62,13 +62,14 @@ export interface Phase {
 //   一問一答(q、a),或語法對照(q 為需求、code 為「資料庫 → 寫法」幾行、a 為結論)
 //   對話輪播(seq:依時間輪流顯示在各節點上)、警報表格(rows,第一列為表頭;手機版改顯示 brief)
 export interface Callout {
-  tone: "ok" | "danger"
+  tone: "ok" | "danger" | "idle"   // idle:中性的步驟卡(灰框、一般文字)
   q: string
   a?: string
   code?: [string, string][]
   rows?: string[][]
   brief?: string
   seq?: SeqStep[]
+  time?: string                    // 單句步驟卡:q 為這一步在做什麼,time 為累計花了多久
   side?: "top" | "left" | "bottom" // 放在節點上方(預設)、左側或下方
 }
 

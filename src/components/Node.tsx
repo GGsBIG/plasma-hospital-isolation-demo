@@ -81,7 +81,7 @@ export function Node({
           <div
             key={`${callout.tone}-${callout.q}-${callout.a}`}
             className={`callout-in absolute whitespace-nowrap border bg-card leading-snug ${s.bubble} ${compact && callout.rows ? "!text-[40px]" : ""}
-              ${callout.tone === "ok" ? "border-ok/40" : "border-danger/40"} ${callout.side === "left" ? "-translate-y-1/2" : ""}`}
+              ${callout.tone === "ok" ? "border-ok/40" : callout.tone === "idle" ? "border-border" : "border-danger/40"} ${callout.side === "left" ? "-translate-y-1/2" : ""}`}
             // 手機版往右多推一點(仍在節點外框內),不碰到左邊疊在 Plasma 上的知識庫
             style={
               callout.side === "left" ? { right: a + 70 * NODE_SCALE, top: 0 }
@@ -89,7 +89,9 @@ export function Node({
               : { right: compact ? -a - 40 : -a, bottom: a / 2 + 56 * NODE_SCALE }
             }
           >
-            {callout.rows ? (
+            {callout.time !== undefined ? (
+              <StepCard text={callout.q} time={callout.time} tone={callout.tone} compact={compact} />
+            ) : callout.rows ? (
               // 警報卡:標題 + 表格(手機版字太小,改顯示一句重點)
               <>
                 <div className="flex items-center gap-2 font-semibold text-danger">
@@ -198,11 +200,20 @@ function SeqBubble({ callout, nodeId, a, compact, bubble }: { callout: Callout; 
       // 靠右對齊節點右緣:最右邊的節點(AI 部門)泡泡才不會超出畫面
       style={{ right: -a, bottom: a / 2 + 56 * NODE_SCALE }}
     >
-      <div className="font-medium">{step.text}</div>
+      <StepCard text={step.text} time={step.time} compact={compact} />
+    </div>
+  )
+}
+
+// 一步的內容:在做什麼 + 累計時間(對話輪播與分幕步驟卡共用)
+function StepCard({ text, time, tone, compact }: { text: string; time: string; tone?: Callout["tone"]; compact: boolean }) {
+  return (
+    <>
+      <div className={`font-medium ${tone === "danger" ? "text-danger" : tone === "ok" ? "text-ok" : ""}`}>{text}</div>
       <div className="mt-0.5 flex items-center gap-1.5 text-[0.85em] text-muted-foreground">
         <Timer className={compact ? "h-7 w-7" : "h-4 w-4"} />
-        {step.time}
+        {time}
       </div>
-    </div>
+    </>
   )
 }
