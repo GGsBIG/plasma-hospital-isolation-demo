@@ -50,7 +50,7 @@ export function Node({
   // 字放大(手機上舞台縮得比較小)、徽章疊在名稱下方、省略副標題
   const s = compact
     ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", logo: "h-[100px]", brand: "h-[104px] w-[104px]", bubble: "text-[28px] px-5 py-3 rounded-[24px]" }
-    : { name: "text-[30px]", badge: "text-[22px] px-3 py-1", meta: "text-[22px]", logo: "h-[64px]", brand: "h-[66px] w-[66px]", bubble: "text-[22px] px-4 py-2.5 rounded-2xl" }
+    : { name: "text-[30px]", badge: "text-[22px] px-3 py-1", meta: "text-[22px]", logo: "h-[64px]", brand: "h-[44px] w-[44px]", bubble: "text-[22px] px-4 py-2.5 rounded-2xl" }
 
   const labelStyle = side
     ? { left: a + 22, top: -30 }
@@ -181,8 +181,7 @@ export function Node({
             } ${compact ? "rounded-2xl bg-background/90 px-2 py-1" : ""}`}
             style={labelStyle}
           >
-            {/* 資料庫:品牌圖示在左,與右邊兩行文字上下置中;邊長(s.brand)略小於兩行的總高
-                (桌機 名稱列 + 副標 80px、手機 名稱 + 徽章 128px,依實際量測;改了字級要一起改) */}
+            {/* 資料庫:品牌圖示在左,與右邊文字上下置中(桌機為名稱列一行、手機為名稱 + 徽章兩行) */}
             {node.brand ? (
               <div className="flex items-center gap-3">
                 <img src={node.brand} alt="" className={`${s.brand} shrink-0`} />

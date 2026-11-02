@@ -7,21 +7,21 @@ import mysqlLogo from "./assets/db/mysql.svg"
 import ibmLogo from "./assets/db/ibm.svg"
 import type { NodeDef, AgentTurn } from "./types"
 
-// 五個源頭資料庫異質資料庫 → 對應醫院系統
+// 五個源頭異質資料庫(分別支援 HIS、NIS、ERP、PACS、LIS;畫面上只顯示產品名稱,保持簡潔)
 // 品牌圖示取自 Simple Icons(官方色);Informix 沒有獨立圖示,用母公司 IBM
 export const DBS: NodeDef[] = [
-  { id: "db-oracle",   kind: "db", label: "Oracle",     sub: "HIS 醫療資訊系統",   icon: "database", brand: oracleLogo },
-  { id: "db-postgres", kind: "db", label: "PostgreSQL", sub: "NIS 護理資訊系統",   icon: "database", brand: postgresLogo },
-  { id: "db-mssql",    kind: "db", label: "MS SQL",     sub: "ERP／計費",         icon: "database", brand: mssqlLogo },
-  { id: "db-mysql",    kind: "db", label: "MySQL",      sub: "PACS 醫學影像系統",  icon: "database", brand: mysqlLogo },
-  { id: "db-informix", kind: "db", label: "Informix",   sub: "LIS 檢驗資訊系統",   icon: "database", brand: ibmLogo },
+  { id: "db-oracle",   kind: "db", label: "Oracle",   icon: "database", brand: oracleLogo },
+  { id: "db-postgres", kind: "db", label: "PostgreSQL",   icon: "database", brand: postgresLogo },
+  { id: "db-mssql",    kind: "db", label: "MS SQL",         icon: "database", brand: mssqlLogo },
+  { id: "db-mysql",    kind: "db", label: "MySQL",  icon: "database", brand: mysqlLogo },
+  { id: "db-informix", kind: "db", label: "Informix",   icon: "database", brand: ibmLogo },
 ]
 
 // 跨院區:不同院區各有一套 HIS
 export const CAMPUSES: NodeDef[] = [
-  { id: "campus-main",  kind: "db", label: "總院",     sub: "HIS 醫療資訊系統", icon: "database" },
-  { id: "campus-north", kind: "db", label: "北區分院", sub: "HIS 醫療資訊系統", icon: "database" },
-  { id: "campus-south", kind: "db", label: "南區分院", sub: "HIS 醫療資訊系統", icon: "database" },
+  { id: "campus-main",  kind: "db", label: "總院", icon: "database" },
+  { id: "campus-north", kind: "db", label: "北區分院", icon: "database" },
+  { id: "campus-south", kind: "db", label: "南區分院", icon: "database" },
 ]
 
 // 下方既有使用端
@@ -57,7 +57,7 @@ export const APPS: NodeDef[] = [
 
 export const PLASMA: NodeDef = { id: "plasma", kind: "plasma", label: "Plasma", sub: "AI-Ready 資料中台", icon: "layers", logo: { light: plasmaLogo, dark: plasmaLogoDark } }
 // Plasma 整理後的資料落地到這台 PostgreSQL,再提供給 AP 使用(與左側 NIS 的源頭資料庫 PostgreSQL 不同台)
-export const SERVING_PG: NodeDef = { id: "serving-pg", kind: "serving", label: "PostgreSQL", sub: "整理後資料 · 服務資料庫", icon: "database", brand: postgresLogo }
+export const SERVING_PG: NodeDef = { id: "serving-pg", kind: "serving", label: "PostgreSQL", icon: "database", brand: postgresLogo }
 export const KB: NodeDef = { id: "kb", kind: "kb", label: "知識庫", sub: "文件／技術文件", icon: "book-open" }
 
 export const ALL_NODES: NodeDef[] = [...DBS, ...CAMPUSES, ...DOWNSTREAM, ...APPS, PLASMA, SERVING_PG, KB]
