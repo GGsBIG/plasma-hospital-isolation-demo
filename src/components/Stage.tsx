@@ -2,7 +2,8 @@ import { useLayoutEffect, useRef, useState } from "react"
 import type { SceneState } from "../types"
 import { DOC_FILES, NODE_BY_ID } from "../data"
 import { SCENES } from "../scenes"
-import { FileText, ShieldCheck } from "lucide-react"
+import { ShieldCheck } from "lucide-react"
+import { FILE_ICONS, FILE_ICON_VIEWBOX } from "../fileIcons"
 import { iconScale, place, sceneBox, stageSize, useLayoutMode, zoneRect, type Box } from "../layout"
 import { dominantStates, frameAt, loadsAt, segmentAt, segmentIndex, stageKey, statesAt, structureAt } from "../timeline"
 import { plasmaMix } from "../plasma"
@@ -20,11 +21,10 @@ const REVEAL_MS = 900 // 連線逐步畫出的時間
 // 文件上傳:第一份開始飛的時間、每份間隔(秒),各份的起點(相對大腦中心,舞台 px)
 const DOC_DELAY = 1.3
 const DOC_STEP = 0.5
-const DOC_FROM: [number, number][] = [[-480, -400], [-165, -430], [165, -430], [480, -400]]
-// 手機版:知識庫疊在 Plasma 正上方、舞台上緣較近,文件排在知識庫上方並往左偏(右邊緊貼鏡頭邊緣),才留在鏡頭內
-const DOC_FROM_COMPACT: [number, number][] = [[-715, -390], [-345, -420], [25, -420], [390, -390]]
+const DOC_FROM: [number, number][] = [[-540, -390], [-270, -425], [0, -440], [270, -425], [540, -390]]
+// 手機版:舞台上緣較近、卡片字大,五份文件上下交錯排成兩列並往左偏(右邊緊貼鏡頭邊緣),才留在鏡頭內
+const DOC_FROM_COMPACT: [number, number][] = [[-715, -440], [-430, -330], [-165, -440], [120, -330], [400, -440]]
 const BRAIN_W = 1000 // 大腦網路寬度(舞台 px,壓扁成 70% 高):包住疊在 Plasma 上的知識庫
-const DOC_COLOR = { pdf: "#e5484d", doc: "#3b82f6", xls: "#1f9d55", md: "#71717a" }
 
 function loadBadge(v: number): Badge {
   // 數字(load)每格由 Stage 直接改 DOM,這裡只決定文字與色調
@@ -392,7 +392,9 @@ export function Stage() {
               }}
             >
               <div className={`flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-xl border border-border bg-card font-medium text-foreground ${compact ? "px-5 py-3 text-[32px]" : "px-3.5 py-2 text-[20px]"}`}>
-                <FileText className={compact ? "h-9 w-9" : "h-5 w-5"} style={{ color: DOC_COLOR[f.type] }} />
+                <svg viewBox={FILE_ICON_VIEWBOX} className={`shrink-0 text-[rgb(37_132_235)] dark:text-[rgb(110_175_255)] ${compact ? "h-11 w-11" : "h-7 w-7"}`} fill="currentColor" aria-hidden>
+                  {FILE_ICONS[f.icon].map((d, j) => <path key={j} d={d} />)}
+                </svg>
                 {f.name}
               </div>
             </div>
@@ -430,7 +432,7 @@ export function Stage() {
       </div>
       {/* 大腦圖示的授權標註(Noun Project 免費圖示須標註作者),只在大腦頁導入後出現 */}
       {near.upload && (
-        <span className="pointer-events-none absolute bottom-1 right-2 text-[11px] text-muted-foreground/60">Brain by Clockwise from the Noun Project</span>
+        <span className="pointer-events-none absolute bottom-1 right-2 whitespace-nowrap text-[11px] text-muted-foreground/60 pp:text-[9px]">Brain by Clockwise, File icons by Febri Ardianto from the Noun Project</span>
       )}
     </div>
   )

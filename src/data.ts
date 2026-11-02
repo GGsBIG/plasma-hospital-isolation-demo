@@ -64,12 +64,13 @@ export const ALL_NODES: NodeDef[] = [...DBS, ...CAMPUSES, ...DOWNSTREAM, ...APPS
 export const NODE_BY_ID: Record<string, NodeDef> =
   Object.fromEntries(ALL_NODES.map((n) => [n.id, n]))
 
-// Plasma 大腦頁:切到導入後,依序上傳到知識庫的文件(名稱、檔案類型決定圖示顏色)
-export const DOC_FILES: { name: string; type: "pdf" | "doc" | "xls" | "md" }[] = [
-  { name: "系統規格書.pdf", type: "pdf" },
-  { name: "資料庫描述.docx", type: "doc" },
-  { name: "資料字典.xlsx", type: "xls" },
-  { name: "欄位代碼說明.md", type: "md" },
+// Plasma 大腦頁:切到導入後,依序上傳到知識庫的文件;icon 對應 fileIcons.ts 的圖示
+export const DOC_FILES: { name: string; icon: "share" | "link" | "upload" | "alert" | "user" }[] = [
+  { name: "系統規格書", icon: "share" },
+  { name: "資料庫描述", icon: "link" },
+  { name: "資料字典", icon: "upload" },
+  { name: "欄位代碼說明", icon: "alert" },
+  { name: "使用者手冊", icon: "user" },
 ]
 
 // 情境 6 Plasma 對外開放的 MCP 工具
