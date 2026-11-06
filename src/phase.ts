@@ -84,3 +84,12 @@ scrollStore.subscribe((p) => {
   }
   schedule()
 })
+
+// 重播／換頁時:這一頁的分幕從第 1 幕重新開始,隨機結果也重新抽
+export function restartPhases(i: number) {
+  if (!SCENES[i]?.phases) return
+  start.set(i, performance.now())
+  base.set(i, Math.floor(Math.random() * 1e6))
+  schedule()
+  scrollStore.notify()
+}

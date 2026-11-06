@@ -13,6 +13,12 @@ import { Node, type Badge } from "./Node"
 import { Edge } from "./Edge"
 import { drawDots, dotLen, lutOf, type DotEdge, type Lut } from "./dots"
 import { BrainNet, brainVisibility } from "./BrainNet"
+import { entryAt, entryKey, onReplay, useEntryEpoch } from "../entry"
+
+// 進場時節點依資料流順序(左 → 右,同一欄由上而下)一個接一個升起
+const ENTRY_STEP = 70
+const ENTRY_NODE = 420
+const ENTRY_RISE = 24
 
 const HOT = 80
 // 任何畫面狀態裡會疊到 Plasma 上合體的節點
@@ -144,6 +150,7 @@ export function Stage() {
   // 只在離散狀態改變時重繪:換段、徽章文字改用另一端情境、負載跨過門檻
   useScrollSelector(stageKey)
   const p = scrollStore.get()
+  const epoch = useEntryEpoch()
   const { nodeIds, edges } = structure()
   // 目前的幕與輪次:攻擊封包在進入那一幕時重新掛上,動畫才會剛好在那一幕從頭播
   const pa = phaseOf(segmentIndex(p))
@@ -192,6 +199,12 @@ export function Stage() {
   const lastKey = useRef("")
   // 重繪後可能有新節點/連線還沒套樣式,下一次一定要完整套一次
   lastKey.current = ""
+  // 重播:忘掉「已畫出」的連線與「已合體」的節點,讓它們這次再從頭畫一次
+  useEffect(() => onReplay(() => {
+    revealed.current.clear()
+    merging.current.clear()
+    lastKey.current = ""
+  }), [])
   // 手機版鏡頭:各畫面狀態的外框依權重內插
   useScrollEffect((p) => {
     if (!compact) return
@@ -254,7 +267,7 @@ export function Stage() {
   useScrollEffect((p) => {
     // 畫面沒有任何變化(同一捲動位置、同一切換進度、同一幕)就整格略過
     const i = segmentIndex(p)
-    const key = `${i}|${segmentAt(p).t.toFixed(4)}|${plasmaMix(i).toFixed(4)}|${plasmaMix(i + 1).toFixed(4)}|${phaseOf(i).idx}|${phaseOf(i + 1).idx}`
+    const key = `${i}|${segmentAt(p).t.toFixed(4)}|${plasmaMix(i).toFixed(4)}|${plasmaMix(i + 1).toFixed(4)}|${phaseOf(i).idx}|${phaseOf(i + 1).idx}|${entryKey()}`
     if (key === lastKey.current) return
     lastKey.current = key
     const f = frameAt(p)
@@ -270,7 +283,13 @@ export function Stage() {
       merging.current.delete(id)
     }
     shownNodes.current = seen
-    for (const n of f.nodes) {
+    // 進場程度:目前這一頁的節點依資料流順序錯開出現(不是進場中就全部是 1)
+    const here = Math.round(Math.min(SCENES.length - 1, Math.max(0, p)))
+    const order = [...f.nodes].sort((a, b) => a.pos.x - b.pos.x || a.pos.y - b.pos.y)
+    const enter = new Map(order.map((n, k) => [n.id, entryAt(here, 80 + k * ENTRY_STEP, ENTRY_NODE)]))
+    for (const raw of f.nodes) {
+      const k = enter.get(raw.id) ?? 1
+      const n = k === 1 ? raw : { ...raw, opacity: raw.opacity * k, pos: { x: raw.pos.x, y: raw.pos.y + ENTRY_RISE * (1 - k) } }
       const rec = nodeEls.current.get(n.id)
       if (!rec) continue
       // 用 transform 移動(不觸發版面重算),透明度在自己的圖層上變化
@@ -313,7 +332,7 @@ export function Stage() {
         const cy = kb ? (plasma.pos.y + kb.pos.y) / 2 : plasma.pos.y
         aura.style.transform = `translate3d(${plasma.pos.x}px, ${cy}px, 0)`
         aura.style.setProperty("--kb-dy", `${kb ? kb.pos.y - cy : 0}px`)
-        aura.style.opacity = `${brain}`
+        aura.style.opacity = `${brain * entryAt(Math.round(Math.min(SCENES.length - 1, Math.max(0, p))), 500, 600)}`
         aura.style.display = ""
         brainVisibility.shown = true
       } else {
@@ -332,7 +351,8 @@ export function Stage() {
         zoneEl.style.transform = `translate3d(${r.x0}px, ${r.y0}px, 0)`
         zoneEl.style.width = `${r.x1 - r.x0}px`
         zoneEl.style.height = `${r.y1 - r.y0}px`
-        zoneEl.style.opacity = `${w}`
+        // 進場中:防護框等框內的資料庫大致出現後才浮現
+        zoneEl.style.opacity = `${w * entryAt(Math.round(Math.min(SCENES.length - 1, Math.max(0, p))), 380, 520)}`
         zoneEl.style.display = ""
       } else {
         zoneEl.style.display = "none"
@@ -342,9 +362,12 @@ export function Stage() {
     const now = new Set(f.edges.map((e) => e.key))
     const gone = [...shownEdges.current].filter((k) => !now.has(k)).map((key) => ({ key, opacity: 0, d: edgeEls.current.get(key)?.d ?? "" }))
     shownEdges.current = now
-    for (const e of [...f.edges, ...gone]) {
-      const rec = edgeEls.current.get(e.key)
+    for (const raw of [...f.edges, ...gone]) {
+      const rec = edgeEls.current.get(raw.key)
       if (!rec) continue
+      // 進場中:連線等兩端節點都出現了才出現
+      const ek = Math.min(enter.get(rec.from) ?? 1, enter.get(rec.to) ?? 1)
+      const e = ek === 1 ? raw : { ...raw, opacity: raw.opacity * ek }
       rec.opacity = e.opacity
       const op = e.opacity.toFixed(3)
       if (op !== rec.last) {
@@ -488,6 +511,7 @@ export function Stage() {
           />
           {/* 大腦輪廓:線條逐筆畫出,把知識庫與 Plasma 包在裡面;有上傳動畫時等文件都飛進去才開始畫 */}
           <BrainNet
+            key={epoch}
             width={BRAIN_W * iconScale("plasma")}
             delay={upload ? DOC_DELAY + DOC_FILES.length * DOC_STEP + 0.3 : 0.2}
             mode={upload ? "full" : "idle"}
@@ -495,7 +519,7 @@ export function Stage() {
           {/* 上傳到知識庫的文件:從上方各自飛進知識庫後消失 */}
           {/* 先一起浮現在上方排成一列(doc-appear),再一份一份飛進去(doc-fly) */}
           {upload && DOC_FILES.map((f, k) => (
-            <div key={f.name} className="doc-appear absolute left-0 top-0" style={{ animationDelay: `${0.4 + k * 0.2}s` }}>
+            <div key={`${f.name}-${epoch}`} className="doc-appear absolute left-0 top-0" style={{ animationDelay: `${0.4 + k * 0.2}s` }}>
             <div
               className="doc-fly absolute left-0 top-0"
               style={{

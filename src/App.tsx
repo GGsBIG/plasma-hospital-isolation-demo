@@ -12,6 +12,8 @@ import { ThemeToggle } from "./components/ThemeToggle"
 import { PlasmaToggle } from "./components/PlasmaToggle"
 import { Recap } from "./components/Recap"
 import { plasmaOn, setPlasma } from "./plasma"
+import { replay, restartEffects, useEntryEpoch } from "./entry"
+import { ReplayButton } from "./components/ReplayButton"
 import logo from "./assets/brobridge-logo.png"
 import logoDark from "./assets/brobridge-logo-dark.png"
 
@@ -123,6 +125,7 @@ export function App() {
   // App 本身只在「目前情境」改變時重繪(標題列的頁碼)
   const current = useScrollSelector((p) => Math.round(clampProgress(p)))
   const recap = useScrollSelector((p) => recapAt(p) >= 0.5)
+  const epoch = useEntryEpoch()
   // 版面模式只在換版面(例如手機轉向)時改變
   const mode = useLayoutMode()
 
@@ -192,25 +195,10 @@ export function App() {
     return () => document.removeEventListener("visibilitychange", onVisibility)
   }, [])
 
-  // 按鈕與方向鍵:用瀏覽器原生的短平滑捲動到目標情境,過場跟著捲動一路播放
-  const goTo = useCallback((i: number) => {
-    const h = stepPx()
-    if (!h) return
-    stopAuto()
-    // 最後一個情境之後可以再往下捲到對話播完(RECAP_AT),再往下是結尾總覽(END)
-    const target = i === RECAP_INDEX ? END : Math.max(0, Math.min(i, END))
-    window.scrollTo({ top: target * h, behavior: "smooth" })
-  }, [stepPx, stopAuto])
-
-  // 切換導入前後。最後一頁切到導入後:自動往下捲,讓 Agent 對話一路播完;
-  // 對話仍由捲動位置驅動,所以使用者隨時可以用滾輪/觸控接手
+  // 最後一頁導入後:自動往下捲,讓 Agent 對話一路播完;對話仍由捲動位置驅動,使用者隨時可以用滾輪/觸控接手
   const chatTimer = useRef(0)
-  const togglePlasma = useCallback((i: number, on: boolean) => {
-    setPlasma(i, on)
-    if (i !== LAST) return
+  const playChat = useCallback(() => {
     window.clearTimeout(chatTimer.current)
-    // 切回導入前:停在目前位置
-    if (!on) return stopAuto()
     chatTimer.current = window.setTimeout(() => {
       const h = stepPx()
       const end = (LAST + CHAT_SPAN) * h
@@ -219,7 +207,43 @@ export function App() {
       const left = (end - window.scrollY) / (CHAT_SPAN * h)
       autoScroll(end, Math.max(1, CHAT_PLAY * Math.min(1, left)))
     }, CHAT_DELAY)
-  }, [stepPx, stopAuto, autoScroll])
+  }, [stepPx, autoScroll])
+
+  // 切到第 i 頁(切換列、方向鍵、說明卡片、總覽卡片):直接切過去,不刷過中間的頁面,
+  // 再從頭完整播放那一頁的效果;最後一頁導入後連同 Agent 對話一起從頭播
+  const goTo = useCallback((i: number) => {
+    const h = stepPx()
+    if (!h) return
+    stopAuto()
+    window.clearTimeout(chatTimer.current)
+    // 最後一個情境之後可以再往下捲到對話播完(RECAP_AT),再往下是結尾總覽(END)
+    const target = i === RECAP_INDEX ? END : Math.max(0, Math.min(i, END))
+    window.scrollTo({ top: target * h, behavior: "instant" })
+    scrollStore.set(target)
+    const page = i === RECAP_INDEX || target > RECAP_AT ? RECAP_INDEX : Math.round(clampProgress(target))
+    replay(page)
+    if (page === LAST && plasmaOn(LAST) && target <= LAST) playChat()
+  }, [stepPx, stopAuto, playChat])
+
+  // 重播目前這一頁(重播鈕、R 鍵):位置不動;在最後一頁的對話中途按,先回到對話開頭再播
+  const replayCurrent = useCallback(() => {
+    const raw = scrollStore.get()
+    if (raw > RECAP_AT + 0.5) return goTo(RECAP_INDEX)
+    const cur = Math.round(clampProgress(raw))
+    if (cur === LAST) return goTo(LAST)
+    replay(cur)
+  }, [goTo])
+
+  // 切換導入前後:畫面交給導入前後的轉場,同時讓這一頁的分幕、大腦等時間效果從頭開始
+  const togglePlasma = useCallback((i: number, on: boolean) => {
+    setPlasma(i, on)
+    restartEffects(i)
+    if (i !== LAST) return
+    window.clearTimeout(chatTimer.current)
+    // 切回導入前:停在目前位置
+    if (!on) return stopAuto()
+    playChat()
+  }, [stopAuto, playChat])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -229,18 +253,22 @@ export function App() {
         const cur = Math.round(clampProgress(raw))
         // 在最後一個情境按 →:導入後先捲到對話播完,再按一次到結尾總覽(導入前沒有對話,直接到總覽);
         // 在總覽按 ←:回到最後一個情境
-        if (e.key === "ArrowRight") goTo(cur < LAST ? cur + 1 : plasmaOn(LAST) && raw < RECAP_AT - 0.01 ? RECAP_AT : END)
+        // 最後一頁導入後、對話還沒播完:→ 讓對話播完(而不是直接跳到結尾)
+        if (e.key === "ArrowRight" && cur === LAST && plasmaOn(LAST) && raw < RECAP_AT - 0.01) playChat()
+        else if (e.key === "ArrowRight") goTo(cur < LAST ? cur + 1 : END)
         else goTo(raw > RECAP_AT + 0.01 ? LAST : cur - 1)
       } else if ((e.key === "p" || e.key === "P") && !e.metaKey && !e.ctrlKey && !e.altKey) {
         // P:切換目前這頁導入前後(總覽沒有切換)
         if (raw > RECAP_AT + 0.5) return
         const cur = Math.round(clampProgress(raw))
         togglePlasma(cur, !plasmaOn(cur))
+      } else if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        replayCurrent()
       }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [goTo, togglePlasma])
+  }, [goTo, togglePlasma, replayCurrent, playChat])
 
   return (
     <div className="min-h-full">
@@ -285,7 +313,8 @@ export function App() {
         <div className="sticky top-[var(--header-h)] flex h-[var(--stage-h)] min-w-0 flex-1 pt-[84px] pp:order-1 pp:w-full pp:flex-none pp:pb-1.5 pp:pt-[66px] pl:pt-[64px]">
           <div className="relative min-h-0 min-w-0 flex-1">
             <Stage />
-            <div className="absolute bottom-full right-0 z-10 mb-2 pp:mb-1.5 pl:mb-1">
+            <div className="absolute bottom-full right-0 z-10 mb-2 flex items-center gap-2 pp:mb-1.5 pl:mb-1">
+              <ReplayButton onReplay={replayCurrent} />
               <PlasmaToggle onToggle={togglePlasma} />
             </div>
           </div>
@@ -294,7 +323,7 @@ export function App() {
         </div>
       </main>
 
-      <Recap onSelect={goTo} />
+      <Recap key={epoch} onSelect={goTo} />
 
       {/* 底部情境切換列只在桌機出現;手機用捲動切換(也可點說明卡片) */}
       {mode === "desktop" && (

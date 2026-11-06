@@ -468,3 +468,14 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .iso-down { animation: none; }
 }
+
+/* 重播鈕:按下時圖示逆時針轉一圈(key 每次換新,所以每按一次都重轉) */
+.replay-spin { animation: replay-spin 720ms cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes replay-spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+/* 舞台右上角這組柔和按鈕:按下時輕微縮一下,回饋點擊 */
+.arc button { transition-property: color, background-color, transform; }
+.arc button:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .replay-spin { animation: none; }
+  .arc button:active { transform: none; }
+}

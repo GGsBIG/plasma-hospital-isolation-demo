@@ -15,6 +15,9 @@ export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
   const glassRef = useRef<HTMLSpanElement>(null)
   const slots = useRef<Slot[]>([])
   const [ready, setReady] = useState(false)
+  // 直接切頁時進度一次跳很多:指示器改用短過渡滑過去;一般捲動仍逐格跟著走
+  const lastP = useRef(scrollStore.get())
+  const glideTimer = useRef(0)
 
   const place = useCallback((p: number) => {
     // 對話播完後再往下捲:從最後一個情境移到總覽那格
@@ -28,6 +31,12 @@ export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
     const m = toRecap ? recapAt(p) : q - i
     const l = a.left + (b.left - a.left) * m
     const r = a.left + a.width + (b.left + b.width - a.left - a.width) * m
+    if (Math.abs(p - lastP.current) > 0.6) {
+      el.style.transition = "transform 340ms cubic-bezier(0.16, 1, 0.3, 1), width 340ms cubic-bezier(0.16, 1, 0.3, 1)"
+      window.clearTimeout(glideTimer.current)
+      glideTimer.current = window.setTimeout(() => (el.style.transition = ""), 380)
+    }
+    lastP.current = p
     el.style.transform = `translateX(${l}px)`
     el.style.width = `${r - l}px`
   }, [])
@@ -51,7 +60,8 @@ export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
 
   useScrollEffect(place, [place])
 
-  const nav = "grid h-10 w-10 shrink-0 place-items-center rounded-full text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+  const ring = "outline-none focus-visible:ring-2 focus-visible:ring-foreground/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+  const nav = `grid h-10 w-10 shrink-0 place-items-center rounded-full text-foreground/70 transition-[color,background-color,transform] duration-150 hover:bg-foreground/5 hover:text-foreground active:scale-95 disabled:pointer-events-none disabled:opacity-30 ${ring}`
 
   return (
     <div className="liquid-bar flex items-center gap-1 rounded-full p-1">
@@ -67,10 +77,10 @@ export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
             ref={(el) => { itemRefs.current[k] = el }}
             onClick={() => onSelect(k)}
             aria-current={k === current ? "step" : undefined}
-            className={`relative z-0 inline-flex h-10 items-center gap-2 rounded-full px-4 text-[14px] transition-[color,transform] duration-300
+            className={`relative z-0 inline-flex h-10 items-center gap-2 rounded-full px-4 text-[14px] transition-[color,transform] duration-300 active:scale-[0.97] ${ring}
               ${k === current ? "scale-[1.04] font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}`}
           >
-            <span className="text-[12px] tabular-nums opacity-60">{k + 1}</span>
+            <span className={`text-[12px] tabular-nums ${k === current ? "font-semibold opacity-100" : "opacity-60"}`}>{k + 1}</span>
             <span className="whitespace-nowrap">{s.short}</span>
           </button>
         ))}

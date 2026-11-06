@@ -4,6 +4,11 @@ import type { SceneDef } from "../types"
 import { clamp01, clampProgress } from "../timeline"
 import { useScrollEffect, useScrollSelector } from "../scroll"
 import { plasmaMix } from "../plasma"
+import { entryAt } from "../entry"
+
+// 重播／換頁時說明的逐字浮現:標題與導入前那段先,導入後那段稍晚(ms)
+const ENTRY_TEXT = { delay: 120, dur: 1100 }
+const ENTRY_FIX = { delay: 520, dur: 1000 }
 
 // 英數連成一個單位(避免單字被拆行),其餘逐字;句讀黏在前一個字上,避免標點落在行首
 // 空白黏在前一個單位後面,換行時才不會出現在行首
@@ -41,6 +46,12 @@ function paint(spans: HTMLElement[], prev: number | null, head: number, lite: bo
 }
 const TITLE_LENS = SCENES.map((s) => tokens(s.title).length)
 
+// 小標膠囊的透明度跟它第一個字一樣
+function syncLabel(label: HTMLElement | null) {
+  const first = label?.querySelector<HTMLElement>(".rv")
+  if (label && first) label.style.opacity = first.style.opacity || "1"
+}
+
 // 捲動驅動的 text reveal:每個字是一個 .rv span,浮現程度由 NarrationPanel 直接寫進 style,
 // 而且每格只改「浮現邊緣」附近約 SOFT 個字(其餘字的狀態沒變),樣式重算量從整段降到幾個字。
 // hover:整段是一張可點的卡片(點了捲到該情境);淡化的段落提亮預覽,左側長出強調線,標題往右輕推
@@ -54,8 +65,8 @@ const Section = memo(function Section({
   onSelect: (i: number) => void
 }) {
   const title = tokens(scene.title)
-  const body = "text-[16px] leading-relaxed text-muted-foreground transition-colors duration-200 hover:text-foreground pl:text-[13.5px] pl:leading-normal pp:text-[16px] pp:leading-relaxed ps:text-[14.5px] ps:leading-normal"
-  const label = "mb-1 text-[13px] font-medium pl:mb-0.5 pl:text-[12px] ps:mb-0.5 ps:text-[12px]"
+  const body = "max-w-[32em] text-[16px] leading-[1.75] text-muted-foreground transition-colors duration-200 hover:text-foreground pl:text-[13.5px] pl:leading-normal pp:text-[16px] pp:leading-relaxed ps:text-[14.5px] ps:leading-normal"
+  const label = "mb-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold leading-5 pl:mb-1 pl:text-[11.5px] ps:mb-1 ps:text-[11.5px]"
   const word = (text: string, key: number) => (
     <span key={key} className="rv">
       {text}
@@ -96,12 +107,12 @@ const Section = memo(function Section({
           {scene.pain && (
             <div className="grid">
               <div className="pain-block [grid-area:1/1]">
-                <div className={`${label} text-danger`}>{tokens(PAIN_LABEL).map(word)}</div>
+                <div className={`${label} bg-danger/10 text-danger`}>{tokens(PAIN_LABEL).map(word)}</div>
                 <p className={body}>{tokens(scene.pain).map(word)}</p>
               </div>
               {scene.fix && (
                 <div className="fix-block [grid-area:1/1]">
-                  <div className={`${label} text-ok`}>{tokens(FIX_LABEL).map(word)}</div>
+                  <div className={`${label} bg-ok/10 text-ok`}>{tokens(FIX_LABEL).map(word)}</div>
                   <p className={body}>{tokens(scene.fix).map(word)}</p>
                 </div>
               )}
@@ -123,7 +134,9 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
   // 每張卡片:元素、所有字的 span、分隔線,以及上次寫入的浮現位置與亮度(沒變就不寫)
   type Card = {
     el: HTMLDivElement; spans: HTMLElement[]; line: HTMLElement | null; head: number | null; e: string
-    pain: HTMLElement | null; fixSpans: HTMLElement[]; fixHead: number | null; m: number
+    pain: HTMLElement | null; fixSpans: HTMLElement[]; fixHead: number | null; m: number; ek: number
+    // 導入前／導入後小標(有底色的膠囊):跟著它的第一個字一起浮現,字還沒出現時不先露出空的底色
+    painLabel: HTMLElement | null; fixLabel: HTMLElement | null
   }
   const cards = useRef<(Card | null)[]>([])
   const setCard = (i: number, el: HTMLDivElement | null) => {
@@ -133,7 +146,8 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
     const all = [...el.querySelectorAll<HTMLElement>(".rv")]
     cards.current[i] = {
       el, spans: all.filter((s) => !fix?.contains(s)), line: el.querySelector(".rv-line"), head: null, e: "",
-      pain: el.querySelector(".pain-block"), fixSpans: all.filter((s) => fix?.contains(s)), fixHead: null, m: -1,
+      pain: el.querySelector(".pain-block"), fixSpans: all.filter((s) => fix?.contains(s)), fixHead: null, m: -1, ek: -1,
+      painLabel: el.querySelector<HTMLElement>(".pain-block > div"), fixLabel: el.querySelector<HTMLElement>(".fix-block > div"),
     }
   }
   // 欄位高與段高快取,只在尺寸改變時重量(捲動中讀版面尺寸會逼瀏覽器當場重算版面)
@@ -164,23 +178,29 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
     cards.current.forEach((card, i) => {
       if (!card) return
       // 從前一段過場到一半起開始浮現,接近置中時完整;以 1/4 個字為單位
-      const head = Math.round(clamp01((p - (i - 0.75)) / 0.6) * (TOTALS[i] + SOFT) * 4) / 4
+      // 進場中(換頁、重播):不超過依時間浮現到的位置,所以會從第一個字重新浮現
+      const enter = entryAt(i, ENTRY_TEXT.delay, ENTRY_TEXT.dur)
+      const head = Math.round(Math.min(clamp01((p - (i - 0.75)) / 0.6), enter) * (TOTALS[i] + SOFT) * 4) / 4
       if (head !== card.head) {
         paint(card.spans, card.head, head, lite)
         if (card.line) card.line.style.transform = `scaleX(${clamp01((head - TITLE_LENS[i]) / SOFT)})`
+        syncLabel(card.painLabel)
         card.head = head
       }
       // 切換到導入後:導入前那段整段淡出,導入後那段再逐字浮現
       const m = plasmaMix(i)
-      if (m !== card.m && card.pain) {
+      const ek = entryAt(i, ENTRY_FIX.delay, ENTRY_FIX.dur)
+      if ((m !== card.m || ek !== card.ek) && card.pain) {
+        card.ek = ek
         const out = clamp01(m / SWAP)
         card.pain.style.opacity = `${1 - out}`
         card.pain.style.transform = lite || out === 0 ? "" : `translateY(${-out * 6}px)`
         card.pain.style.visibility = out === 1 ? "hidden" : ""
-        const fixHead = Math.round(clamp01((m - SWAP) / (1 - SWAP)) * (card.fixSpans.length + SOFT) * 4) / 4
+        const fixHead = Math.round(Math.min(clamp01((m - SWAP) / (1 - SWAP)), ek) * (card.fixSpans.length + SOFT) * 4) / 4
         if (fixHead !== card.fixHead) {
           paint(card.fixSpans, card.fixHead, fixHead, lite)
           card.fixHead = fixHead
+          syncLabel(card.fixLabel)
         }
         card.m = m
       }
