@@ -62,8 +62,10 @@ img { display: block; max-width: 100%; }
   background: var(--paper);
 }
 .site-header .container { display: flex; align-items: center; gap: 16px; height: 64px; }
-.site-header .logo img { height: 24px; width: auto; }
-@media (min-width: 768px) { .site-header .logo img { height: 28px; } }
+/* logo 圖檔已裁掉透明留白,左緣就是字的左緣,跟內容對齊 */
+.site-header .logo { display: block; }
+.site-header .logo img { height: 16px; width: auto; }
+@media (min-width: 768px) { .site-header .logo img { height: 18px; } }
 .site-header .crumb {
   padding-left: 16px; border-left: 1px solid var(--hair);
   font-size: 0.9375rem; font-weight: 700; white-space: nowrap;

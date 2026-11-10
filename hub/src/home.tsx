@@ -56,7 +56,7 @@ function Backdrop() {
 type Card = (typeof CARDS)[number]
 
 /** 點入口按鈕後,在同一頁疊一層全螢幕視窗顯示 demo,不換頁、沒有額外的工具列。
- *  關閉:瀏覽器「上一頁」或 Esc(焦點在 demo 裡面時也有效,同網域可以直接聽 iframe 的按鍵) */
+ *  關閉:點 demo 左上角 logo、瀏覽器「上一頁」或 Esc(同網域,直接聽 iframe 裡的點擊與按鍵) */
 function Viewer({ card, onClose }: { card: Card; onClose: () => void }) {
   const frameRef = useRef<HTMLIFrameElement>(null)
   useEffect(() => {
@@ -74,8 +74,14 @@ function Viewer({ card, onClose }: { card: Card; onClose: () => void }) {
   }, [card.key, onClose])
   const onLoad = () => {
     try {
-      frameRef.current?.contentWindow?.addEventListener("keydown", (e) => { if (e.key === "Escape") history.back() })
-      frameRef.current?.contentWindow?.focus()
+      const win = frameRef.current?.contentWindow
+      win?.addEventListener("keydown", (e) => { if (e.key === "Escape") history.back() })
+      // demo 左上角 logo 連回入口頁:在這裡就直接關掉視窗,不重新載入首頁
+      win?.document.addEventListener("click", (e) => {
+        const a = (e.target as Element | null)?.closest?.("a")
+        if (a && new URL(a.href, win.location.href).pathname === location.pathname) { e.preventDefault(); history.back() }
+      })
+      win?.focus()
     } catch { /* 不同網域時聽不到,只剩上一頁可關 */ }
   }
   return (

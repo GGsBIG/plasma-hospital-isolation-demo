@@ -391,12 +391,15 @@ export function App() {
   return (
     <div className="min-h-full">
       <header
-        className="sticky top-0 z-20 flex h-[var(--header-h)] items-center justify-between border-b border-border bg-background px-5 pl:px-4 pp:px-6"
+        className="sticky top-0 z-20 flex h-[var(--header-h)] items-center justify-between border-b border-border bg-background px-6 pl:px-3 pp:px-6"
       >
         <ProgressBar onSelect={goTo} />
         <div className="flex items-center gap-4">
-          <img src={logo} alt="Brobridge" className="h-[22px] w-auto dark:hidden" />
-          <img src={logoDark} alt="Brobridge" className="hidden h-[26px] w-auto dark:block" />
+          {/* 點 logo 回 Demo 入口頁(/demos/);在入口頁的視窗裡開啟時,由入口頁攔下來直接關閉視窗 */}
+          <a href="../" target="_top" aria-label="回到 Plasma Demo 入口" className="shrink-0">
+            <img src={logo} alt="Brobridge" className="h-[22px] w-auto dark:hidden" />
+            <img src={logoDark} alt="Brobridge" className="hidden h-[26px] w-auto dark:block" />
+          </a>
           <span className="h-5 w-px bg-border cp:hidden" />
           <h1 className="text-[15px] text-foreground/85 cp:hidden">Plasma 醫院資料隔離</h1>
         </div>
