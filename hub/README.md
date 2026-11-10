@@ -3,7 +3,7 @@
 業務展示用的入口頁與給技術人員看的元件總覽。React + Vite 多頁專案,沿用官網 bbg-web 首頁的設計(紅橋背景、輪播主標、紅邊入口卡)。
 
     npm install
-    npm run dev       # 開發:http://localhost:5173/ 與 /tech/
+    npm run dev       # 開發:http://localhost:5173/ 與 /tech/;入口卡也點得進各 demo(要先跑過一次 ./build.sh)
     ./build.sh        # 產生 WordPress 用的 HTML 與 zip(見 WORDPRESS.md)
 
 | 檔案 | 內容 |
