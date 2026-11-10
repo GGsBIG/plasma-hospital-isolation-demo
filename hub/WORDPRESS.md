@@ -13,6 +13,7 @@
 | `/demos/tech/` | Plasma 元件總覽 | `hub/`(React) |
 | `/demos/hospital/` | 醫院資料隔離 | repo 根目錄(React) |
 | `/demos/ui-hospital/` | 醫院 UI 操作 demo | `ui-demo/`(React) |
+| `/demos/ops/` | Plasma 操作 demo(跟官網 bbg-web 同一份) | `ops-demo/`(React) |
 | `/demos/powerbi/` | Plasma × Power BI 簡報(對外版) | `powerbi/`(靜態 HTML) |
 | `/demos/ncsist/` | 中科院資料隔離 | 另一個 private repo `plasma-data-isolation-demo`,需放在本 repo 旁邊 |
 

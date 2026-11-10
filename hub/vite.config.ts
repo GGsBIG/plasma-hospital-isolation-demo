@@ -9,6 +9,7 @@ const DEMO_DIRS: Record<string, string> = {
   ncsist: resolve(__dirname, "release/demos/ncsist"),
   hospital: resolve(__dirname, "release/demos/hospital"),
   "ui-hospital": resolve(__dirname, "release/demos/ui-hospital"),
+  ops: resolve(__dirname, "release/demos/ops"),
   powerbi: resolve(__dirname, "../powerbi"),
 }
 const MIME: Record<string, string> = {

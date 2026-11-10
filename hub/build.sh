@@ -19,6 +19,8 @@ echo "› 醫院版"
 need "$REPO";              (cd "$REPO" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/hospital" --emptyOutDir --logLevel warn)
 echo "› 醫院 UI 操作"
 need "$REPO/ui-demo";      (cd "$REPO/ui-demo" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/ui-hospital" --emptyOutDir --logLevel warn)
+echo "› Plasma 操作 demo(官網同一份)"
+need "$REPO/ops-demo";     (cd "$REPO/ops-demo" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/ops" --emptyOutDir --logLevel warn)
 echo "› Power BI 簡報"
 mkdir -p "$OUT/powerbi" && cp -R "$REPO/powerbi/." "$OUT/powerbi/"
 
