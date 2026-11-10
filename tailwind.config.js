@@ -6,6 +6,8 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      // 全站同一套系統字(含原本的等寬字)
+      fontFamily: { sans: ["ui-sans-serif", "system-ui", "-apple-system", "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "sans-serif"], mono: ["ui-sans-serif", "system-ui", "-apple-system", "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "sans-serif"] },
       // 手機版面(與 src/layout.ts 的判斷一致):pp 直拿、pl 橫拿、cp 兩者皆是(緊湊版)
       screens: {
         pp: { raw: "(max-width: 1023px) and (orientation: portrait)" },

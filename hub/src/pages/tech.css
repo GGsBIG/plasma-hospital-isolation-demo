@@ -59,7 +59,7 @@ html { scroll-padding-top: calc(var(--header-h) + 16px); scroll-behavior: smooth
 .panel.limit h3 { color: var(--red); }
 .panel ul { margin: 8px 0 0; padding-left: 1.1em; font-size: 0.9375rem; line-height: 1.65; }
 .panel li + li { margin-top: 4px; }
-code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.875em; background: var(--sheet); padding: 1px 5px; }
+code { font-family: inherit; font-size: 0.875em; background: var(--sheet); padding: 1px 5px; }
 table.db { width: 100%; border-collapse: collapse; font-size: 0.9375rem; margin-top: 8px; }
 table.db th, table.db td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--hair); }
 table.db th { font-size: 0.8125rem; letter-spacing: 0.08em; color: var(--muted); }

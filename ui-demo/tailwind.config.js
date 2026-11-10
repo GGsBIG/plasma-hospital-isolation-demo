@@ -4,6 +4,8 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      // 全站同一套系統字(含原本的等寬字)
+      fontFamily: { sans: ["ui-sans-serif", "system-ui", "-apple-system", "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "sans-serif"], mono: ["ui-sans-serif", "system-ui", "-apple-system", "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "sans-serif"] },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

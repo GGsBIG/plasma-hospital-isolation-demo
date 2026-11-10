@@ -2,6 +2,9 @@ import { memo, useEffect, useRef } from "react"
 import type { EdgeDef } from "../types"
 import { dotScale, lineScale } from "../layout"
 
+// 全站同一套系統字
+const FONT = 'ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif'
+
 const LINE: Record<EdgeDef["state"], string> = {
   normal: "var(--edge-normal)",
   overload: "var(--edge-overload)",
@@ -90,7 +93,7 @@ function AttackPacket({ href, dr }: { href: string; dr: number }) {
       </animateMotion>
       <animate attributeName="opacity" begin="indefinite" dur={`${ATTACK_DUR}s`} fill="freeze" values="1;1;0" keyTimes="0;0.92;1" />
       <rect x={-34 * dr} y={-11 * dr} width={68 * dr} height={22 * dr} rx={11 * dr} style={{ fill: "var(--dot-overload)" }} />
-      <text textAnchor="middle" dominantBaseline="central" fontSize={12 * dr} fontWeight={700} fontFamily="ui-monospace, monospace" fill="#fff">
+      <text textAnchor="middle" dominantBaseline="central" fontSize={12 * dr} fontWeight={700} fontFamily={FONT} fill="#fff">
         DELETE
       </text>
     </g>

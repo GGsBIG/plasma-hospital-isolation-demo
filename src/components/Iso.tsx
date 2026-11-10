@@ -5,6 +5,9 @@ import { KNOWLEDGE_ICON } from "../fileIcons"
 import { NODE_SCALE, sizeOf } from "../geometry"
 import { iconScale } from "../layout"
 
+// 全站同一套系統字
+const FONT = 'ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif'
+
 // 等角投影的面色:頂面最亮,右側最暗。取自 index.css 的主題變數,
 // 以 style 指定(SVG 屬性不一定吃 var())
 const C = {
@@ -160,7 +163,7 @@ function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: bool
         <g transform={`translate(${-w / 2} ${-h - 4})`}>
           <path d={`M 0 0 H ${w - fold} L ${w} ${fold} V ${h} H 0 Z`} style={{ fill: f.fill }} />
           <path d={`M ${w - fold} 0 V ${fold} H ${w} Z`} fill="#fff" opacity={0.45} />
-          <text x={w / 2} y={h * 0.64} textAnchor="middle" dominantBaseline="central" fontSize={f.text.length > 1 ? 8.5 : 13} fontWeight={800} fill="#fff" fontFamily="ui-sans-serif, system-ui">
+          <text x={w / 2} y={h * 0.64} textAnchor="middle" dominantBaseline="central" fontSize={f.text.length > 1 ? 8.5 : 13} fontWeight={800} fill="#fff" fontFamily={FONT}>
             {f.text}
           </text>
         </g>
