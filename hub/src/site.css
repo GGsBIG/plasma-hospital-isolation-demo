@@ -1,10 +1,11 @@
-/* Brobridge 官網的設計語彙（website/bbg-web）：白紙、墨色、單一紅色、方角 */
+/* 白紙、墨色、青綠重點色(首頁照片上用亮青綠,白底上用深青綠確保對比)、方角 */
 :root {
   --paper: #ffffff;
   --ink: #111111;
-  --red: #b42622;
-  --red-deep: #8f1d1a;
-  --sheet: #ece9e2;
+  --accent: #14b8a6;
+  --accent-ink: #0f766e;
+  --accent-deep: #115e59;
+  --sheet: #eef5f4;
   --hair: rgb(17 17 17 / 0.18);
   --muted: #4a4a4a;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -27,8 +28,8 @@ h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; 
 p { margin: 0; }
 a { color: inherit; }
 img { display: block; max-width: 100%; }
-::selection { background: var(--red); color: var(--paper); }
-:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+::selection { background: var(--accent-ink); color: var(--paper); }
+:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
 
 .container { width: 100%; max-width: 90rem; margin: 0 auto; padding: 0 16px; }
 @media (min-width: 768px) { .container { padding: 0 32px; } }
@@ -50,14 +51,14 @@ img { display: block; max-width: 100%; }
   transition: background-color 160ms var(--ease), color 160ms var(--ease), border-color 160ms;
 }
 .btn-bar:hover { background: var(--ink); color: var(--paper); }
-.btn-bar.primary { border-color: var(--red); background: var(--red); color: var(--paper); }
-.btn-bar.primary:hover { border-color: var(--red-deep); background: var(--red-deep); }
+.btn-bar.primary { border-color: var(--accent-ink); background: var(--accent-ink); color: var(--paper); }
+.btn-bar.primary:hover { border-color: var(--accent-deep); background: var(--accent-deep); }
 .btn-bar.small { min-height: 40px; padding: 0 16px; font-size: 0.875rem; }
 
 /* 頁首：上緣 6px 紅線 + 64px + 1px 墨線 = 71px */
 .site-header {
   position: sticky; top: 0; z-index: 40;
-  border-top: 6px solid var(--red); border-bottom: 1px solid var(--ink);
+  border-top: 6px solid var(--accent-ink); border-bottom: 1px solid var(--ink);
   background: var(--paper);
 }
 .site-header .container { display: flex; align-items: center; gap: 16px; height: 64px; }
@@ -68,7 +69,7 @@ img { display: block; max-width: 100%; }
   font-size: 0.9375rem; font-weight: 700; white-space: nowrap;
 }
 .site-header .crumb a { text-decoration: none; }
-.site-header .crumb a:hover { color: var(--red); }
+.site-header .crumb a:hover { color: var(--accent-ink); }
 .site-header .spacer { flex: 1; }
 @media (max-width: 520px) { .site-header .crumb { display: none; } }
 
