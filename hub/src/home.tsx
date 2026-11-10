@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useRef, useState, type ReactNode } from "react"
+import { StrictMode, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react"
 import { createRoot } from "react-dom/client"
 import { CONTACT, SiteHeader } from "./components"
 import "./site.css"
@@ -53,22 +53,55 @@ function Backdrop() {
   )
 }
 
+type Card = (typeof CARDS)[number]
+
+/** 點入口按鈕後,在同一頁疊一層全螢幕視窗顯示 demo,不換頁;Esc 或右上角關閉 */
+function Viewer({ card, onClose }: { card: Card; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    closeRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
+  return (
+    <div className="viewer" role="dialog" aria-modal="true" aria-label={card.title}>
+      <div className="viewer-bar">
+        <span className="viewer-title">{card.title}</span>
+        <a className="viewer-link" href={card.href} target="_blank" rel="noopener">新分頁開啟</a>
+        <button ref={closeRef} type="button" className="viewer-close" onClick={onClose} aria-label="關閉">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+      {/* 播放 demo 時 iframe 拿得到焦點,Esc 交給右上角關閉鈕 */}
+      <iframe className="viewer-frame" src={card.href} title={card.title} allow="autoplay; fullscreen" />
+    </div>
+  )
+}
+
 function Home() {
   const [cur, setCur] = useState(0)
   const [still, setStill] = useState(false)
   // 滑鼠移到卡片上時取消輪播高亮,避免兩張卡同時是紅的
   const [hovering, setHovering] = useState(false)
   const [changed, setChanged] = useState(false)
+  const [open, setOpen] = useState<Card | null>(null)
   const first = useRef(true)
+  // 一般點擊在本頁開啟;按著 Cmd/Ctrl/Shift 或中鍵,照瀏覽器原本的方式開新分頁
+  const openCard = (e: MouseEvent, c: Card) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+    e.preventDefault()
+    setOpen(c)
+  }
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) setStill(true)
   }, [])
   useEffect(() => {
-    if (still) return
+    if (still || open) return
     const t = window.setTimeout(() => setCur((c) => (c + 1) % HEADS.length), HOLD)
     return () => window.clearTimeout(t)
-  }, [cur, still])
+  }, [cur, still, open])
   useEffect(() => {
     if (first.current) { first.current = false; return }
     setChanged(true)
@@ -107,7 +140,7 @@ function Home() {
               <ul className="cards" onMouseEnter={() => setHovering(true)} onMouseLeave={() => setHovering(false)}>
                 {CARDS.map((c) => (
                   <li key={c.key}>
-                    <a className={`card${!hovering && c.key === head.key ? " lit" : ""}`} href={c.href} target="_blank" rel="noopener">
+                    <a className={`card${!hovering && c.key === head.key ? " lit" : ""}`} href={c.href} onClick={(e) => openCard(e, c)}>
                       {c.title}
                     </a>
                   </li>
@@ -117,6 +150,7 @@ function Home() {
           </div>
         </section>
       </main>
+      {open && <Viewer card={open} onClose={() => setOpen(null)} />}
     </>
   )
 }

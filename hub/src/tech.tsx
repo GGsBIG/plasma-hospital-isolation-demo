@@ -42,7 +42,7 @@ function Tech() {
   return (
     <>
       <SiteHeader logoHref="../" logoLabel="回到 Plasma Demo 入口"
-        crumb={<><a href="../">Plasma Demo</a> / 元件總覽</>}
+        crumb={<><a href="../" target="_top">Plasma Demo</a> / 元件總覽</>}
         action={<a className="btn-bar small" href={DOCS} target="_blank" rel="noopener">官方技術文件</a>} />
       <main>
         <section className="intro">

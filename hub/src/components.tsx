@@ -11,7 +11,7 @@ export function SiteHeader({ logoHref, logoLabel, crumb, action }: {
   return (
     <header className="site-header">
       <div className="container">
-        <a className="logo" href={logoHref} aria-label={logoLabel}>
+        <a className="logo" href={logoHref} aria-label={logoLabel} target="_top">
           <img src={logo} alt="Brobridge" width={145} height={28} />
         </a>
         <span className="crumb">{crumb}</span>
