@@ -84,7 +84,6 @@ function Home() {
           <Backdrop />
           <div className="container">
             <div className="headline">
-              <p className="eyebrow"><b>PLASMA</b>企業資料平台 · 展示</p>
               <h1>
                 <span className="sr-only">{head.lines.join(" ")}</span>
                 <span key={cur} className={`lines${changed ? " wipe" : ""}`} aria-hidden="true">

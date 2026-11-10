@@ -17,13 +17,11 @@ main { flex: 1; min-height: 0; display: flex; }
 }
 /* 矮螢幕:先藏說明文字,再縮小主標,確保整頁放得下 */
 @media (max-height: 640px) { .lead { display: none; } }
-@media (max-height: 520px) { .headline h1 { font-size: 2rem !important; } .eyebrow { display: none; } }
+@media (max-height: 520px) { .headline h1 { font-size: 2rem !important; } }
 
-.eyebrow { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.12em; }
-.eyebrow b { color: var(--paper); background: var(--red); padding: 2px 8px; margin-right: 8px; }
 .headline { max-width: 46rem; }
 .headline h1 {
-  margin-top: 14px; color: var(--paper);
+  margin-top: 0; color: var(--paper);
   font-size: clamp(2.375rem, 8.5vw, 3.5rem); line-height: 1.06; letter-spacing: -0.02em;
 }
 @media (min-width: 768px) { .headline h1 { font-size: clamp(3rem, 5.2vw, 4.75rem); } }
