@@ -43,7 +43,7 @@ html { scroll-padding-top: calc(var(--header-h) + 16px); scroll-behavior: smooth
   .toc { display: block; position: sticky; top: calc(var(--header-h) + 24px); align-self: start; }
   .toc ol { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--ink); }
   .toc a { display: flex; gap: 10px; padding: 5px 0 5px 14px; margin-left: -2px; border-left: 2px solid transparent; text-decoration: none; font-size: 0.9375rem; line-height: 1.4; }
-  .toc a span { color: var(--red); font-weight: 900; font-stretch: 75%; min-width: 1.5em; }
+  .toc a span { color: var(--red); font-weight: 700; min-width: 1.5em; }
   .toc a:hover, .toc a[aria-current="true"] { border-left-color: var(--red); font-weight: 700; }
 }
 .comp { border-top: 2px solid var(--ink); padding-top: 22px; margin-bottom: 48px; }

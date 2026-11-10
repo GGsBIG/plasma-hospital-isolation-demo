@@ -18,11 +18,12 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: Archivo, "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
+  /* 跟 demo 一樣用系統字:Mac 是 SF Pro + 蘋方,Windows 是微軟正黑體 */
+  font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   font-size: 1.0625rem;
   line-height: 1.75;
 }
-h1, h2, h3, h4 { font-weight: 900; letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
+h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
 p { margin: 0; }
 a { color: inherit; }
 img { display: block; max-width: 100%; }
@@ -34,9 +35,8 @@ img { display: block; max-width: 100%; }
 @media (min-width: 1024px) { .container { padding: 0 40px; } }
 
 .t-num {
-  font-weight: 900;
-  font-stretch: 75%;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   line-height: 0.95;
 }
