@@ -20,7 +20,7 @@ const PLASMA_POS = { x: 800, y: 525 }
 // 知識庫與 Plasma 合體:知識庫疊在 Plasma 的平台上(落下合體),不顯示名稱;
 // nodes 裡 kb 要寫在 plasma 後面,才會畫在 Plasma 上層
 const KB_DOCK = { x: 800, y: 439 } // Plasma 核心立方體頂面(Plasma 中心往上 PLASMA_LIFT × 1.3)
-const BRAIN_BADGE = { tone: "ok" as const, text: "資料大腦 · 理解所有表與欄位" }
+const BRAIN_BADGE = { tone: "ok" as const, text: "已匯入資料字典 · 欄位有說明" }
 
 const col = (ys: Record<string, number>, x: number) =>
   Object.fromEntries(Object.entries(ys).map(([id, y]) => [id, { x, y }]))
@@ -132,7 +132,7 @@ const HANDOFF: Callout = {
   tone: "danger",
   q: "",
   seq: [
-    { who: "ds-aiteam", text: "需要資料！", time: "第 0 週" },
+    { who: "ds-aiteam", text: "需要資料", time: "第 0 週" },
     { who: "ds-it", text: "找資料中…", time: "第 2 週" },
     { who: "ds-it", text: "資料給你", time: "第 3 週" },
     { who: "ds-aiteam", text: "資料不對，再協調一次", time: "第 4 週", tone: "danger" },
@@ -265,7 +265,7 @@ export const SCENES: SceneDef[] = [
     id: "manual",
     title: "手工合併資料",
     short: "手工合併",
-    pain: "人工到各資料庫匯出再手動合併，報表要等好幾天。",
+    pain: "人工到各資料庫匯出、再用 Excel 合併，報表要等好幾天。",
     fix: "Plasma 自動整合，健保申報、評鑑資料直接產出。",
     nodes: { ...dbCol(260), manual: { x: 800, y: MID }, ...OUT_POS },
     active: [...dbIds, "manual", ...outIds],
@@ -289,8 +289,8 @@ export const SCENES: SceneDef[] = [
     id: "fhir",
     title: "FHIR 對外交換",
     short: "FHIR 交換",
-    pain: "FHIR 轉檔直連核心資料庫，負載過高、代碼不一。",
-    fix: "Plasma 統一代碼，FHIR Server 只向 Plasma 取用。",
+    pain: "FHIR 轉檔程式直連核心資料庫，負載過高，各系統代碼也不一致。",
+    fix: "Plasma 先統一代碼，FHIR Server 只向 Plasma 取資料。",
     nodes: { ...dbCol(220), "app-fhir": GW_POS, ...EXT_POS },
     active: [...dbIds, "app-fhir", ...extIds],
     edges: [
@@ -323,7 +323,7 @@ export const SCENES: SceneDef[] = [
     title: "AI 的資安與效能風險",
     short: "資安風險",
     pain: "AI 直連正式資料庫，一個錯誤指令就能讓系統停機。",
-    fix: "AI 只能透過 Plasma 唯讀存取，資料不會被誤刪。",
+    fix: "AI 只能透過 Plasma 讀取資料，不能修改或刪除。",
     // 地端 AI 靠右一點:上方的重大事故警報卡才不會壓到資料庫的負載徽章
     nodes: { ...dsCol(150), ...dbCol(480), "app-ai": { x: 1400, y: MID } },
     active: [...dsIds, ...dbIds, "app-ai"],
@@ -351,9 +351,9 @@ export const SCENES: SceneDef[] = [
   {
     id: "mcp",
     title: "AI 用不了院內資料",
-    short: "Plasma 大腦",
-    pain: "AI 要資料得找 IT 來回協調，動輒數月；拿到了也看不懂欄位代碼。",
-    fix: "匯入資料字典，Plasma 成為資料大腦；AI Agent 透過 MCP 自助取用，數分鐘完成。",
+    short: "AI 取資料",
+    pain: "AI 要資料得找 IT 來回協調，常常要好幾個月；拿到了也看不懂欄位代碼。",
+    fix: "匯入資料字典後，Plasma 看得懂欄位代碼；AI Agent 透過 MCP 自己取資料，幾分鐘就有結果。",
     nodes: { ...dbCol(260), "ds-it": { x: 800, y: MID }, "ds-aiteam": { x: 1340, y: MID } },
     active: [...dbIds, "ds-it", "ds-aiteam"],
     edges: [
@@ -374,7 +374,7 @@ export const SCENES: SceneDef[] = [
       // 系統文件、資料字典等文件依序飛進知識庫,接著大腦輪廓把知識庫與 Plasma 包在一起;大腦長好後才播 Agent 對話
       upload: true,
       merged: ["kb"],
-      badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "數分鐘取得結果" } },
+      badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "幾分鐘拿到結果" } },
       showAgent: true,
     },
   },

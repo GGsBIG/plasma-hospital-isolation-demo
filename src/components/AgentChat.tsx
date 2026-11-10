@@ -188,7 +188,7 @@ function Chart({ v }: { v: number }) {
     <div className="mt-1 rounded-xl border border-border bg-card p-3" style={appear(clamp01(v * 4))}>
       <div className="mb-2.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         {grow === 0 && <Loader2 className="h-3 w-3 animate-spin" />}
-        <span className={grow === 0 ? "shimmer-text" : ""}>{grow === 0 ? "產生圖表中…" : "本月專案經費執行彙總 · 百萬 NT$"}</span>
+        <span className={grow === 0 ? "shimmer-text" : ""}>{grow === 0 ? "產生圖表中…" : "本月住院計費彙總 · 百萬 NT$"}</span>
       </div>
       <div className="space-y-2">
         {AGENT_CHART.map((d, i) => (
