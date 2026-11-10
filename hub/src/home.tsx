@@ -18,16 +18,16 @@ import m941w from "./assets/hero/bridge-mobile-941.webp"
 /** 主標輪播:每則對應一張入口卡,輪到時那張卡轉紅 */
 const HEADS: { key: string; tab: string; lines: [string, string]; lead: ReactNode }[] = [
   {
-    key: "ncsist", tab: "中科院", lines: ["核心資料庫", "不再被壓垮"],
-    lead: <>新應用、報表與 AI 都改向 Plasma 取資料。<b>正式資料庫不受影響</b>，各單位<b>只看得到權限內的資料</b>。</>,
+    key: "ncsist", tab: "中科院", lines: ["報表和 AI", "改從 Plasma 取資料"],
+    lead: <>正式資料庫不受影響，各單位只看得到自己權限內的資料。</>,
   },
   {
-    key: "hospital", tab: "醫院", lines: ["HIS 不用動", "資料照樣用"],
-    lead: <>健保申報、FHIR 對外交換、院內 AI，全部從 Plasma 取用。<b>門診、護理系統照常運作</b>。</>,
+    key: "hospital", tab: "醫院", lines: ["HIS 不用改", "資料從 Plasma 取"],
+    lead: <>健保申報、FHIR 對外交換和院內 AI 都從 Plasma 取資料，門診、護理系統照常運作。</>,
   },
   {
-    key: "tech", tab: "技術人員", lines: ["從連線到 MCP", "一個平台管到底"],
-    lead: <>資料庫連線、View、排程、資料產品到 MCP，<b>每個元件做什麼、規格與限制</b>一次看完。</>,
+    key: "tech", tab: "技術人員", lines: ["Plasma 元件", "逐一說明"],
+    lead: <>從資料庫連線、View、排程、資料產品到 MCP，說明每個元件的用途、規格與限制。</>,
   },
 ]
 const HOLD = 6500
@@ -136,7 +136,7 @@ function Home() {
   const head = HEADS[cur]
   return (
     <>
-      <SiteHeader logoHref="./" logoLabel="回到 Plasma Demo 首頁" crumb="Plasma Demo"
+      <SiteHeader logoHref="./" logoLabel="回到 Plasma Demo 首頁" crumb={null}
         action={<a className="btn-bar primary small" href={CONTACT}>預約專人諮詢</a>} />
       <main>
         <section className={`hero${still ? " still" : ""}`}>
