@@ -1,0 +1,83 @@
+/* Brobridge 官網的設計語彙（website/bbg-web）：白紙、墨色、單一紅色、方角 */
+:root {
+  --paper: #ffffff;
+  --ink: #111111;
+  --red: #b42622;
+  --red-deep: #8f1d1a;
+  --sheet: #ece9e2;
+  --hair: rgb(17 17 17 / 0.18);
+  --muted: #4a4a4a;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --header-h: 71px;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Archivo, "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+h1, h2, h3, h4 { font-weight: 900; letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
+p { margin: 0; }
+a { color: inherit; }
+img { display: block; max-width: 100%; }
+::selection { background: var(--red); color: var(--paper); }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+
+.container { width: 100%; max-width: 90rem; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 768px) { .container { padding: 0 32px; } }
+@media (min-width: 1024px) { .container { padding: 0 40px; } }
+
+.t-num {
+  font-weight: 900;
+  font-stretch: 75%;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.95;
+}
+
+.btn-bar {
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  min-height: 48px; padding: 0 24px;
+  border: 2px solid var(--ink); background: transparent; color: var(--ink);
+  font: inherit; font-size: 0.9375rem; font-weight: 700; letter-spacing: 0.02em;
+  text-decoration: none; cursor: pointer;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease), border-color 160ms;
+}
+.btn-bar:hover { background: var(--ink); color: var(--paper); }
+.btn-bar.primary { border-color: var(--red); background: var(--red); color: var(--paper); }
+.btn-bar.primary:hover { border-color: var(--red-deep); background: var(--red-deep); }
+.btn-bar.small { min-height: 40px; padding: 0 16px; font-size: 0.875rem; }
+
+/* 頁首：上緣 6px 紅線 + 64px + 1px 墨線 = 71px */
+.site-header {
+  position: sticky; top: 0; z-index: 40;
+  border-top: 6px solid var(--red); border-bottom: 1px solid var(--ink);
+  background: var(--paper);
+}
+.site-header .container { display: flex; align-items: center; gap: 16px; height: 64px; }
+.site-header .logo img { height: 24px; width: auto; }
+@media (min-width: 768px) { .site-header .logo img { height: 28px; } }
+.site-header .crumb {
+  padding-left: 16px; border-left: 1px solid var(--hair);
+  font-size: 0.9375rem; font-weight: 700; white-space: nowrap;
+}
+.site-header .crumb a { text-decoration: none; }
+.site-header .crumb a:hover { color: var(--red); }
+.site-header .spacer { flex: 1; }
+@media (max-width: 520px) { .site-header .crumb { display: none; } }
+
+@keyframes wipe-in {
+  from { clip-path: inset(0 100% 0 0); transform: translateX(-0.15em); }
+  to { clip-path: inset(0 0 0 0); transform: none; }
+}
+@keyframes hold { from { width: 0%; } to { width: 100%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
