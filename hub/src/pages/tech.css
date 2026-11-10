@@ -2,10 +2,11 @@ html { scroll-padding-top: calc(var(--header-h) + 16px); scroll-behavior: smooth
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
 .intro { border-bottom: 2px solid var(--ink); }
-.intro .container { padding-top: 48px; padding-bottom: 40px; }
-.intro .eyebrow { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.12em; color: var(--red); }
+.intro .container { padding-top: 24px; padding-bottom: 40px; }
+@media (min-width: 1024px) { .intro .container { padding-top: 40px; } }
 .intro h1 { margin-top: 10px; font-size: clamp(2.25rem, 6vw, 4.5rem); line-height: 1.05; letter-spacing: -0.02em; }
 .intro p { margin-top: 18px; max-width: 40em; font-size: 1.125rem; }
+.intro .eyebrow { margin-top: 0; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.12em; color: var(--red); }
 .intro .facts { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 24px; font-size: 0.9375rem; font-weight: 700; }
 .intro .facts span::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; background: var(--red); vertical-align: 2px; }
 
