@@ -39,6 +39,22 @@ const CARDS = [
   { key: "tech", href: "tech/", title: "元件總覽" },
 ]
 
+/** 主標的 text reveal:每一行有遮罩,字一個接一個從遮罩下方升上來 */
+function Reveal({ lines }: { lines: readonly string[] }) {
+  let n = 0
+  return (
+    <>
+      {lines.map((l) => (
+        <span key={l} className="line">
+          {[...l].map((ch, k) => (
+            <span key={k} className="ch" style={{ animationDelay: `${n++ * 32}ms` }}>{ch === " " ? "\u00a0" : ch}</span>
+          ))}
+        </span>
+      ))}
+    </>
+  )
+}
+
 const srcset = (files: string[], widths: number[]) => files.map((f, i) => `${f} ${widths[i]}w`).join(", ")
 
 function Backdrop() {
@@ -97,10 +113,8 @@ function Home() {
   const [still, setStill] = useState(false)
   // 滑鼠移到卡片上時取消輪播高亮,避免兩張卡同時是紅的
   const [hovering, setHovering] = useState(false)
-  const [changed, setChanged] = useState(false)
   const [open, setOpen] = useState<Card | null>(null)
   const closeViewer = useCallback(() => setOpen(null), [])
-  const first = useRef(true)
   // 一般點擊在本頁開啟;按著 Cmd/Ctrl/Shift 或中鍵,照瀏覽器原本的方式開新分頁
   const openCard = (e: MouseEvent, c: Card) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
@@ -118,10 +132,6 @@ function Home() {
     const t = window.setTimeout(() => setCur((c) => (c + 1) % HEADS.length), HOLD)
     return () => window.clearTimeout(t)
   }, [cur, still, open])
-  useEffect(() => {
-    if (first.current) { first.current = false; return }
-    setChanged(true)
-  }, [cur])
 
   const head = HEADS[cur]
   return (
@@ -135,11 +145,11 @@ function Home() {
             <div className="headline">
               <h1>
                 <span className="sr-only">{head.lines.join(" ")}</span>
-                <span key={cur} className={`lines${changed ? " wipe" : ""}`} aria-hidden="true">
-                  {head.lines.map((l) => <span key={l} className="line">{l}</span>)}
+                <span key={cur} className="lines" aria-hidden="true">
+                  <Reveal lines={head.lines} />
                 </span>
               </h1>
-              <p className="lead" aria-live="polite">{head.lead}</p>
+              <p key={cur} className="lead reveal-fade" aria-live="polite">{head.lead}</p>
               <div className="tabs" role="group" aria-label="主標切換">
                 {HEADS.map((h, i) => (
                   <button key={h.key} type="button" aria-pressed={i === cur} onClick={() => setCur(i)}>
