@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useRef, useState, type ReactNode } from "react"
 import { createRoot } from "react-dom/client"
-import { ArrowRight, CONTACT, SiteHeader } from "./components"
+import { CONTACT, SiteHeader } from "./components"
 import "./site.css"
 import "./pages/home.css"
 
@@ -109,7 +109,6 @@ function Home() {
                   <li key={c.key}>
                     <a className={`card${!hovering && c.key === head.key ? " lit" : ""}`} href={c.href} target="_blank" rel="noopener">
                       {c.title}
-                      <ArrowRight size={20} />
                     </a>
                   </li>
                 ))}
