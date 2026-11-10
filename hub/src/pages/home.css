@@ -41,13 +41,13 @@ main { flex: 1; min-height: 0; display: flex; }
 .tabs button[aria-pressed="true"] .fill { animation: hold linear both; }
 .still .tabs button[aria-pressed="true"] .fill { animation: none; width: 100%; }
 
-/* 入口按鈕:白色實心方塊、黑字、加寬字距,靠左上下堆疊,寬度隨文字;指到或主標輪到時轉成 logo 紅 */
+/* 入口按鈕:白色實心方塊、黑字,靠左上下堆疊,寬度隨文字;指到或主標輪到時轉成 logo 紅 */
 .cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 @media (min-width: 768px) { .cards { gap: 14px; } }
 .card {
   display: inline-block; min-width: 9em; padding: 12px 26px;
   background: var(--paper); color: var(--ink); text-decoration: none;
-  font-size: 1.125rem; font-weight: 500; letter-spacing: 0.14em; line-height: 1.4;
+  font-size: 1.125rem; font-weight: 600; line-height: 1.4;
   transition: background-color 200ms var(--ease), color 200ms var(--ease);
 }
 @media (min-width: 768px) { .card { padding: 18px 44px; font-size: 1.5rem; } }
