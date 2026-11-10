@@ -92,7 +92,8 @@ function Viewer({ card, onClose }: { card: Card; onClose: () => void }) {
 }
 
 function Home() {
-  const [cur, setCur] = useState(0)
+  // 從 demo 點 logo 回來時網址帶 #ncsist / #hospital / #tech,首頁就停在那個情境
+  const [cur, setCur] = useState(() => Math.max(0, HEADS.findIndex((h) => `#${h.key}` === location.hash)))
   const [still, setStill] = useState(false)
   // 滑鼠移到卡片上時取消輪播高亮,避免兩張卡同時是紅的
   const [hovering, setHovering] = useState(false)
@@ -104,6 +105,8 @@ function Home() {
   const openCard = (e: MouseEvent, c: Card) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
     e.preventDefault()
+    const i = HEADS.findIndex((h) => h.key === c.key)
+    if (i >= 0) setCur(i)
     setOpen(c)
   }
 
@@ -123,7 +126,7 @@ function Home() {
   const head = HEADS[cur]
   return (
     <>
-      <SiteHeader logoHref="https://brobridge.com/" logoLabel="Brobridge 寬橋 官網" crumb="Plasma Demo"
+      <SiteHeader logoHref="./" logoLabel="回到 Plasma Demo 首頁" crumb="Plasma Demo"
         action={<a className="btn-bar primary small" href={CONTACT}>預約專人諮詢</a>} />
       <main>
         <section className={`hero${still ? " still" : ""}`}>
