@@ -34,9 +34,9 @@ const HOLD = 6500
 
 /** 入口卡:href 對應 WordPress 上 /demos/ 底下的子資料夾 */
 const CARDS = [
-  { key: "ncsist", href: "ncsist/", title: "中科院" },
-  { key: "hospital", href: "hospital/", title: "醫院" },
-  { key: "tech", href: "tech/", title: "Plasma 元件總覽" },
+  { key: "ncsist", href: "ncsist/", title: "中科院情境" },
+  { key: "hospital", href: "hospital/", title: "醫院情境" },
+  { key: "tech", href: "tech/", title: "元件總覽" },
 ]
 
 const srcset = (files: string[], widths: number[]) => files.map((f, i) => `${f} ${widths[i]}w`).join(", ")
