@@ -143,13 +143,24 @@ function Home() {
           <Backdrop />
           <div className="container">
             <div className="headline">
-              <h1>
-                <span className="sr-only">{head.lines.join(" ")}</span>
-                <span key={cur} className="lines" aria-hidden="true">
-                  <Reveal lines={head.lines} />
-                </span>
-              </h1>
-              <p key={cur} className="lead reveal-fade" aria-live="polite">{head.lead}</p>
+              {/* 三則主標疊在同一格,高度取最高的那則;切換時下方頁籤與按鈕不會跟著移動 */}
+              <div className="head-stack">
+                {HEADS.map((h, i) => i !== cur && (
+                  <div key={h.key} className="head-ghost" aria-hidden="true">
+                    <div className="h1">{h.lines.map((l) => <span key={l} className="line">{l}</span>)}</div>
+                    <p className="lead">{h.lead}</p>
+                  </div>
+                ))}
+                <div className="head-live">
+                  <h1 className="h1">
+                    <span className="sr-only">{head.lines.join(" ")}</span>
+                    <span key={cur} className="lines" aria-hidden="true">
+                      <Reveal lines={head.lines} />
+                    </span>
+                  </h1>
+                  <p key={cur} className="lead reveal-fade" aria-live="polite">{head.lead}</p>
+                </div>
+              </div>
               <div className="tabs" role="group" aria-label="主標切換">
                 {HEADS.map((h, i) => (
                   <button key={h.key} type="button" aria-pressed={i === cur} onClick={() => setCur(i)}>
