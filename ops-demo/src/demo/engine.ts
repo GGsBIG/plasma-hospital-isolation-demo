@@ -49,20 +49,25 @@ export function useDemo() {
           }
         }, stepMs)
       })
+    // 整頁用 CSS zoom 放大(見 main.tsx):getBoundingClientRect 是畫面上的實際像素,
+    // 游標本身也在放大的頁面裡,座標要先除以倍率,不然會被放大兩次
+    const center = (el: Element) => {
+      const z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1
+      const r = el.getBoundingClientRect()
+      return { x: (r.left + r.width / 2) / z, y: (r.top + r.height / 2) / z }
+    }
     const moveTo = async (sel: string) => {
       const el = q(sel)
       if (!el) return
-      const r = el.getBoundingClientRect()
-      const x = r.left + r.width / 2
-      const y = r.top + r.height / 2
+      const { x, y } = center(el)
       apply((st) => ({ cursor: { ...st.cursor, x, y } }))
       await sleep(720)
     }
     const click = async (sel: string) => {
       const el = q(sel)
       if (el) {
-        const r = el.getBoundingClientRect()
-        apply(() => ({ cursor: { x: r.left + r.width / 2, y: r.top + r.height / 2, clicking: true } }))
+        const { x, y } = center(el)
+        apply(() => ({ cursor: { x, y, clicking: true } }))
       }
       await sleep(180)
       apply((st) => ({ cursor: { ...st.cursor, clicking: false } }))
