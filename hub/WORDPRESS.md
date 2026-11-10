@@ -4,17 +4,17 @@
 
     ./build.sh
 
-會重新 build 四個 demo，並把入口頁、技術頁一起收進 `release/demos/`，打包成
+會重新 build 入口頁、技術頁與四個 demo，收進 `release/demos/`，打包成
 `release/plasma-demos-wordpress.zip`。解壓後的 `demos/` 就對應主機上的 `httpdocs/demos/`：
 
-| 網址 | 內容 | 來源 |
+| 網址 | 內容 | 原始碼 |
 |---|---|---|
-| `/demos/` | 入口頁 | 本專案 `index.html` |
-| `/demos/ncsist/` | 中科院資料隔離 | `../../plasma-data-isolation-demo` |
-| `/demos/hospital/` | 醫院資料隔離 | 本 repo 根目錄 |
-| `/demos/tech/` | Plasma 元件總覽 | 本專案 `tech/index.html` |
-| `/demos/ui-hospital/` | 醫院 UI 操作 demo | `../../plasma-ui-demo-hospital` |
-| `/demos/powerbi/` | Plasma × Power BI 簡報（對外版） | `../../plasma-bi-powerbi/plasma-bi-簡報-對外.html` |
+| `/demos/` | 入口頁 | `hub/`(React) |
+| `/demos/tech/` | Plasma 元件總覽 | `hub/`(React) |
+| `/demos/hospital/` | 醫院資料隔離 | repo 根目錄(React) |
+| `/demos/ui-hospital/` | 醫院 UI 操作 demo | `ui-demo/`(React) |
+| `/demos/powerbi/` | Plasma × Power BI 簡報(對外版) | `powerbi/`(靜態 HTML) |
+| `/demos/ncsist/` | 中科院資料隔離 | 另一個 private repo `plasma-data-isolation-demo`,需放在本 repo 旁邊 |
 
 所有頁面都加了 `noindex, nofollow`，搜尋引擎不會收錄。入口頁不要放進官網選單。
 

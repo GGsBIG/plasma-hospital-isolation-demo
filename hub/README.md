@@ -1,8 +1,15 @@
-# Plasma Demo 入口
+# Plasma Demo 入口(hub)
 
-業務展示用的入口頁（`index.html`）與給技術人員看的元件總覽（`tech/index.html`）。
-純靜態 HTML，沿用官網 bbg-web 首頁的設計（紅橋背景、輪播主標、紅邊入口卡），共用樣式在 `assets/site.css`。
+業務展示用的入口頁與給技術人員看的元件總覽。React + Vite 多頁專案,沿用官網 bbg-web 首頁的設計(紅橋背景、輪播主標、紅邊入口卡)。
 
-- 主標輪播：每則主標對應一張入口卡（中科院、醫院、技術人員），輪到時那張卡轉紅。文案在 `index.html` 底部的 `HEADS`。
-- 技術頁內容整理自 Plasma 官方文件 https://plasma-docs.brobridge.workers.dev/zh-Hant/ ，每段附原文連結；文件沒寫的不寫。
-- 打包與上傳：見 `WORDPRESS.md`。
+    npm install
+    npm run dev       # 開發:http://localhost:5173/ 與 /tech/
+    ./build.sh        # 產生 WordPress 用的 HTML 與 zip(見 WORDPRESS.md)
+
+| 檔案 | 內容 |
+|---|---|
+| `src/home.tsx` | 入口頁:主標輪播 `HEADS`、入口卡 `CARDS` |
+| `src/tech.tsx` | 元件總覽頁面版型 |
+| `src/techData.tsx` | 12 個元件的內容,整理自 https://plasma-docs.brobridge.workers.dev/zh-Hant/ ,文件沒寫的不寫 |
+| `src/site.css` | 共用設計 token、頁首、按鈕 |
+| `src/pages/*.css` | 各頁樣式 |

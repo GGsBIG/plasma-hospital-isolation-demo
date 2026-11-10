@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta name="robots" content="noindex">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plasma 資料交付平台 — 正式簡報</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<style>
+  :root{
+    --bg:#ffffff; --bg2:#f1f5f9; --ink:#0f172a; --muted:#64748b;
+    --accent:#0284c7; --accent2:#0891b2; --good:#059669; --bad:#dc2626; --warn:#d97706;
+    --card:#f8fafc; --line:#e2e8f0;
+  }
+  .reveal{font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;color:var(--ink);font-size:30px;}
+  .reveal .slides{text-align:left;}
+  .reveal section{background:transparent;}
+  .backgrounds{background:radial-gradient(1200px 600px at 80% -10%, #eef5fc 0%, #ffffff 60%);}
+  .reveal h1,.reveal h2,.reveal h3{color:#0f172a;font-weight:800;letter-spacing:.3px;text-transform:none;line-height:1.2;}
+  .reveal h1{font-size:1.9em;} .reveal h2{font-size:1.35em;} .reveal h3{font-size:1.05em;}
+  .reveal em{color:var(--accent);font-style:normal;}
+  .reveal strong{color:#0f172a;}
+  .reveal ul{margin-left:.2em;} .reveal li{margin:.35em 0;line-height:1.4;}
+  .reveal li::marker{color:var(--accent);}
+  .kicker{display:inline-block;font-size:.5em;letter-spacing:3px;color:var(--accent);border:1px solid #bae6fd;
+    padding:.25em .8em;border-radius:999px;margin-bottom:.6em;background:#eff6ff;}
+  .part-badge{position:fixed;top:24px;right:34px;font-size:15px;color:var(--muted);letter-spacing:2px;}
+  .msg{margin-top:.6em;padding:.5em .9em;border-left:4px solid var(--accent);background:#eff6ff;
+    color:#0c4a6e;font-size:.72em;border-radius:0 8px 8px 0;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;box-shadow:0 1px 3px rgba(15,23,42,.05);}
+  .card h3{margin:0 0 .3em;color:var(--accent2);}
+  .card .num{font-size:.7em;color:var(--accent);font-weight:800;}
+  .cap{display:flex;gap:16px;align-items:flex-start;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:14px 18px;margin:10px 0;}
+  .cap .n{font-size:1.4em;font-weight:800;color:var(--accent);min-width:1.4em;}
+  .cap b{color:#0f172a;} .cap span{color:var(--muted);font-size:.8em;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);}
+  .cols>div{padding:20px 24px;} .cols .trad{background:#fef2f2;} .cols .plas{background:#ecfeff;}
+  .cols h3{margin-top:0;} .cols .trad h3{color:var(--bad);} .cols .plas h3{color:var(--good);}
+  .cols ul{font-size:.8em;}
+  figure{margin:0;text-align:center;}
+  figure img{max-height:560px;width:auto;border-radius:12px;border:1px solid var(--line);box-shadow:0 12px 40px rgba(15,23,42,.15);}
+  figure.small img{max-height:360px;}
+  figcaption{color:var(--muted);font-size:.62em;margin-top:.6em;}
+  .kpigrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:.4em 0;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 10px;text-align:center;box-shadow:0 1px 3px rgba(15,23,42,.05);}
+  .kpi .v{font-size:1.5em;font-weight:800;color:#0f172a;} .kpi .k{font-size:.6em;color:var(--muted);margin-top:.3em;}
+  .kpi.good .v{color:var(--good);} .kpi.bad .v{color:var(--bad);} .kpi.warn .v{color:var(--warn);} .kpi.acc .v{color:var(--accent);}
+  .flow{display:flex;align-items:center;justify-content:center;gap:12px;margin:.6em 0;flex-wrap:wrap;}
+  .flow .node{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;font-size:.72em;text-align:center;}
+  .flow .arr{color:var(--accent);font-size:1.2em;}
+  .dax{background:#f1f5f9;border:1px solid var(--line);border-radius:10px;padding:14px 18px;font-family:ui-monospace,Menlo,monospace;
+    font-size:.62em;color:#0f172a;line-height:1.7;white-space:pre-wrap;}
+  .dax .fn{color:var(--accent);font-weight:700;} .dax .c{color:var(--muted);}
+  .sec{text-align:center;}
+  .sec .kicker{font-size:.6em;}
+  .sec h1{font-size:2.2em;margin:.2em 0;}
+  .sec p{color:var(--muted);}
+  .lead{color:var(--muted);font-size:.85em;}
+  table.spec{font-size:.62em;border-collapse:collapse;width:100%;}
+  table.spec td{border-bottom:1px solid var(--line);padding:8px 10px;color:var(--ink);}
+  table.spec td:first-child{color:var(--accent2);white-space:nowrap;width:26%;}
+  .reveal .slide-number{background:transparent;color:var(--muted);}
+  .foot{position:fixed;bottom:18px;left:34px;font-size:13px;color:#94a3b8;letter-spacing:1px;}
+  code{color:var(--accent2);}
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+
+<!-- ============ PART 0 ============ -->
+
+<!-- 1 封面 -->
+<section data-background-gradient="radial-gradient(900px 600px at 70% 10%, #e0f2fe 0%, #ffffff 60%)">
+  <span class="kicker">BROBRIDGE · Plasma × Power BI</span>
+  <h1>Plasma<br><span style="color:var(--accent)">讓分散的資料，變成可交付的資料產品</span></h1>
+  <p class="lead" style="margin-top:.8em">資料聯邦 × 物化 × 交付　一站式資料平台</p>
+  <div class="msg">這是一份完整認識 Plasma 的簡報，最後用一個真實案例證明它跑得通。</div>
+</section>
+
+<!-- 2 議程 -->
+<section>
+  <div class="part-badge">AGENDA</div>
+  <h2>今天的三個部分</h2>
+  <div class="grid3" style="margin-top:.6em">
+    <div class="card"><h3>PART 1</h3>認識 Plasma<br><span style="color:var(--muted);font-size:.75em">它是什麼、解決什麼、五大核心能力</span></div>
+    <div class="card"><h3>PART 2</h3>實證案例<br><span style="color:var(--muted);font-size:.75em">用 Plasma 一天串起一張醫療住院 BI</span></div>
+    <div class="card"><h3>PART 3</h3>換成你的資料<br><span style="color:var(--muted);font-size:.75em">同一條管線，換來源、換指標照樣跑</span></div>
+  </div>
+  <div class="msg">先建立對 Plasma 的完整認知，再用案例驗證，最後談怎麼複製。</div>
+</section>
+
+<!-- 3 脈絡 -->
+<section>
+  <div class="part-badge">開場</div>
+  <h2>為什麼現在要談「資料交付」</h2>
+  <ul>
+    <li>資料越來越分散：每個系統、每個部門、每個客戶都有自己的庫</li>
+    <li>商業要的是<em>可用的資料產品</em>（報表、API、指標），不是一堆原始資料庫</li>
+    <li>中間那段「把分散資料變成可用產品」的工，正是最貴、最慢的一段</li>
+    <li>這正是 Plasma 要收斂的問題</li>
+  </ul>
+  <div class="flow">
+    <div class="node">分散資料<br><span style="color:var(--muted)">多個異質庫</span></div>
+    <div class="arr">→</div>
+    <div class="node" style="border-color:var(--accent);color:var(--accent)">? ? ?<br><span>最貴最慢的一段</span></div>
+    <div class="arr">→</div>
+    <div class="node">可用資料產品<br><span style="color:var(--muted)">報表 / API / 指標</span></div>
+  </div>
+  <div class="msg">真正的瓶頸不在分析，而在「把分散資料變成可交付產品」這段。</div>
+</section>
+
+<!-- ============ PART 1 ============ -->
+<section class="sec" data-background-color="#f1f5f9">
+  <span class="kicker">PART 1</span>
+  <h1>認識 Plasma</h1>
+  <p>它是什麼、解決什麼、五大核心能力</p>
+</section>
+
+<!-- 4 痛點 -->
+<section>
+  <div class="part-badge">PART 1 · 認識 Plasma</div>
+  <h2>資料團隊每天在對抗什麼</h2>
+  <ul>
+    <li>資料天生分散在多個異質資料庫（不同系統、不同技術、不同權限）</li>
+    <li>要產出一個跨來源的指標，往往得同時碰好幾個庫</li>
+    <li>每多一個資料源，整合、同步、維護成本再疊一層</li>
+    <li>原始資料還常因合規/安全，不能隨意複製搬移</li>
+  </ul>
+  <div class="msg">資料分散是常態，也是資料工作一直做不快的結構性根因。</div>
+</section>
+
+<!-- 5 傳統代價 -->
+<section>
+  <div class="part-badge">PART 1 · 認識 Plasma</div>
+  <h2>傳統做法：先蓋一座倉，再談分析</h2>
+  <div class="flow" style="justify-content:flex-start">
+    <div class="node">建資料倉</div><div class="arr">→</div>
+    <div class="node">設計 schema</div><div class="arr">→</div>
+    <div class="node">寫 ETL</div><div class="arr">→</div>
+    <div class="node">排 pipeline</div><div class="arr">→</div>
+    <div class="node">才輪到分析</div>
+  </div>
+  <ul style="font-size:.85em;margin-top:.4em">
+    <li><b>時間</b>：動輒數週到數月</li>
+    <li><b>風險</b>：原始資料要再複製落地一份（敏感資料尤其棘手）</li>
+    <li><b>維護</b>：需求一改，pipeline 要重寫重跑，越養越重</li>
+  </ul>
+  <div class="msg">傳統 BI 慢，不是分析難，是「前置搬運與維運」太重。</div>
+</section>
+
+<!-- 6 Plasma是什麼 -->
+<section>
+  <div class="part-badge">PART 1 · 認識 Plasma</div>
+  <h2>Plasma 是什麼</h2>
+  <p style="font-size:.9em">一句話：Plasma 把<em>分散的異質資料</em>就地<em>聯邦</em>、<em>物化</em>、再<em>交付</em>成資料產品。</p>
+  <div class="flow" style="margin:.8em 0">
+    <div class="node">來源資料庫<br><span style="color:var(--muted)">PostgreSQL / Oracle / MySQL …</span></div>
+    <div class="arr">→</div>
+    <div class="node" style="border-color:var(--accent);color:var(--accent);padding:16px 22px"><b>Plasma</b><br><span>交付層 · 聯邦查詢引擎</span></div>
+    <div class="arr">→</div>
+    <div class="node">下游消費<br><span style="color:var(--muted)">BI / API / 應用</span></div>
+  </div>
+  <ul style="font-size:.8em">
+    <li>站在資料棧的<b>交付層</b>：介於來源庫與下游消費工具之間</li>
+    <li>不取代來源庫、不取代 BI；補的是中間最貴的整合與交付</li>
+  </ul>
+  <div class="msg">Plasma 是資料棧的「交付層」，把分散來源變成可用資料產品。</div>
+</section>
+
+<!-- 7 能力總覽 -->
+<section>
+  <div class="part-badge">PART 1 · 認識 Plasma</div>
+  <h2>Plasma 的五大核心能力</h2>
+  <div class="cap"><div class="n">①</div><div><b>跨庫聯邦查詢</b>　<span>多個異質庫當一個邏輯來源查，原始資料不搬</span></div></div>
+  <div class="cap"><div class="n">②</div><div><b>物化 Materialized View</b>　<span>把運算結果固化成表，替下游降載</span></div></div>
+  <div class="cap"><div class="n">③</div><div><b>CDC / 串流同步</b>　<span>來源更新持續同步，維持結果新鮮</span></div></div>
+  <div class="cap"><div class="n">④</div><div><b>資料交付</b>　<span>一鍵出 REST API / 參數化視圖 pview / blueprint</span></div></div>
+  <div class="cap"><div class="n">⑤</div><div><b>治理與安全</b>　<span>資料不落地、權限控管、API 效期</span></div></div>
+  <div class="msg">從「查」到「算」到「交付」到「治理」，Plasma 一站收斂。</div>
+</section>
+
+<!-- 8 能力1 -->
+<section>
+  <div class="part-badge">PART 1 · 能力 ①</div>
+  <h2>① 跨庫聯邦查詢 — 多個庫當一個查</h2>
+  <ul>
+    <li>把多個異質資料庫掛進同一個工作區，當成一個邏輯來源</li>
+    <li>用聯邦查詢引擎做跨庫 JOIN / 聚合，原始資料留在原地不搬</li>
+    <li>省掉傳統「先把資料集中到一處」的整段前置工</li>
+  </ul>
+  <div class="flow" style="margin-top:.8em">
+    <div class="node">庫 A</div><div class="node">庫 B</div><div class="node">庫 C</div>
+    <div class="arr">→</div>
+    <div class="node" style="border-color:var(--accent);color:var(--accent)">Plasma 聯邦查詢</div>
+    <div class="arr">→</div>
+    <div class="node">單一結果集</div>
+  </div>
+  <div class="msg">資料不搬，Plasma 負責把分散來源「當一個庫」查。</div>
+</section>
+
+<!-- 9 能力2 -->
+<section>
+  <div class="part-badge">PART 1 · 能力 ②</div>
+  <h2>② 物化 — 把重運算「算一次，用很多次」</h2>
+  <ul>
+    <li>把聯邦查詢、JOIN、衍生欄位的結果固化成一張 <em>Materialized View</em></li>
+    <li>重運算在 Plasma 端算完，下游只讀結果，查詢很輕（對來源庫<em>降載</em>）</li>
+    <li>mview 是 Plasma 交付的核心單位：一張算好的、可交付的寬表</li>
+  </ul>
+  <div class="flow" style="margin-top:.8em">
+    <div class="node">來源庫</div><div class="arr">— 一次運算 →</div>
+    <div class="node" style="border-color:var(--accent);color:var(--accent)">mview</div>
+    <div class="arr">— 多次輕量讀取 →</div>
+    <div class="node">下游</div>
+  </div>
+  <div class="msg">物化＝把最花力氣的運算固化，讓下游查詢又快又輕。</div>
+</section>
+
+<!-- 10 能力3 -->
+<section>
+  <div class="part-badge">PART 1 · 能力 ③</div>
+  <h2>③ CDC / 串流同步 — 資料產品會自己保鮮</h2>
+  <ul>
+    <li>來源資料更新後，透過同步機制讓物化結果跟著更新</li>
+    <li>Plasma 內建 <em>Streaming Pipeline</em>，支援持續同步而非一次性快照</li>
+    <li>意義：交付出去的不是死資料，是會持續更新的資料產品</li>
+  </ul>
+  <div class="flow" style="margin-top:.8em">
+    <div class="node">來源變更</div><div class="arr">→</div>
+    <div class="node" style="border-color:var(--accent);color:var(--accent)">CDC / 同步</div><div class="arr">→</div>
+    <div class="node">mview 自動更新</div><div class="arr" style="transform:scaleX(-1)">↻</div>
+  </div>
+  <div class="msg">Plasma 交付的是「活的」資料產品，不是一次性匯出。</div>
+</section>
+
+<!-- 11 能力4 -->
+<section>
+  <div class="part-badge">PART 1 · 能力 ④</div>
+  <h2>④ 資料交付 — 一鍵把資料變成可消費的介面</h2>
+  <div class="grid3" style="margin-top:.4em">
+    <div class="card"><h3>REST API</h3><span style="color:var(--muted);font-size:.8em">access entry：把 mview 直接匯出成 API，下游貼 URL 就能接</span></div>
+    <div class="card"><h3>參數化視圖</h3><span style="color:var(--muted);font-size:.8em">pview：對外提供可帶參數篩選的視圖</span></div>
+    <div class="card"><h3>Blueprint</h3><span style="color:var(--muted);font-size:.8em">把資料產品輸出到外部目標</span></div>
+  </div>
+  <ul style="font-size:.82em;margin-top:.6em"><li>不需另外寫後端、不需架 API server</li></ul>
+  <div class="msg">從「一張算好的表」到「可被工具消費的介面」，一鍵完成。</div>
+</section>
+
+<!-- 12 能力5 -->
+<section>
+  <div class="part-badge">PART 1 · 能力 ⑤</div>
+  <h2>⑤ 治理與安全 — 交付得出去，也管得住</h2>
+  <ul>
+    <li><b>資料不落地</b>：不需複製整座來源庫，降低外洩面</li>
+    <li><b>存取控管</b>：workspace 權限、API 驗證方式（可 No Auth 或帶驗證）與效期</li>
+    <li><b>血緣可追</b>：資料從來源到交付的路徑清楚</li>
+  </ul>
+  <div class="msg">Plasma 讓資料「流得動」的同時，也「管得住」。</div>
+</section>
+
+<!-- 13 價值總結 -->
+<section>
+  <div class="part-badge">PART 1 · 收束</div>
+  <h2>Plasma 為誰、解決了什麼</h2>
+  <div class="grid2">
+    <div class="card"><h3>對資料團隊</h3>省掉建倉與寫 pipeline 的前置重工</div>
+    <div class="card"><h3>對來源系統</h3>物化降載，不被下游反覆重壓</div>
+    <div class="card"><h3>對業務 / 下游</h3>拿到可持續更新的資料產品（API / 視圖）</div>
+    <div class="card"><h3>對合規</h3>資料不落地、可控管</div>
+  </div>
+  <div class="msg">Plasma 把「分散資料 → 可交付資料產品」這段變短、變輕、變可控。</div>
+</section>
+
+<!-- ============ PART 2 ============ -->
+<section class="sec" data-background-color="#f1f5f9">
+  <span class="kicker">PART 2 · 實證案例</span>
+  <h1>一天串起一張醫療住院 BI</h1>
+  <p>MIMIC-IV × Plasma × Power BI（2026-09-24 實作）</p>
+</section>
+
+<!-- 14 情境 -->
+<section>
+  <div class="part-badge">PART 2 · 實證</div>
+  <h2>實證案例 — 情境介紹</h2>
+  <ul style="font-size:.85em">
+    <li><b>資料</b>：MIMIC-IV 開放醫療資料集，刻意拆成 4 個獨立 PostgreSQL（模擬客戶資料分散）</li>
+    <li style="list-style:none;color:var(--muted);font-size:.9em">　急診 <code>mimiciv_ed</code>、住院 <code>mimiciv_hosp</code>、加護 <code>mimiciv_icu</code>、病歷 <code>mimiciv_note</code></li>
+    <li><b>目標</b>：產出一張含 10 個住院關鍵指標、可互動的 Power BI 儀表板</li>
+    <li><b>約束</b>：不建資料倉、不寫 ETL pipeline，用 Plasma 直接走</li>
+  </ul>
+  <div class="msg">拿一個「資料天生分散」的真實資料集，正面示範 Plasma 怎麼收。</div>
+</section>
+
+<!-- 15 管線總覽 -->
+<section>
+  <div class="part-badge">PART 2 · 實證</div>
+  <h2>四步，從分散資料到 BI 儀表板</h2>
+  <div class="flow" style="margin:1em 0">
+    <div class="node"><b>①</b> 跨庫聯邦<br><span style="color:var(--muted)">4× PostgreSQL</span></div><div class="arr">→</div>
+    <div class="node"><b>②</b> 物化<br><span style="color:var(--muted)">住院事實表</span></div><div class="arr">→</div>
+    <div class="node"><b>③</b> 交付<br><span style="color:var(--muted)">一鍵 REST API</span></div><div class="arr">→</div>
+    <div class="node"><b>④</b> 消費<br><span style="color:var(--muted)">Power BI 貼 URL</span></div>
+  </div>
+  <div class="msg">四步，沒有一步需要客戶交出整座資料庫。</div>
+</section>
+
+<!-- 16 step1 -->
+<section>
+  <div class="part-badge">PART 2 · Step 1</div>
+  <h2>Step 1 — 跨庫聯邦，四個庫當一個查</h2>
+  <div class="grid2">
+    <ul style="font-size:.8em">
+      <li>4 個 PostgreSQL（ed / hosp / icu / note）在 Plasma 裡當成一個邏輯來源</li>
+      <li>用聯邦查詢引擎跨庫 JOIN（住院 × 加護 × 診斷）</li>
+    </ul>
+    <div>
+      <div class="kpigrid" style="grid-template-columns:repeat(2,1fr)">
+        <div class="kpi acc"><div class="v">8,073</div><div class="k">admissions 住院次數</div></div>
+        <div class="kpi acc"><div class="v">4,130</div><div class="k">patients 病人</div></div>
+        <div class="kpi acc"><div class="v">1,394</div><div class="k">icustays</div></div>
+        <div class="kpi acc"><div class="v">40,898</div><div class="k">diagnoses_icd</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="msg">資料留在原地，Plasma 把它們「當一個庫」查。</div>
+</section>
+
+<!-- 17 step2 mview img -->
+<section>
+  <div class="part-badge">PART 2 · Step 2</div>
+  <h2>Step 2 — 把指標「就地算完」物化成一張表</h2>
+  <div class="grid2">
+    <ul style="font-size:.72em">
+      <li>mview：<code>inpatient_admission_fact_m_v2</code></li>
+      <li>粒度：每次住院一列（key=hadm_id），物化 <b>8,073 列</b></li>
+      <li>mview 端算好衍生欄位：age_band、days_to_next_admit、readmit_eligible、readmit_30d</li>
+      <li>BI 端拿到「乾淨的一張寬表」，不用再拼 SQL</li>
+    </ul>
+    <figure class="small"><img src="Plasma-BI/頁17-mview清單-Synced100.png" alt="mview synced">
+      <figcaption>Plasma mview — Active · Sync 100% Synced</figcaption></figure>
+  </div>
+  <div class="msg">重運算在 Plasma 算完，BI 端只做視覺化。</div>
+</section>
+
+<!-- 18 step2 detail -->
+<section>
+  <div class="part-badge">PART 2 · Step 2</div>
+  <h2>為什麼是「每次住院一列」</h2>
+  <ul style="font-size:.82em">
+    <li><b>粒度 hadm_id</b>（一次住院）＝ 多數住院指標的自然分析單位</li>
+    <li><b>readmit_eligible / readmit_30d</b>：把「30天再入院率」的分子分母先算好</li>
+    <li><b>age_band</b>：年齡分層，讓死亡率能直接按年齡層切</li>
+    <li><b>days_to_next_admit</b>：跨住院的時間計算在物化時處理掉</li>
+  </ul>
+  <div class="msg">把指標語意「編進事實表」，下游想切什麼維度都很快。</div>
+</section>
+
+<!-- 19 step3 api -->
+<section>
+  <div class="part-badge">PART 2 · Step 3</div>
+  <h2>Step 3 — 一鍵把資料表變成 API</h2>
+  <div class="grid2">
+    <ul style="font-size:.75em">
+      <li>從 mview 直接匯出成 REST API（示範用公開資料，未設驗證；正式環境可設定驗證與效期）</li>
+      <li>回傳 application/json，<code>{"data":[…每次住院一列…]}</code>，共 8,073 筆</li>
+      <li>不需另外寫後端、不需架 API server</li>
+    </ul>
+    <figure class="small"><img src="Plasma-BI/頁12d-API建好-AccessURL.png" alt="api access url">
+      <figcaption>Plasma Export → API access：No Auth + Access URL</figcaption></figure>
+  </div>
+  <div class="msg">從資料到可被工具消費，中間沒有工程隊。</div>
+</section>
+
+<!-- 20 step4 powerbi -->
+<section>
+  <div class="part-badge">PART 2 · Step 4</div>
+  <h2>Step 4 — Power BI 貼個 URL 就進來</h2>
+  <div class="grid2">
+    <ul style="font-size:.72em">
+      <li>取得資料 → <b>Web</b> → 貼 API URL</li>
+      <li>Power Query：把回傳的 data 展開成表格</li>
+      <li>改型別（API 把小數當文字回傳）：bed_days / icu_days / days_to_next_admit → 十進位；日期欄 → 日期</li>
+      <li>用 admission_date 建日期切片器，10 指標隨日期區間互動</li>
+    </ul>
+    <figure class="small"><img src="Plasma-BI/頁20-PowerBI-資料表載入.png" alt="powerbi data">
+      <figcaption>Power BI 載入 inp_adm_fact 資料表</figcaption></figure>
+  </div>
+  <div class="msg">不用 connector、不用中介，貼 URL 就接上。</div>
+</section>
+
+<!-- 21 10指標概覽 -->
+<section>
+  <div class="part-badge">PART 2 · 指標</div>
+  <h2>一次算齊 10 個住院關鍵指標</h2>
+  <div class="grid3">
+    <div class="card"><h3>量能類</h3><span style="color:var(--muted);font-size:.72em">總住院次數 · 不重複病人數 · 平均住院天數 · ICU使用比例 · 平均ICU住院天數</span></div>
+    <div class="card"><h3>品質 / 風險類</h3><span style="color:var(--muted);font-size:.72em">30天再入院率 · 院內死亡率 · 平均ICU時間占比</span></div>
+    <div class="card"><h3>維度切分類</h3><span style="color:var(--muted);font-size:.72em">主要診斷別院內死亡率 · 各年齡層死亡率</span></div>
+  </div>
+  <div class="msg">這些都是醫院真正在看的營運與品質指標，不是湊數的圖表。</div>
+</section>
+
+<!-- 22 dax1 -->
+<section>
+  <div class="part-badge">PART 2 · 指標</div>
+  <h2>指標怎麼算的（量能類）</h2>
+  <div class="dax">總住院次數     = <span class="fn">COUNTROWS</span>(inpatient)
+不重複病人數   = <span class="fn">DISTINCTCOUNT</span>(inpatient[subject_id])
+平均住院天數   = <span class="fn">AVERAGE</span>(inpatient[bed_days])
+ICU使用住院比例 = <span class="fn">DIVIDE</span>(<span class="fn">SUM</span>(inpatient[icu_used]), <span class="fn">COUNTROWS</span>(inpatient))
+平均ICU住院天數 = <span class="fn">DIVIDE</span>(<span class="fn">SUM</span>(inpatient[icu_days]), <span class="fn">SUM</span>(inpatient[icu_stay_count]))</div>
+  <div class="msg">因為 mview 把欄位備好了，這些 measure 都是一兩行。</div>
+</section>
+
+<!-- 23 dax2 -->
+<section>
+  <div class="part-badge">PART 2 · 指標</div>
+  <h2>指標怎麼算的（品質 / 風險類）</h2>
+  <div class="dax">30天再入院率 = <span class="fn">DIVIDE</span>(<span class="fn">SUM</span>(inpatient[readmit_30d]), <span class="fn">SUM</span>(inpatient[readmit_eligible]))
+院內死亡率   = <span class="fn">AVERAGE</span>(inpatient[in_hospital_death])
+平均ICU時間占比 = <span class="fn">AVERAGEX</span>(
+    <span class="fn">FILTER</span>(inpatient, inpatient[icu_used]=1),
+    <span class="fn">DIVIDE</span>(inpatient[icu_days], inpatient[bed_days]))</div>
+  <div class="msg">品質指標的分子分母在 mview 先備好，DAX 只做最後一步。</div>
+</section>
+
+<!-- 24 一條measure切三維 -->
+<section>
+  <div class="part-badge">PART 2 · 設計巧思</div>
+  <h2>一條死亡率，切出三張不同的圖</h2>
+  <div class="grid3">
+    <div class="card"><h3>總體</h3><span style="color:var(--muted);font-size:.75em">列軸：無</span></div>
+    <div class="card"><h3>按主診斷</h3><span style="color:var(--muted);font-size:.75em">列軸：primary_diagnosis_name</span></div>
+    <div class="card"><h3>按年齡層</h3><span style="color:var(--muted);font-size:.75em">列軸：age_band</span></div>
+  </div>
+  <div class="dax" style="margin-top:.6em">指標 5 / 8 / 10 其實是同一條： <span class="fn">AVERAGE</span>(inpatient[in_hospital_death])</div>
+  <div class="msg">measure 寫一次，維度靠視覺化切——這就是維度建模的力量。</div>
+</section>
+
+<!-- 25 更新 -->
+<section>
+  <div class="part-badge">PART 2 · 運行</div>
+  <h2>資料會更新，儀表板跟著更新</h2>
+  <div class="flow" style="margin:1em 0">
+    <div class="node">資料更新</div><div class="arr">→</div>
+    <div class="node" style="border-color:var(--accent);color:var(--accent)">mview Sync<br><span>重新物化</span></div><div class="arr">→</div>
+    <div class="node">Power BI 重新整理</div>
+  </div>
+  <ul style="font-size:.82em"><li>兩步，沒有重建 pipeline</li><li>可排程 sync，運維成本極低</li></ul>
+  <div class="msg">這不是一次性 demo，是可持續運行的資料產品。</div>
+</section>
+
+<!-- 26 成果 dashboard -->
+<section data-background-color="#f8fafc">
+  <div class="part-badge">PART 2 · 成果</div>
+  <h2>成果 — 一張活的住院分析儀表板</h2>
+  <div class="kpigrid" style="grid-template-columns:repeat(8,1fr);gap:8px">
+    <div class="kpi acc"><div class="v" style="font-size:1.1em">8,073</div><div class="k">總住院人次</div></div>
+    <div class="kpi acc"><div class="v" style="font-size:1.1em">4,130</div><div class="k">不重複病人</div></div>
+    <div class="kpi bad"><div class="v" style="font-size:1.1em">9.5%</div><div class="k">院內死亡率</div></div>
+    <div class="kpi warn"><div class="v" style="font-size:1.1em">43.7%</div><div class="k">30天再入院率</div></div>
+    <div class="kpi acc"><div class="v" style="font-size:1.1em">17.1%</div><div class="k">ICU使用比例</div></div>
+    <div class="kpi"><div class="v" style="font-size:1.1em">4.95</div><div class="k">平均住院天數</div></div>
+    <div class="kpi"><div class="v" style="font-size:1.1em">4.62</div><div class="k">平均ICU天數</div></div>
+    <div class="kpi good"><div class="v" style="font-size:1.1em">73.5%</div><div class="k">ICU時間占比</div></div>
+  </div>
+  <figure style="margin-top:.4em"><img src="Plasma-BI/頁26-完成儀表板-住院品質指標.png" alt="dashboard" style="max-height:400px">
+    <figcaption>Power BI「住院品質指標儀表板」— 資料來源 Plasma inp_adm_fact</figcaption></figure>
+  <div class="msg">PART 1 講的能力，在這張儀表板上全部兌現了。</div>
+</section>
+
+<!-- ============ PART 3 ============ -->
+<section class="sec" data-background-color="#f1f5f9">
+  <span class="kicker">PART 3</span>
+  <h1>換成你的資料</h1>
+  <p>可複製的交付流程 · 下一步</p>
+</section>
+
+<!-- 28 可複製 -->
+<section>
+  <div class="part-badge">PART 3 · 收斂</div>
+  <h2>MIMIC 只是範例，管線才是產品</h2>
+  <div class="flow" style="margin:1em 0">
+    <div class="node">聯邦</div><div class="arr">→</div>
+    <div class="node">物化</div><div class="arr">→</div>
+    <div class="node">出 API</div><div class="arr">→</div>
+    <div class="node">BI 消費</div>
+    <div style="width:100%"></div>
+    <div style="color:var(--accent);font-size:.7em;margin-top:.4em">↑ 換來源、換指標、換事實表；這條管線不變</div>
+  </div>
+  <div class="msg">換成你的資料來源與指標，同一條管線照樣跑。</div>
+</section>
+
+<!-- 30 下一步(對外) -->
+<section>
+  <div class="part-badge">PART 3 · 下一步</div>
+  <h2>用你的資料，跑一次給你看</h2>
+  <ul>
+    <li>PoC 一至兩週：接上你的資料庫，做出第一張儀表板</li>
+    <li>原始資料留在原地，不必先蓋資料倉</li>
+    <li>聯絡 Brobridge 寬橋：contact@brobridge.com · +886 2 8729 9611</li>
+  </ul>
+</section>
+
+<!-- 31 附錄 -->
+<section>
+  <div class="part-badge">附錄</div>
+  <h2>附錄 — 技術規格速查</h2>
+  <table class="spec">
+    <tr><td>資料源</td><td>4× PostgreSQL（ed / hosp / icu / note），Plasma 跨庫聯邦</td></tr>
+    <tr><td>mview</td><td>inpatient_admission_fact_m_v2，粒度 hadm_id，8,073 列</td></tr>
+    <tr><td>衍生欄位</td><td>age_band / days_to_next_admit / readmit_eligible / readmit_30d</td></tr>
+    <tr><td>交付</td><td>mview → REST API，JSON，8,073 筆</td></tr>
+    <tr><td>消費</td><td>Power BI Web connector；型別修正（小數→十進位、日期欄→日期）</td></tr>
+    <tr><td>更新</td><td>mview Sync → Power BI Refresh</td></tr>
+  </table>
+  <div class="msg">一頁看完整套規格。</div>
+</section>
+
+</div></div>
+<div class="foot">Plasma × 醫療 BI · Brobridge 寬橋</div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+Reveal.initialize({
+  hash:true, slideNumber:'c/t', width:1280, height:720, margin:0.04,
+  transition:'slide', controls:true, progress:true,
+});
+</script>
+</body>
+</html>

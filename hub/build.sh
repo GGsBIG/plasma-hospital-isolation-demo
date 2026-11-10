@@ -1,25 +1,26 @@
 #!/usr/bin/env bash
-# 把入口頁、技術頁與四個 demo 收成 release/demos/，並打包成 WordPress 用的 zip。
-# 解壓後的 demos/ 直接對應主機上的 httpdocs/demos/。
+# 產生 WordPress 用的靜態 HTML:入口頁、技術頁與四個 demo 收進 release/demos/,再打包成 zip。
+# 解壓後的 demos/ 直接對應主機上的 httpdocs/demos/。release/ 不進 git。
 set -euo pipefail
-HERE="$(cd "$(dirname "$0")" && pwd)"
-DEMOS="$(cd "$HERE/../.." && pwd)"
+HERE="$(cd "$(dirname "$0")" && pwd)"   # repo/hub
+REPO="$(cd "$HERE/.." && pwd)"           # plasma-hospital-isolation-demo
+DEMOS="$(cd "$REPO/.." && pwd)"          # 中科院版在 repo 外(private repo)
 OUT="$HERE/release/demos"
 rm -rf "$HERE/release" && mkdir -p "$OUT"
 
+need() { [ -d "$1/node_modules" ] || (cd "$1" && npm ci --silent); }
+
+echo "› 入口頁與技術頁"
+need "$HERE";              (cd "$HERE" && npx tsc -b && npx vite build --outDir "$OUT" --emptyOutDir --logLevel warn)
 echo "› 中科院版"
+need "$DEMOS/plasma-data-isolation-demo"
 (cd "$DEMOS/plasma-data-isolation-demo" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/ncsist" --emptyOutDir --logLevel warn)
 echo "› 醫院版"
-(cd "$DEMOS/plasma-hospital-isolation-demo" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/hospital" --emptyOutDir --logLevel warn)
+need "$REPO";              (cd "$REPO" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/hospital" --emptyOutDir --logLevel warn)
 echo "› 醫院 UI 操作"
-(cd "$DEMOS/plasma-ui-demo-hospital" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/ui-hospital" --emptyOutDir --logLevel warn)
-echo "› Power BI 簡報（對外版）"
-mkdir -p "$OUT/powerbi/Plasma-BI"
-cp "$DEMOS/plasma-bi-powerbi/plasma-bi-簡報-對外.html" "$OUT/powerbi/index.html"
-cp "$DEMOS/plasma-bi-powerbi/Plasma-BI/"*.png "$OUT/powerbi/Plasma-BI/"
-echo "› 入口頁與技術頁"
-cp "$HERE/index.html" "$OUT/"
-cp -R "$HERE/assets" "$HERE/tech" "$OUT/"
+need "$REPO/ui-demo";      (cd "$REPO/ui-demo" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/ui-hospital" --emptyOutDir --logLevel warn)
+echo "› Power BI 簡報"
+mkdir -p "$OUT/powerbi" && cp -R "$REPO/powerbi/." "$OUT/powerbi/"
 
 # 所有頁面都不讓搜尋引擎收錄
 for f in "$OUT"/*/index.html; do

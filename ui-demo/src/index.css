@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes sidebar-indicator-in {
+  from { transform: translateY(-50%) scaleX(0); }
+  to { transform: translateY(-50%) scaleX(1); }
+}
+
+html, body, #root { height: 100%; }
+
+@layer base {
+  :root {
+    --background: 210 20% 99%;
+    --foreground: 210 15% 8%;
+    --card: 210 20% 99%;
+    --card-foreground: 210 15% 8%;
+    --popover: 210 20% 99%;
+    --popover-foreground: 210 15% 8%;
+    --primary: 210 18% 12%;
+    --primary-foreground: 210 15% 98%;
+    --secondary: 210 12% 95%;
+    --secondary-foreground: 210 15% 8%;
+    --muted: 210 12% 95%;
+    --muted-foreground: 210 8% 48%;
+    --accent: 210 12% 90%;
+    --accent-foreground: 210 15% 8%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 14% 88%;
+    --input: 210 14% 88%;
+    --ring: 210 15% 8%;
+    --radius: 0.5rem;
+    --sidebar: 210 15% 97%;
+    --sidebar-background: 210 15% 97%;
+    --sidebar-foreground: 210 12% 26%;
+    --sidebar-primary: 210 18% 12%;
+    --sidebar-primary-foreground: 210 15% 98%;
+    --sidebar-accent: 210 12% 92%;
+    --sidebar-accent-foreground: 210 15% 10%;
+    --sidebar-border: 215 14% 90%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+}
+
+/* Mac-style thin scrollbar */
+* { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,.2) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,.2); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
+
+/* fake cursor */
+.demo-cursor {
+  position: fixed; z-index: 60; width: 22px; height: 22px; pointer-events: none;
+  left: 0; top: 0; transition: transform 1.1s cubic-bezier(.33,.02,.2,1);
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.35));
+}
+.demo-ripple {
+  position: fixed; z-index: 59; width: 12px; height: 12px; border-radius: 999px;
+  background: hsl(var(--sidebar-ring)); pointer-events: none; opacity: 0;
+  transform: translate(-50%, -50%) scale(1);
+}
+.demo-ripple.on { animation: demo-ripple-a .5s ease-out; }
+@keyframes demo-ripple-a {
+  0% { opacity: .5; transform: translate(-50%,-50%) scale(.4); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(3.2); }
+}
+
+.fadeup { opacity: 0; transform: translateY(10px); transition: opacity .45s ease-out, transform .45s ease-out; }
+.fadeup.on { opacity: 1; transform: translateY(0); }

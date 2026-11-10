@@ -1,5 +1,14 @@
 # Plasma 醫院資料隔離互動 Demo
 
+## 這個 repo 裡還有
+
+| 資料夾 | 內容 |
+|---|---|
+| `hub/` | Demo 入口頁與 Plasma 元件總覽(React),`hub/build.sh` 產生上傳 WordPress 的 zip |
+| `ui-demo/` | 醫院 UI 操作 demo(React) |
+| `powerbi/` | Plasma × Power BI 簡報對外版(靜態 HTML) |
+
+
 純前端 React 單頁 demo(桌機與手機皆可,窄於 768px 時自動改為直式舞台、上下分割版面),等角(isometric)風格,右上角可切換淺色/深色模式(預設淺色,記住上次選擇),連線上有流動光點表示資料流。
 左側六段說明隨頁面捲動,右側舞台固定。所有過場(節點移動、連線、負載數字、左側逐字浮現、
 Agent 對話)都由捲動位置直接驅動,捲到一半停下就停在過場的一半,往回捲會倒轉。
