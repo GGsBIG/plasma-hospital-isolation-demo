@@ -22,7 +22,7 @@ const HEADS: { key: string; tab: string; lines: [string, string]; lead: ReactNod
     lead: <>正式資料庫不受影響，各單位只看得到自己權限內的資料。</>,
   },
   {
-    key: "hospital", tab: "醫院", lines: ["HIS 不用改", "資料從 Plasma 取"],
+    key: "hospital", tab: "醫院", lines: ["既有系統", "不需遷移"],
     lead: <>健保申報、FHIR 對外交換和院內 AI 都從 Plasma 取資料，門診、護理系統照常運作。</>,
   },
   {
