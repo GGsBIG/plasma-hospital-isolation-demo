@@ -1,11 +1,11 @@
-/* 白紙、墨色、青綠重點色(首頁照片上用亮青綠,白底上用深青綠確保對比)、方角 */
+/* 白紙、墨色、logo 紅重點色、方角 */
 :root {
   --paper: #ffffff;
   --ink: #111111;
-  --accent: #14b8a6;
-  --accent-ink: #0f766e;
-  --accent-deep: #115e59;
-  --sheet: #eef5f4;
+  --accent: #b42622;      /* logo 紅 */
+  --accent-ink: #b42622;
+  --accent-deep: #8f1d1a;
+  --sheet: #ece9e2;
   --hair: rgb(17 17 17 / 0.18);
   --muted: #4a4a4a;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
