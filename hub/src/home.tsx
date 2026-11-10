@@ -34,16 +34,9 @@ const HOLD = 6500
 
 /** 入口卡:href 對應 WordPress 上 /demos/ 底下的子資料夾 */
 const CARDS = [
-  { key: "ncsist", href: "ncsist/", kind: "客戶情境", meta: "6 個情境", code: "NCSIST", title: "中科院資料隔離",
-    body: "核心資料庫不再被壓垮，各單位只看得到權限內的資料，AI 只能讀不能改。" },
-  { key: "hospital", href: "hospital/", kind: "客戶情境", meta: "6 個情境", code: "HOSPITAL", title: "醫院資料隔離",
-    body: "HIS 不用動，健保申報、FHIR 交換與院內 AI 都改從 Plasma 取用資料。" },
-  { key: "tech", href: "tech/", kind: "技術說明", meta: "12 個元件", code: "TECH", title: "Plasma 元件總覽",
-    body: "從資料庫連線、View、排程到 MCP，每個元件做什麼、規格與限制。" },
-  { key: "ui", href: "ui-hospital/", kind: "操作示範", meta: "醫院", code: "UI", title: "Plasma 實際操作",
-    body: "連上 HIS、LIS、EMR，匯入資料字典，AI Agent 自動建好病歷摘要 API。" },
-  { key: "bi", href: "powerbi/", kind: "案例簡報", meta: "醫療 BI", code: "BI", title: "Plasma × Power BI",
-    body: "四個資料庫跨庫查詢、物化、出 API，一天串起住院品質儀表板。" },
+  { key: "ncsist", href: "ncsist/", title: "中科院" },
+  { key: "hospital", href: "hospital/", title: "醫院" },
+  { key: "tech", href: "tech/", title: "Plasma 元件總覽" },
 ]
 
 const srcset = (files: string[], widths: number[]) => files.map((f, i) => `${f} ${widths[i]}w`).join(", ")
@@ -116,11 +109,8 @@ function Home() {
                 {CARDS.map((c) => (
                   <li key={c.key}>
                     <a className={`card${!hovering && c.key === head.key ? " lit" : ""}`} href={c.href} target="_blank" rel="noopener">
-                      <span className="tag"><span>{c.kind}</span><span>{c.meta}</span></span>
-                      <span className="code t-num">{c.code}</span>
-                      <h2>{c.title}</h2>
-                      <p>{c.body}</p>
-                      <span className="go">全螢幕開啟 <ArrowRight /></span>
+                      {c.title}
+                      <ArrowRight size={20} />
                     </a>
                   </li>
                 ))}
