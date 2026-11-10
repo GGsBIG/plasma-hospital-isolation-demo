@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react"
+import { StrictMode, useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react"
 import { createRoot } from "react-dom/client"
 import { CONTACT, SiteHeader } from "./components"
 import "./site.css"
@@ -55,26 +55,32 @@ function Backdrop() {
 
 type Card = (typeof CARDS)[number]
 
-/** 點入口按鈕後,在同一頁疊一層全螢幕視窗顯示 demo,不換頁;Esc 或右上角關閉 */
+/** 點入口按鈕後,在同一頁疊一層全螢幕視窗顯示 demo,不換頁、沒有額外的工具列。
+ *  關閉:瀏覽器「上一頁」或 Esc(焦點在 demo 裡面時也有效,同網域可以直接聽 iframe 的按鍵) */
 function Viewer({ card, onClose }: { card: Card; onClose: () => void }) {
-  const closeRef = useRef<HTMLButtonElement>(null)
+  const frameRef = useRef<HTMLIFrameElement>(null)
   useEffect(() => {
-    closeRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    // 開啟時塞一筆瀏覽紀錄(網址不變),按「上一頁」就關閉視窗而不是離開首頁
+    // (開發模式的 StrictMode 會跑兩次 effect,已經推過就不再推)
+    if (history.state?.viewer !== card.key) history.pushState({ viewer: card.key }, "")
+    const onPop = () => onClose()
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") history.back() }
+    window.addEventListener("popstate", onPop)
     window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [onClose])
+    return () => {
+      window.removeEventListener("popstate", onPop)
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [card.key, onClose])
+  const onLoad = () => {
+    try {
+      frameRef.current?.contentWindow?.addEventListener("keydown", (e) => { if (e.key === "Escape") history.back() })
+      frameRef.current?.contentWindow?.focus()
+    } catch { /* 不同網域時聽不到,只剩上一頁可關 */ }
+  }
   return (
     <div className="viewer" role="dialog" aria-modal="true" aria-label={card.title}>
-      <div className="viewer-bar">
-        <span className="viewer-title">{card.title}</span>
-        <a className="viewer-link" href={card.href} target="_blank" rel="noopener">新分頁開啟</a>
-        <button ref={closeRef} type="button" className="viewer-close" onClick={onClose} aria-label="關閉">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-        </button>
-      </div>
-      {/* 播放 demo 時 iframe 拿得到焦點,Esc 交給右上角關閉鈕 */}
-      <iframe className="viewer-frame" src={card.href} title={card.title} allow="autoplay; fullscreen" />
+      <iframe ref={frameRef} className="viewer-frame" src={card.href} title={card.title} allow="autoplay; fullscreen" onLoad={onLoad} />
     </div>
   )
 }
@@ -86,6 +92,7 @@ function Home() {
   const [hovering, setHovering] = useState(false)
   const [changed, setChanged] = useState(false)
   const [open, setOpen] = useState<Card | null>(null)
+  const closeViewer = useCallback(() => setOpen(null), [])
   const first = useRef(true)
   // 一般點擊在本頁開啟;按著 Cmd/Ctrl/Shift 或中鍵,照瀏覽器原本的方式開新分頁
   const openCard = (e: MouseEvent, c: Card) => {
@@ -150,7 +157,7 @@ function Home() {
           </div>
         </section>
       </main>
-      {open && <Viewer card={open} onClose={() => setOpen(null)} />}
+      {open && <Viewer card={open} onClose={closeViewer} />}
     </>
   )
 }
