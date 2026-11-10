@@ -41,7 +41,7 @@ export const WORKSPACE_BOXES: { href: string; name: string; desc: string; wide?:
 export const COMPONENTS: Component[] = [
   {
     id: "workspace", name: "工作區", en: "Workspaces",
-    what: "每個工作區是一個獨立容器，裝著自己的連線、View、資料產品、Blueprint 與排程。不同部門各用一個工作區，資料與設定互不干擾；要共享時，再把 View 發布成資料產品。",
+    what: "工作區是獨立的容器，各自放自己的連線、View、資料產品、Blueprint 與排程，彼此的資料與設定不會互相影響。要給其他工作區使用，就把 View 發布成資料產品。",
     spec: [
       "成員角色：Owner、Manager、Member",
       <>每個帳號都有私人工作區 <code>user_&lt;使用者名稱&gt;</code></>,
@@ -55,7 +55,7 @@ export const COMPONENTS: Component[] = [
   },
   {
     id: "dbc", name: "資料庫連線", en: "Database Connections (DBC)",
-    what: "告訴 Plasma 怎麼連上外部的關聯式資料庫。連上後 Plasma 會發現資料表，可以直接在 SQL 編輯器查詢，也能當 View 的來源或 Blueprint 的寫入目的地。",
+    what: "設定 Plasma 怎麼連上外部的關聯式資料庫。連上後 Plasma 會找出裡面的資料表，可以直接在 SQL 編輯器查詢，也能當 View 的來源或 Blueprint 的寫入目的地。",
     specTitle: "支援的資料庫",
     spec: [],
     specTable: [
@@ -88,7 +88,7 @@ export const COMPONENTS: Component[] = [
   },
   {
     id: "sql", name: "SQL Playground 與 SQL 方言", en: "SQL Playground · SQL Reference",
-    what: "直接對已連線的來源下 SQL，不必先把資料匯進來。跨不同廠牌的資料庫也用同一種 SQL 寫法，查好的語法可以「Save as View」存成 View。",
+    what: "直接對已連線的來源下 SQL，不必先把資料匯進來。不同廠牌的資料庫都用同一種 SQL 寫法，寫好的查詢可以用「Save as View」存成 View。",
     spec: [
       "ANSI SQL 風格的 Plasma 方言，不是各來源資料庫的方言",
       "函式分類：字串、日期時間、陣列與 map、JSON、數字等",
@@ -102,7 +102,7 @@ export const COMPONENTS: Component[] = [
   },
   {
     id: "views", name: "Views", en: "Standard · Materialized · Parameterized",
-    what: "把查詢存成可重複使用的 View。三種 View 差在什麼時候執行、結果存不存起來。",
+    what: "把查詢存成 View 重複使用。三種 View 的差別在什麼時候執行，以及結果會不會存起來。",
     specTitle: "三種 View",
     spec: [
       <><b>Standard</b>：每次查詢時才執行 SQL，不佔儲存空間</>,
@@ -118,7 +118,7 @@ export const COMPONENTS: Component[] = [
   },
   {
     id: "blueprint", name: "Data Blueprint", en: "資料匯出 Job 定義",
-    what: "可重複使用的匯出設定：把來源 View 的結果寫進目標資料表。Blueprint 定義「做什麼」，排程器決定「什麼時候做」。適合搬完整資料集，例如把 Informix 這類唯讀來源的資料複製出去。",
+    what: "可以重複使用的匯出設定，把來源 View 的結果寫進目標資料表。Blueprint 定義要做什麼，什麼時候做交給排程器。適合搬完整的資料集，例如把 Informix 這類唯讀來源的資料複製出去。",
     spec: [
       "寫入模式：Overwrite、Append、Truncate",
       "選項：Force Create Table（目標表不存在就建立）、Allow concurrent jobs（預設關閉）",
@@ -152,7 +152,7 @@ export const COMPONENTS: Component[] = [
   },
   {
     id: "triggers", name: "觸發器", en: "Triggers",
-    what: "一個工作完成或失敗時，自動接著做下一件事，把多個步驟串成流程（A → B → C）。",
+    what: "一個工作完成或失敗後，自動執行下一個工作，把多個步驟串起來（A → B → C）。",
     spec: [
       "事件來源：Blueprint 的 Job 完成或失敗、Materialized View 同步完成或失敗",
       "動作：Sync View（重新整理 Materialized View）或 Spawn Blueprint（執行另一個 Blueprint）",
@@ -167,7 +167,7 @@ export const COMPONENTS: Component[] = [
   },
   {
     id: "products", name: "資料產品", en: "Data Products",
-    what: "把 View、Materialized View 或資料表發布成有名稱、可共享的資料集。其他工作區不必知道來源在哪個資料庫，用固定位址就能查詢。",
+    what: "把 View、Materialized View 或資料表發布成有名稱、可共享的資料集。其他工作區用固定位址查詢，不必知道來源在哪個資料庫。",
     spec: [
       "每個資料產品有固定的 key",
       <>從任何工作區查詢都是：<code>SELECT * FROM data_product.default.&lt;key&gt;</code></>,
@@ -177,7 +177,7 @@ export const COMPONENTS: Component[] = [
   },
   {
     id: "catalog", name: "資料目錄", en: "Data Catalog",
-    what: "全平台共用的目錄，列出所有工作區發布的資料產品，像企業內部的資料市集。",
+    what: "全平台共用的目錄，列出所有工作區發布的資料產品。",
     spec: [
       "卡片顯示所屬工作區、說明、類型與最後修改時間",
       "任何有 Plasma 帳號的人都能瀏覽",
@@ -191,7 +191,7 @@ export const COMPONENTS: Component[] = [
   },
   {
     id: "mcp", name: "MCP", en: "Model Context Protocol",
-    what: "把 Plasma 變成 MCP 伺服器。AI 助理不自己寫 SQL，而是從事先定義好的工具中挑一個、帶入參數執行，查得到什麼由工具決定。",
+    what: "Plasma 可以當 MCP 伺服器用。AI 助理從事先定義好的工具裡挑一個、帶入參數執行，不會自己寫 SQL，能查到什麼由工具決定。",
     spec: [
       "Group：一組工具",
       "Tool：具名參數的 SQL，參數依型別、必填與允許值檢查",
@@ -207,7 +207,7 @@ export const COMPONENTS: Component[] = [
   },
   {
     id: "admin", name: "系統管理", en: "Administration",
-    what: "只有系統管理員能用：管理使用者、工作區、AI 連線與稽核記錄。",
+    what: "系統管理員專用，用來管理使用者、工作區、AI 連線與稽核記錄。",
     spec: [
       <>系統角色只有 <code>admin</code> 與 <code>user</code>；admin 可存取所有工作區</>,
       "使用者名稱以小寫字母開頭，只能有小寫字母、數字與底線，建立後不能改",

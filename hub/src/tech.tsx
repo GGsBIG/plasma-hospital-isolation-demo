@@ -49,7 +49,7 @@ function Tech() {
           <div className="container">
             <p className="eyebrow">PLASMA · 給技術人員</p>
             <h1>Plasma 元件總覽</h1>
-            <p>Plasma 用一個 Web 介面管完整段資料流程：連上來源資料庫、用 SQL 查詢與轉換、排程寫出，最後發布成資料產品或 MCP 工具給 AI 使用。以下依資料流的順序，說明每個元件做什麼、規格與限制。</p>
+            <p>Plasma 在同一個 Web 介面處理整段資料流程：連上來源資料庫、用 SQL 查詢與轉換、排程寫出，再發布成資料產品，或做成 MCP 工具給 AI 使用。下面的元件依資料流的順序排列。</p>
             <div className="facts"><span>6 種來源資料庫</span><span>3 種 View</span><span>CDC 串流同步</span><span>內建 MCP 伺服器</span></div>
           </div>
         </section>
@@ -121,8 +121,8 @@ function Tech() {
         <section className="outro">
           <div className="container">
             <div>
-              <h2>用你的資料，跑一次 Plasma</h2>
-              <p>PoC 一至兩週，接上你的資料庫就能開始。</p>
+              <h2>用自己的資料試 Plasma</h2>
+              <p>PoC 約一至兩週，接上你的資料庫就能開始。</p>
             </div>
             <a className="btn-bar onred" href={CONTACT}>預約專人諮詢</a>
           </div>
