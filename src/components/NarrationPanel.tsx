@@ -22,14 +22,14 @@ const PAIN_LABEL = "導入前"
 const FIX_LABEL = "導入 Plasma 後"
 
 // 捲動浮現的文字:標題,然後是開場說明,或「導入前」那段。
-// 「導入後」那段同一時間只顯示一種:切換時舊的淡出、新的再逐字浮現(由切換進度驅動,不是捲動)
+// 「導入後」那段排在導入前下方,兩段同時看得到:目前狀態那段全亮、另一段淡化(由切換進度驅動,不是捲動)
 const texts = (s: SceneDef) => [s.title, ...(s.bullets ?? []), ...(s.pain ? [PAIN_LABEL, s.pain] : [])]
 
 // 每段的字數,用來把 reveal 0~1 換算成「浮現到第幾個字」
 const TOTALS = SCENES.map((s) => texts(s).reduce((n, t) => n + tokens(t).length, 0))
 
-// 切換進度 m 0~1:前 30% 舊的那段淡出,之後新的那段逐字浮現;切回來時倒著播
-const SWAP = 0.3
+// 不是目前狀態的那段淡到多少
+const DIMMED = 0.35
 
 // 把一串字的浮現位置從 prev 移到 head:第 k 個字的浮現程度 v 只在 head - SOFT < k < head 之間介於 0~1,
 // 所以只有新舊位置之間的字需要改,其餘不動
@@ -65,7 +65,7 @@ const Section = memo(function Section({
   onSelect: (i: number) => void
 }) {
   const title = tokens(scene.title)
-  const body = "max-w-[32em] text-[16px] leading-[1.75] text-muted-foreground transition-colors duration-200 hover:text-foreground pl:text-[13.5px] pl:leading-normal pp:text-[16px] pp:leading-relaxed ps:text-[14.5px] ps:leading-normal"
+  const body = "max-w-[32em] text-[16px] leading-[1.75] text-foreground/80 transition-colors duration-200 hover:text-foreground pl:text-[13.5px] pl:leading-normal pp:text-[16px] pp:leading-relaxed ps:text-[14.5px] ps:leading-normal"
   const label = "mb-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold leading-5 pl:mb-1 pl:text-[11.5px] ps:mb-1 ps:text-[11.5px]"
   const word = (text: string, key: number) => (
     <span key={key} className="rv">
@@ -103,15 +103,15 @@ const Section = memo(function Section({
               {tokens(b).map(word)}
             </p>
           ))}
-          {/* 導入前／導入後疊在同一格(高度取較長的那段,切換時版面不跳),同時只顯示一段 */}
+          {/* 導入前在上、導入後在下,兩段都在:目前狀態那段全亮,另一段淡化,一眼看得到前後對比 */}
           {scene.pain && (
-            <div className="grid">
-              <div className="pain-block [grid-area:1/1]">
+            <div className="space-y-4 pl:space-y-2 ps:space-y-2">
+              <div className="pain-block">
                 <div className={`${label} bg-danger/10 text-danger`}>{tokens(PAIN_LABEL).map(word)}</div>
                 <p className={body}>{tokens(scene.pain).map(word)}</p>
               </div>
               {scene.fix && (
-                <div className="fix-block [grid-area:1/1]">
+                <div className="fix-block">
                   <div className={`${label} bg-ok/10 text-ok`}>{tokens(FIX_LABEL).map(word)}</div>
                   <p className={body}>{tokens(scene.fix).map(word)}</p>
                 </div>
@@ -134,7 +134,7 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
   // 每張卡片:元素、所有字的 span、分隔線,以及上次寫入的浮現位置與亮度(沒變就不寫)
   type Card = {
     el: HTMLDivElement; spans: HTMLElement[]; line: HTMLElement | null; head: number | null; e: string
-    pain: HTMLElement | null; fixSpans: HTMLElement[]; fixHead: number | null; m: number; ek: number
+    pain: HTMLElement | null; fix: HTMLElement | null; fixSpans: HTMLElement[]; fixHead: number | null; m: number; ek: number
     // 導入前／導入後小標(有底色的膠囊):跟著它的第一個字一起浮現,字還沒出現時不先露出空的底色
     painLabel: HTMLElement | null; fixLabel: HTMLElement | null
   }
@@ -146,7 +146,7 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
     const all = [...el.querySelectorAll<HTMLElement>(".rv")]
     cards.current[i] = {
       el, spans: all.filter((s) => !fix?.contains(s)), line: el.querySelector(".rv-line"), head: null, e: "",
-      pain: el.querySelector(".pain-block"), fixSpans: all.filter((s) => fix?.contains(s)), fixHead: null, m: -1, ek: -1,
+      pain: el.querySelector(".pain-block"), fix: el.querySelector(".fix-block"), fixSpans: all.filter((s) => fix?.contains(s)), fixHead: null, m: -1, ek: -1,
       painLabel: el.querySelector<HTMLElement>(".pain-block > div"), fixLabel: el.querySelector<HTMLElement>(".fix-block > div"),
     }
   }
@@ -187,16 +187,15 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
         syncLabel(card.painLabel)
         card.head = head
       }
-      // 切換到導入後:導入前那段整段淡出,導入後那段再逐字浮現
+      // 導入後那段跟著捲動與進場逐字浮現(比導入前晚一點);切換只改兩段的亮度:目前狀態那段全亮、另一段淡化
       const m = plasmaMix(i)
       const ek = entryAt(i, ENTRY_FIX.delay, ENTRY_FIX.dur)
-      if ((m !== card.m || ek !== card.ek) && card.pain) {
+      const reveal = clamp01((p - (i - 0.6)) / 0.6)
+      if ((m !== card.m || ek !== card.ek || card.fixHead === null || reveal < 1) && card.pain) {
         card.ek = ek
-        const out = clamp01(m / SWAP)
-        card.pain.style.opacity = `${1 - out}`
-        card.pain.style.transform = lite || out === 0 ? "" : `translateY(${-out * 6}px)`
-        card.pain.style.visibility = out === 1 ? "hidden" : ""
-        const fixHead = Math.round(Math.min(clamp01((m - SWAP) / (1 - SWAP)), ek) * (card.fixSpans.length + SOFT) * 4) / 4
+        card.pain.style.opacity = `${1 - (1 - DIMMED) * m}`
+        if (card.fix) card.fix.style.opacity = `${DIMMED + (1 - DIMMED) * m}`
+        const fixHead = Math.round(Math.min(reveal, ek) * (card.fixSpans.length + SOFT) * 4) / 4
         if (fixHead !== card.fixHead) {
           paint(card.fixSpans, card.fixHead, fixHead, lite)
           card.fixHead = fixHead

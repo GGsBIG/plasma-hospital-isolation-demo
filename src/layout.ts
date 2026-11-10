@@ -54,16 +54,26 @@ const ROW_A = [200, 515, 830]
 const ROW_B = [357, 673]
 // 間距 300:名稱 + 徽章才不會壓到下一個;整欄中心對齊源頭資料庫那組的中心(515),上下置中
 const APP_ROW = [65, 365, 665, 965]
+// 既有系統 5 個一欄,中心對齊 515;間距 250(名稱 + 徽章剛好不重疊),整欄才不會比資料庫高太多
+const DS_ROW = [15, 265, 515, 765, 1015]
 // 橫軸位置:B 欄比 A 欄往右 B_SHIFT
 const B_SHIFT = 250
 const FLOW_APP = 1050
+// 一直列(手機版所有情境的資料庫與既有系統):五個資料庫由上到下排成一列,既有系統用同一組列位一一對齊,
+// 順序 Oracle、MySQL、PostgreSQL、Informix、MS SQL(和既有系統對應,連線是水平直線)。
+// 間距 290:資料庫左上角的 logo + 平台 + 名稱與負載(同一行)不會壓到下一個
+const COL_ROW = [-65, 225, 515, 805, 1095]
+const COL_Y: Record<string, number> = {
+  "db-oracle": COL_ROW[0], "db-mysql": COL_ROW[1], "db-postgres": COL_ROW[2], "db-informix": COL_ROW[3], "db-mssql": COL_ROW[4],
+  "ds-clinic": COL_ROW[0], "ds-pacs": COL_ROW[1], "ds-ward": COL_ROW[2], "ds-lab": COL_ROW[3], "ds-admin": COL_ROW[4],
+}
 const FLOW_SOURCE = 0 // 最左層:各情境的源頭資料庫、情境 2 的既有系統
 const FLOW_MID = 560 // 情境 1 的既有系統
 // 情境 2 的源頭資料庫:A、B 兩欄的中心(+B_SHIFT/2)剛好在左側既有系統與右側應用的正中間
 const FLOW_MID_DB = (FLOW_SOURCE + FLOW_APP) / 2 - B_SHIFT / 2
 const FLOW_PLASMA = 640 // Plasma、知識庫、落地 PostgreSQL
 const FLOW_HANDOFF = 820 // 情境 4 的 IT 部門(匯出檔與報表之間)
-const FLOW_EXT = 1460 // FHIR 頁的院外診所、藥局(FHIR Server 在應用欄)
+const FLOW_EXT = 1460 // FHIR 交換頁的診所、藥局(FHIR Server 在應用欄)
 // 情境 2 導入後:既有系統在源頭資料庫的更左邊(情境資料的 x < DS_FAR_MAX)
 const DS_FAR_MAX = 200
 const FLOW_DS_FAR = -560
@@ -75,15 +85,21 @@ const SLOT: Record<string, { y: number; b: boolean; x?: number }> = {
   "db-mssql": { y: ROW_A[2], b: false },
   "db-mysql": { y: ROW_B[0], b: true },
   "db-informix": { y: ROW_B[1], b: true },
-  // 既有系統 4 個排成同一欄,間距同應用欄(名稱 + 徽章不會壓到下一個)
-  "ds-clinic": { y: APP_ROW[0], b: false },
-  "ds-ward": { y: APP_ROW[1], b: false },
-  "ds-admin": { y: APP_ROW[2], b: false },
-  "ds-lab": { y: APP_ROW[3], b: false },
-  // 跨院區:總院在最左欄中間,兩間分院在應用欄的上下(導入後 Plasma 插在中間)
-  "campus-main": { y: ROW_A[1], b: false },
-  "campus-north": { y: ROW_A[0], b: false, x: FLOW_APP },
-  "campus-south": { y: ROW_A[2], b: false, x: FLOW_APP },
+  // 既有系統 5 個排成同一欄,間距同應用欄(名稱 + 徽章不會壓到下一個)
+  // 由上而下的順序跟各自的資料庫一樣(Oracle、MySQL、PostgreSQL、Informix、MS SQL),連線才不會交叉
+  "ds-clinic": { y: DS_ROW[0], b: false },
+  "ds-pacs": { y: DS_ROW[1], b: false },
+  "ds-ward": { y: DS_ROW[2], b: false },
+  "ds-lab": { y: DS_ROW[3], b: false },
+  "ds-admin": { y: DS_ROW[4], b: false },
+  // 機敏資料分權:三個部門排在應用欄的上、中、下
+  "team-rnd": { y: ROW_A[0], b: false, x: FLOW_APP },
+  "team-mfg": { y: ROW_A[1], b: false, x: FLOW_APP },
+  "team-fin": { y: ROW_A[2], b: false, x: FLOW_APP },
+  // 跨部門節點(此版未使用)
+  "dept-main": { y: ROW_A[1], b: false },
+  "dept-north": { y: ROW_A[0], b: false, x: FLOW_APP },
+  "dept-south": { y: ROW_A[2], b: false, x: FLOW_APP },
   // FHIR 對外交換:FHIR Server 之後再往右一欄的診所、藥局
   "ext-clinic": { y: ROW_A[1] - 200, b: false, x: FLOW_EXT },
   "ext-pharmacy": { y: ROW_A[1] + 200, b: false, x: FLOW_EXT },
@@ -128,7 +144,13 @@ function compactPos(id: string, p: Pos): Pos {
     return { x: PAD_L + FLOW_APP, y }
   }
   const slot = SLOT[id]
-  const fx = slot.x ?? (id.startsWith("ds-") && p.x < DS_FAR_MAX ? FLOW_DS_FAR : flowX(p.x))
+  // 一直列:橫軸照原本的欄位換算(不分 A、B 兩欄),縱軸用一直列的列位
+  if (id in COL_Y) {
+    const fx = id.startsWith("ds-") ? (p.x < DS_FAR_MAX ? FLOW_DS_FAR : p.x >= 1000 ? FLOW_APP : flowX(p.x)) : flowX(p.x)
+    return { x: PAD_L + fx, y: COL_Y[id] }
+  }
+  // 開場頁的既有系統(情境資料 x ≥ 1000)放到最右欄:整張圖拉寬,手機上才會和下方說明一樣寬
+  const fx = slot.x ?? (id.startsWith("ds-") && p.x < DS_FAR_MAX ? FLOW_DS_FAR : id.startsWith("ds-") && p.x >= 1000 ? FLOW_APP : flowX(p.x))
   return { x: PAD_L + fx + (slot.b ? B_SHIFT : 0), y: slot.y }
 }
 
@@ -155,7 +177,7 @@ export const dotScale = () => (mode === "desktop" ? 1 : 1.75)
 // 外框 = 節點中心 +「圖示 + 名稱 + 徽章」的範圍(舞台座標,依實際量測值;
 // 改了緊湊版的字級或圖示倍率要重新量)
 const EXTENT: Record<NodeKind, { half: number; top: number; bottom: number }> = {
-  db: { half: 200, top: 65, bottom: 222 }, // 名稱左邊多了品牌圖示
+  db: { half: 225, top: 120, bottom: 160 }, // 品牌 logo 在平台左上角;名稱與負載同一行
   serving: { half: 200, top: 65, bottom: 222 },
   downstream: { half: 100, top: 41, bottom: 205 },
   app: { half: 140, top: 54, bottom: 214 },
@@ -165,6 +187,9 @@ const EXTENT: Record<NodeKind, { half: number; top: number; bottom: number }> = 
   person: { half: 120, top: 95, bottom: 205 },
 }
 
+// 徽章特別長的節點(機敏資料分權頁的三個部門):外框加寬,鏡頭才不會切掉徽章
+const WIDE: Record<string, number> = { "team-rnd": 165, "team-mfg": 165, "team-fin": 165 }
+
 export interface Box { x0: number; y0: number; x1: number; y1: number }
 
 export function sceneBox(nodes: Record<string, Pos>, kindOf: (id: string) => NodeKind, zone?: string[]): Box {
@@ -172,8 +197,9 @@ export function sceneBox(nodes: Record<string, Pos>, kindOf: (id: string) => Nod
   for (const id of Object.keys(nodes)) {
     const p = place(id, nodes[id])
     const e = EXTENT[kindOf(id)]
-    b.x0 = Math.min(b.x0, p.x - e.half)
-    b.x1 = Math.max(b.x1, p.x + e.half)
+    const half = WIDE[id] ?? e.half
+    b.x0 = Math.min(b.x0, p.x - half)
+    b.x1 = Math.max(b.x1, p.x + half)
     b.y0 = Math.min(b.y0, p.y - e.top)
     b.y1 = Math.max(b.y1, p.y + e.bottom)
   }

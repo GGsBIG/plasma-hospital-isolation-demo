@@ -17,6 +17,12 @@ const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2
 
 let raf = 0
 
+// 全站切回導入前(自動播放換頁前用;沒有對照的頁面也能呼叫)
+export function plasmaOff() {
+  const i = SCENES.findIndex((s) => s.plasma)
+  if (i >= 0) setPlasma(i, false)
+}
+
 // i:在哪一頁按的(那一頁要有對照才能切換);切換的是全站的模式
 export function setPlasma(i: number, on: boolean) {
   if (!SCENES[i]?.plasma) return

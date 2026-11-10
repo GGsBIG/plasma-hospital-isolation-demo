@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { validateScenes } from "./scenes"
-import { agentAt, CHAT_SPAN, clamp01, clampProgress, END, LAST, RECAP_AT, RECAP_INDEX, recapAt } from "./timeline"
+import { SCENES, validateScenes } from "./scenes"
+import { agentReveal, AGENT_REVEAL_AT } from "./agentReveal"
+import { agentAt, CHAT_SPAN, clamp01, clampProgress, END, LAST } from "./timeline"
 import { quantize, scrollStore, useScrollEffect, useScrollSelector } from "./scroll"
-import { useLayoutMode } from "./layout"
+import { layoutMode, useLayoutMode } from "./layout"
 import { Stepper } from "./components/Stepper"
+import { Legend } from "./components/Legend"
+import { AutoplayButton } from "./components/AutoplayButton"
+import { autoplay, useAutoplay } from "./autoplay"
+import { cycleMs } from "./phase"
+import { uploadGate } from "./upload"
 import { Stage } from "./components/Stage"
 import { NarrationPanel } from "./components/NarrationPanel"
 import { AgentChat } from "./components/AgentChat"
 import { ThemeToggle } from "./components/ThemeToggle"
 import { PlasmaToggle } from "./components/PlasmaToggle"
-import { Recap } from "./components/Recap"
-import { plasmaOn, setPlasma } from "./plasma"
-import { replay, restartEffects, useEntryEpoch } from "./entry"
+import { plasmaOff, plasmaOn, setPlasma } from "./plasma"
+import { replay, restartEffects } from "./entry"
 import { ReplayButton } from "./components/ReplayButton"
 import logo from "./assets/brobridge-logo.png"
 import logoDark from "./assets/brobridge-logo-dark.png"
@@ -22,7 +27,23 @@ validateScenes() // 載入即檢查情境資料完整性
 const AGENT_W = 380
 // 最後一頁切到「導入 Plasma 後」時,自動捲完對話所需的秒數(使用者一滾動就交還手動控制)
 const CHAT_PLAY = 9
-const CHAT_DELAY = 600 // 等 Agent 面板滑出後再開始播
+// 等 Agent 面板滑出後再開始播;最後一頁有文件上傳與大腦長出時,等大腦長好再播
+// 最後一頁有上傳關卡:對話從按下 Upload 起算,等文件飛完、大腦長好再播
+const GATED = !!SCENES[LAST].plasma?.upload
+const CHAT_DELAY = GATED ? AGENT_REVEAL_AT + 1000 : 600
+// 自動播放時,上傳視窗出現後等多久自動按 Upload
+const AUTO_UPLOAD = 2500
+
+// 自動播放每段停多久(毫秒):開場頁、導入後、最後一頁導入後(等大腦長好 + 對話播完 + 看一下結果)
+const AUTO_INTRO = 7000
+const AUTO_AFTER = 7000
+const AUTO_LAST = CHAT_DELAY + CHAT_PLAY * 1000 + 4000
+// 導入前:有分幕的頁等一整輪播完;有對話輪播的頁等所有泡泡輪完(每 1.8 秒一格,見 ticker.ts);其餘 6 秒
+const TICK_MS = 1800
+function beforeMs(i: number) {
+  const seq = Object.values(SCENES[i].callouts ?? {}).find((c) => c.seq)?.seq
+  return Math.max(6000, cycleMs(i) + 600, seq ? seq.length * TICK_MS + 600 : 0)
+}
 
 
 // 情境 6 的 Agent 對話:面板在情境 5→6 過場中滑出並擠窄舞台(舞台整體縮小左移,不會被擋住);
@@ -30,6 +51,8 @@ const CHAT_DELAY = 600 // 等 Agent 面板滑出後再開始播
 // 自己訂閱捲動,只在這兩段重繪,其他時候不影響整頁
 // 桌機版面但視窗寬度不足 1400 時,舞台旁邊放不下 380px 的面板(否則舞台會被擠到太小)
 const narrowDesktop = window.matchMedia("(max-width: 1399px)")
+// 面板滑出程度:過場進度 × 上傳關卡的延後滑出(已經捲進對話段落就直接全開)
+const openAt = (p: number) => agentAt(p) * (p > LAST + 0.01 ? 1 : agentReveal())
 
 function AgentPanel() {
   const mode = useLayoutMode()
@@ -42,13 +65,13 @@ function AgentPanel() {
   // 疊在說明欄上(由左側滑入)而不擠壓舞台:手機橫拿,以及寬度不足的桌機版面
   const overlayLeft = mode === "phone-landscape" || (mode === "desktop" && narrow)
   // 只在「出現/消失」與對話進度跨過一小格時重繪;滑出的位置與寬度每格直接寫進 DOM
-  const visible = useScrollSelector((p) => agentAt(p) > 0)
+  const visible = useScrollSelector((p) => openAt(p) > 0)
   const chat = useScrollSelector((p) => quantize(clamp01((p - LAST) / CHAT_SPAN), 0.004))
   const ref = useRef<HTMLDivElement>(null)
   useScrollEffect((p) => {
     const el = ref.current
     if (!el) return
-    const open = agentAt(p)
+    const open = openAt(p)
     el.style.opacity = `${open}`
     if (mode === "phone-portrait") el.style.transform = `translateY(${(1 - open) * 100}%)`
     else if (overlayLeft) el.style.transform = `translateX(${-(1 - open) * 100}%)`
@@ -84,27 +107,23 @@ function AgentPanel() {
   )
 }
 
-// 頂部進度條:情境之間各一段,再加 Agent 對話播完、結尾總覽各一段,
-// 每個情境完整抵達處留一道細縫當刻度,看得出目前在第幾段。
-// 填滿長度每格直接寫進 DOM(transform),不觸發重繪
-const SEGMENTS = LAST + 2
-function progressFill(p: number) {
-  const q = Math.max(0, p)
-  if (q < LAST) return q / SEGMENTS
-  if (q < RECAP_AT) return (LAST + clamp01((q - LAST) / CHAT_SPAN)) / SEGMENTS
-  return (LAST + 1 + clamp01(q - RECAP_AT)) / SEGMENTS
-}
+// 頂部進度條:一頁一段,目前這頁(含)以前填滿,過場中跟著捲動漸進;每頁完整抵達處留一道細縫當刻度。
+// 每一段都可以點(手機沒有底部切換列,靠它直接跳頁)。填滿長度每格直接寫進 DOM(transform),不觸發重繪
+const SEGMENTS = LAST + 1
+const progressFill = (p: number) => (clampProgress(p) + 1) / SEGMENTS
 
-function ProgressBar() {
+function ProgressBar({ onSelect }: { onSelect: (i: number) => void }) {
   const fill = useRef<HTMLDivElement>(null)
+  const current = useScrollSelector((p) => Math.round(clampProgress(p)))
   useScrollEffect((p) => {
     if (fill.current) fill.current.style.transform = `scaleX(${progressFill(p)})`
   }, [])
   return (
     // 標題列正下方一條與背景同色的窄帶(蓋住往上捲到這裡的說明文字),進度條在帶子中間,離標題列下緣約 10px
-    <div aria-hidden className="pointer-events-none absolute inset-x-0 top-full h-[22px] bg-background">
+    <div className="pointer-events-none absolute inset-x-0 top-full h-[22px] bg-background">
       <div
-        className="absolute top-[9px] h-[3px] overflow-hidden rounded-full bg-foreground/10"
+        aria-hidden
+        className="pointer-events-none absolute top-[9px] h-[3px] overflow-hidden rounded-full bg-foreground/10"
         style={{ left: "var(--bar-x)", right: "var(--bar-x)" }}
       >
         <div ref={fill} className="h-full origin-left rounded-full bg-foreground/80" style={{ transform: "scaleX(0)" }} />
@@ -116,6 +135,19 @@ function ProgressBar() {
           />
         ))}
       </div>
+      {/* 點擊區:每段一顆透明按鈕,往上延伸到標題列下緣、往下只到窄帶底,不蓋到下方的切換鈕與重播鈕 */}
+      <nav aria-label="頁面" className="pointer-events-auto absolute -top-2 bottom-0 flex" style={{ left: "var(--bar-x)", right: "var(--bar-x)" }}>
+        {SCENES.map((s, k) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => onSelect(k)}
+            aria-label={`第 ${k + 1} 頁：${s.title}`}
+            aria-current={k === current ? "page" : undefined}
+            className="h-full flex-1 cursor-pointer rounded-sm outline-none focus-visible:bg-foreground/10"
+          />
+        ))}
+      </nav>
     </div>
   )
 }
@@ -124,8 +156,13 @@ export function App() {
   // 捲動進度(整數 = 某情境置中,小數 = 卡在兩情境之間)放在 scrollStore,不是 React state:
   // App 本身只在「目前情境」改變時重繪(標題列的頁碼)
   const current = useScrollSelector((p) => Math.round(clampProgress(p)))
-  const recap = useScrollSelector((p) => recapAt(p) >= 0.5)
-  const epoch = useEntryEpoch()
+  // 捲到別頁也一律回到導入前(第一次載入不動)
+  const lastPage = useRef(current)
+  useEffect(() => {
+    if (current === lastPage.current) return
+    lastPage.current = current
+    plasmaOff()
+  }, [current])
   // 版面模式只在換版面(例如手機轉向)時改變
   const mode = useLayoutMode()
 
@@ -163,15 +200,38 @@ export function App() {
   const stopAuto = useCallback(() => cancelAnimationFrame(autoRaf.current), [])
   useEffect(() => {
     const opts = { passive: true } as const
+    // 手機不能手動捲動,碰一下畫面不該打斷對話播放(換頁、切換導入前後本身會停)
+    const onTouch = () => {
+      if (layoutMode() === "desktop") stopAuto()
+    }
     window.addEventListener("wheel", stopAuto, opts)
-    window.addEventListener("touchstart", stopAuto, opts)
+    window.addEventListener("touchstart", onTouch, opts)
     window.addEventListener("keydown", stopAuto)
     return () => {
       window.removeEventListener("wheel", stopAuto)
-      window.removeEventListener("touchstart", stopAuto)
+      window.removeEventListener("touchstart", onTouch)
       window.removeEventListener("keydown", stopAuto)
     }
   }, [stopAuto])
+
+  // 手機版不用滑動換頁:擋掉手指拖動與滾輪,只能點上方進度條(或說明卡片、自動播放)換頁。
+  // 頁面仍保留捲動高度,換頁與最後一頁的對話播放由程式捲動驅動;Agent 對話清單(data-scroll-ok)可自己捲
+  useEffect(() => {
+    if (mode === "desktop") return
+    const block = (e: Event) => {
+      if (e.target instanceof Element && e.target.closest("[data-scroll-ok]")) return
+      if (e.cancelable) e.preventDefault()
+    }
+    const opts = { passive: false } as const
+    document.documentElement.classList.add("no-swipe")
+    window.addEventListener("touchmove", block, opts)
+    window.addEventListener("wheel", block, opts)
+    return () => {
+      document.documentElement.classList.remove("no-swipe")
+      window.removeEventListener("touchmove", block)
+      window.removeEventListener("wheel", block)
+    }
+  }, [mode])
   const autoScroll = useCallback((to: number, seconds: number) => {
     stopAuto()
     const from = window.scrollY
@@ -209,27 +269,25 @@ export function App() {
     }, CHAT_DELAY)
   }, [stepPx, autoScroll])
 
-  // 切到第 i 頁(切換列、方向鍵、說明卡片、總覽卡片):直接切過去,不刷過中間的頁面,
+  // 切到第 i 頁(切換列、方向鍵、說明卡片):直接切過去,不刷過中間的頁面,
   // 再從頭完整播放那一頁的效果;最後一頁導入後連同 Agent 對話一起從頭播
   const goTo = useCallback((i: number) => {
     const h = stepPx()
     if (!h) return
     stopAuto()
     window.clearTimeout(chatTimer.current)
-    // 最後一個情境之後可以再往下捲到對話播完(RECAP_AT),再往下是結尾總覽(END)
-    const target = i === RECAP_INDEX ? END : Math.max(0, Math.min(i, END))
+    const target = Math.max(0, Math.min(i, LAST))
+    // 換到別頁一律從導入前開始
+    if (target !== Math.round(clampProgress(scrollStore.get()))) plasmaOff()
     window.scrollTo({ top: target * h, behavior: "instant" })
     scrollStore.set(target)
-    const page = i === RECAP_INDEX || target > RECAP_AT ? RECAP_INDEX : Math.round(clampProgress(target))
-    replay(page)
-    if (page === LAST && plasmaOn(LAST) && target <= LAST) playChat()
+    replay(target)
+    if (target === LAST && plasmaOn(LAST) && !GATED) playChat()
   }, [stepPx, stopAuto, playChat])
 
   // 重播目前這一頁(重播鈕、R 鍵):位置不動;在最後一頁的對話中途按,先回到對話開頭再播
   const replayCurrent = useCallback(() => {
-    const raw = scrollStore.get()
-    if (raw > RECAP_AT + 0.5) return goTo(RECAP_INDEX)
-    const cur = Math.round(clampProgress(raw))
+    const cur = Math.round(clampProgress(scrollStore.get()))
     if (cur === LAST) return goTo(LAST)
     replay(cur)
   }, [goTo])
@@ -242,24 +300,84 @@ export function App() {
     window.clearTimeout(chatTimer.current)
     // 切回導入前:停在目前位置
     if (!on) return stopAuto()
-    playChat()
+    // 有上傳關卡時,等使用者按 Upload 才播對話(見下方)
+    if (!GATED) playChat()
   }, [stopAuto, playChat])
+
+  // 按下上傳視窗的 Upload:最後一頁導入後,從這時起算播 Agent 對話
+  useEffect(() => uploadGate.subscribe(() => {
+    if (Math.round(clampProgress(scrollStore.get())) === LAST && plasmaOn(LAST)) playChat()
+  }), [playChat])
+
+  // 自動播放:從目前這頁開始,每頁先切回導入前並重播 → 停一段 → 切到導入後 → 停一段 → 下一頁;
+  // 最後一頁等文件上傳、大腦長出、Agent 對話播完才停。任何手動操作都會中斷(見下方)
+  const playing = useAutoplay()
+  useEffect(() => {
+    if (!playing) return
+    const timers: number[] = []
+    let alive = true
+    const wait = (ms: number) => new Promise<void>((done) => { timers.push(window.setTimeout(done, ms)) })
+    void (async () => {
+      for (let i = Math.round(clampProgress(scrollStore.get())); i <= LAST && alive; i++) {
+        plasmaOff()
+        goTo(i)
+        if (!SCENES[i].plasma) {
+          await wait(AUTO_INTRO)
+          continue
+        }
+        await wait(beforeMs(i))
+        if (!alive) return
+        togglePlasma(i, true)
+        if (i === LAST && GATED) {
+          await wait(AUTO_UPLOAD)
+          if (!alive) return
+          uploadGate.go()
+        }
+        await wait(i === LAST ? AUTO_LAST : AUTO_AFTER)
+      }
+      if (alive) autoplay.set(false)
+    })()
+    // 手動操作(方向鍵、P、R、點切換列／說明卡／切換鈕、滾輪、觸控)中斷自動播放;自動播放鈕本身與空白鍵除外
+    const stop = () => autoplay.set(false)
+    const onPointer = (e: PointerEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest("[data-autoplay]")) stop()
+    }
+    const onKeyStop = (e: KeyboardEvent) => {
+      if (e.key !== " ") stop()
+    }
+    window.addEventListener("pointerdown", onPointer, true)
+    window.addEventListener("keydown", onKeyStop, true)
+    window.addEventListener("wheel", stop, { passive: true })
+    window.addEventListener("touchstart", stop, { passive: true })
+    return () => {
+      alive = false
+      timers.forEach((t) => window.clearTimeout(t))
+      window.removeEventListener("pointerdown", onPointer, true)
+      window.removeEventListener("keydown", onKeyStop, true)
+      window.removeEventListener("wheel", stop)
+      window.removeEventListener("touchstart", stop)
+    }
+  }, [playing, goTo, togglePlasma])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const raw = scrollStore.get()
+      // 空白鍵:開始／暫停自動播放(焦點在按鈕上時讓按鈕自己處理)
+      if (e.key === " ") {
+        if (e.target instanceof Element && e.target.closest("button, [role='button'], input, textarea")) return
+        e.preventDefault()
+        autoplay.set(!autoplay.get())
+        return
+      }
       if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
         e.preventDefault()
         const cur = Math.round(clampProgress(raw))
-        // 在最後一個情境按 →:導入後先捲到對話播完,再按一次到結尾總覽(導入前沒有對話,直接到總覽);
-        // 在總覽按 ←:回到最後一個情境
-        // 最後一頁導入後、對話還沒播完:→ 讓對話播完(而不是直接跳到結尾)
-        if (e.key === "ArrowRight" && cur === LAST && plasmaOn(LAST) && raw < RECAP_AT - 0.01) playChat()
-        else if (e.key === "ArrowRight") goTo(cur < LAST ? cur + 1 : END)
-        else goTo(raw > RECAP_AT + 0.01 ? LAST : cur - 1)
+        // 最後一頁導入後、對話還沒播完:→ 讓對話播完;最後一頁之後沒有下一頁
+        if (e.key === "ArrowRight" && cur === LAST && plasmaOn(LAST) && raw < END - 0.01 && (!GATED || uploadGate.done())) playChat()
+        else if (e.key === "ArrowRight") { if (cur < LAST) goTo(cur + 1) }
+        else goTo(cur - 1)
       } else if ((e.key === "p" || e.key === "P") && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        // P:切換目前這頁導入前後(總覽沒有切換)
-        if (raw > RECAP_AT + 0.5) return
+        // P:切換目前這頁導入前後
         const cur = Math.round(clampProgress(raw))
         togglePlasma(cur, !plasmaOn(cur))
       } else if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -275,7 +393,7 @@ export function App() {
       <header
         className="sticky top-0 z-20 flex h-[var(--header-h)] items-center justify-between border-b border-border bg-background px-5 pl:px-4 pp:px-6"
       >
-        <ProgressBar />
+        <ProgressBar onSelect={goTo} />
         <div className="flex items-center gap-4">
           <img src={logo} alt="Brobridge" className="h-[22px] w-auto dark:hidden" />
           <img src={logoDark} alt="Brobridge" className="hidden h-[26px] w-auto dark:block" />
@@ -283,10 +401,12 @@ export function App() {
           <h1 className="text-[15px] text-foreground/85 cp:hidden">Plasma 醫院資料隔離</h1>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {String(recap ? RECAP_INDEX + 1 : current + 1).padStart(2, "0")} / {String(RECAP_INDEX + 1).padStart(2, "0")}
-            <span className="ml-3 hidden sm:inline">捲動或 ← → 換頁，P 切換導入前後</span>
+          <span className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+            {String(current + 1).padStart(2, "0")} / {String(LAST + 1).padStart(2, "0")}
+            {/* 操作提示只在桌機顯示(手機不能捲動換頁,靠上方進度條) */}
+            <span className={`ml-3 hidden ${mode === "desktop" ? "sm:inline" : ""}`}>{playing ? "自動播放中，按空白鍵暫停" : "捲動或 ← → 換頁，P 切換導入前後，空白鍵自動播放"}</span>
           </span>
+          {mode !== "desktop" && <AutoplayButton compact />}
           <ThemeToggle />
         </div>
       </header>
@@ -306,31 +426,36 @@ export function App() {
             pl:w-[var(--narr-w)] pl:pr-3"
         >
           <NarrationPanel onSelect={goTo} />
+          {/* 上一段露出的尾巴:上緣漸層淡出,不會在欄位頂端被硬切成半行字 */}
+          <div aria-hidden className="narr-top-fade pointer-events-none absolute inset-x-0 top-0 h-24 pp:h-10" />
+          <Legend />
         </aside>
 
         {/* 舞台固定在畫面上,不隨頁面捲動 */}
         {/* 上方留一列給「導入前｜導入 Plasma 後」切換(在進度條遮罩帶下方,不被切到),舞台從切換列下面開始,不會被擋住 */}
-        <div className="sticky top-[var(--header-h)] flex h-[var(--stage-h)] min-w-0 flex-1 pt-[84px] pp:order-1 pp:w-full pp:flex-none pp:pb-1.5 pp:pt-[66px] pl:pt-[64px]">
+        <div className="sticky top-[var(--header-h)] flex h-[var(--stage-h)] min-w-0 flex-1 pt-[92px] pp:order-1 pp:w-full pp:flex-none pp:pb-1.5 pp:pt-[76px] pl:pt-[72px]">
           <div className="relative min-h-0 min-w-0 flex-1">
             <Stage />
-            <div className="absolute bottom-full right-0 z-10 mb-2 flex items-center gap-2 pp:mb-1.5 pl:mb-1">
-              <ReplayButton onReplay={replayCurrent} />
-              <PlasmaToggle onToggle={togglePlasma} />
-            </div>
           </div>
 
           <AgentPanel />
+          {/* 重播與切換鈕釘在整欄右上角:最後一頁 Agent 面板滑出、舞台變窄時,位置也跟前面各頁一樣 */}
+          <div className="absolute right-0 top-0 z-10 flex h-[92px] items-end gap-2 pb-2 pp:h-[76px] pp:pb-1.5 pl:h-[72px] pl:pb-1">
+            <ReplayButton onReplay={replayCurrent} />
+            <PlasmaToggle onToggle={togglePlasma} />
+          </div>
         </div>
       </main>
-
-      <Recap key={epoch} onSelect={goTo} />
 
       {/* 底部情境切換列只在桌機出現;手機用捲動切換(也可點說明卡片) */}
       {mode === "desktop" && (
         <footer
           className="sticky bottom-0 z-20 flex h-[var(--footer-h)] items-center justify-center border-t border-border bg-background px-6"
         >
-          <Stepper onSelect={goTo} />
+          <div className="flex items-center gap-3">
+            <AutoplayButton />
+            <Stepper onSelect={goTo} />
+          </div>
         </footer>
       )}
     </div>

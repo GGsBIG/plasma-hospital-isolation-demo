@@ -44,6 +44,8 @@ export const Node = memo(function Node({
   node, elRef, compact, hot, badge, stat, callout, down = false, stack = false, merged = false, hovered, faded, onHover,
 }: NodeProps) {
   const { a, t } = sizeOf(node.kind)
+  // 手機版資料庫:logo 放在平台左上角,名稱與負載排同一行(資料庫排成一直列,左右有空間)
+  const logoInside = compact && !!node.brand
   // 知識庫在 Plasma 正上方,標籤放右側避免擋到往下的連線
   const side = !compact && node.kind === "kb"
   // 服務資料庫的連線從左下進、往右出,標籤放平台上方才不會被線穿過;
@@ -63,7 +65,7 @@ export const Node = memo(function Node({
   const text = (
     <>
       {/* 名稱與狀態徽章同一行,節省垂直空間 */}
-      <div className={`flex gap-2.5 ${side ? "flex-col items-start" : node.logo || compact || stack ? `flex-col ${node.brand ? "items-start" : "items-center"}` : "items-center"}`}>
+      <div className={`flex gap-2.5 ${side ? "flex-col items-start" : node.logo || (compact && !logoInside) || stack ? `flex-col ${node.brand && !logoInside ? "items-start" : "items-center"}` : "items-center"}`}>
         {/* 有 logo 的節點(Plasma):logo 貼在平台的立方體側面上,名稱列只留徽章 */}
         {!node.logo && <span className={`${s.name} font-medium tracking-tight text-foreground`}>{node.label}</span>}
         {badge && (
@@ -100,6 +102,10 @@ export const Node = memo(function Node({
           data-hovered={hovered || undefined}
         >
           <Platform kind={node.kind} hot={hot} variant={node.icon} down={down} bare={merged} />
+          {/* 手機版:資料庫的品牌 logo 放在平台左上角(左側圓柱的左上方,不擋圓柱),名稱旁就不再放 logo */}
+          {logoInside && (
+            <img src={node.brand} alt="" className="brand-in absolute h-[64px] w-[104px] max-w-none -translate-x-1/2 -translate-y-1/2 object-contain" style={{ left: -88, top: -80 }} />
+          )}
         </div>
 
         {callout?.seq && <SeqBubble callout={callout} nodeId={node.id} a={a} compact={compact} bubble={s.bubble} />}
@@ -178,7 +184,7 @@ export const Node = memo(function Node({
             style={labelStyle}
           >
             {/* 資料庫:品牌圖示在左,與右邊文字上下置中(桌機為名稱列一行、手機為名稱 + 徽章兩行) */}
-            {node.brand ? (
+            {node.brand && !logoInside ? (
               <div className="flex items-center gap-3">
                 <img src={node.brand} alt="" className={`${s.brand} shrink-0`} />
                 <div className="flex flex-col items-start text-left">{text}</div>

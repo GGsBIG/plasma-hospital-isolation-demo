@@ -8,7 +8,7 @@ import { BRAIN_LINES, BRAIN_NODES } from "../brainNet"
 //   C 滑鼠探照:游標附近的節點與連線變亮、節點微微靠向游標,遠的變淡
 //   D 漣漪:每隔幾秒(隨機)從大腦裡隨機一處向外一圈圈亮起
 //   E 回答串連:一道訊號從知識庫經過大腦傳到右緣(AI 那側),定時重播
-// idle(跨部門頁):直接顯示,只有 B
+// idle(大腦已長好、不重播長出動畫時):直接顯示,只有 B
 // 大腦光暈出現時 display 由 none 變回來,CSS 的長出動畫自動重播;JS 的效果在看不見時(brainVisibility.shown 為 false)自動略過
 
 const SQ = 0.7 // 垂直壓扁比例

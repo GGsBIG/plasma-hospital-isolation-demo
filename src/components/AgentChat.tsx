@@ -70,6 +70,7 @@ export function AgentChat({ progress }: { progress: number }) {
           <div className="flex items-center gap-1.5 whitespace-nowrap text-[11px] text-muted-foreground">
             <span className={`h-1.5 w-1.5 rounded-full ${st.busy ? "animate-pulse bg-warn" : "bg-ok"}`} />
             <span className={st.busy ? "shimmer-text" : ""}>{st.text}</span>
+            <span className="text-muted-foreground/70">· 地端部署</span>
           </div>
         </div>
         {/* 手機寬度放不下,工具標籤省略(對話內容已顯示正在呼叫哪個工具) */}
@@ -81,7 +82,7 @@ export function AgentChat({ progress }: { progress: number }) {
           ))}
         </span>
       </div>
-      <div ref={listRef} className="no-scrollbar flex-1 space-y-2.5 overflow-y-auto pr-1">
+      <div ref={listRef} data-scroll-ok="" className="no-scrollbar flex-1 space-y-2.5 overflow-y-auto overscroll-contain pr-1">
         {AGENT_SCRIPT.map((t, i) => {
           const v = steps[i]
           if (v <= 0) return null
@@ -187,7 +188,7 @@ function Chart({ v }: { v: number }) {
     <div className="mt-1 rounded-xl border border-border bg-card p-3" style={appear(clamp01(v * 4))}>
       <div className="mb-2.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         {grow === 0 && <Loader2 className="h-3 w-3 animate-spin" />}
-        <span className={grow === 0 ? "shimmer-text" : ""}>{grow === 0 ? "產生圖表中…" : "本月住院計費彙總 · 百萬 NT$"}</span>
+        <span className={grow === 0 ? "shimmer-text" : ""}>{grow === 0 ? "產生圖表中…" : "本月專案經費執行彙總 · 百萬 NT$"}</span>
       </div>
       <div className="space-y-2">
         {AGENT_CHART.map((d, i) => (

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { flushSync } from "react-dom"
 import { ThemeSwitch, type Theme } from "@/components/arc/theme-switch/theme-switch"
+import { useLayoutMode } from "../layout"
 
 const KEY = "theme"
 
@@ -22,6 +23,7 @@ function apply(theme: Theme) {
 // 瀏覽器不支援 View Transitions 或使用者偏好減少動態時,直接切換
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(initial)
+  const compact = useLayoutMode() !== "desktop"
 
   const change = (next: Theme, _variant: string, trigger: HTMLElement) => {
     const commit = () => {
@@ -44,7 +46,7 @@ export function ThemeToggle() {
   }
 
   return (
-    <span className="arc">
+    <span className={`arc theme-btn ${compact ? "compact" : ""}`}>
       <ThemeSwitch
         theme={theme}
         variant="reveal"

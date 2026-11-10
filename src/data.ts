@@ -17,24 +17,18 @@ export const DBS: NodeDef[] = [
   { id: "db-informix", kind: "db", label: "Informix",   icon: "database", brand: ibmLogo },
 ]
 
-// 跨院區:不同院區各有一套 HIS
-export const CAMPUSES: NodeDef[] = [
-  { id: "campus-main",  kind: "db", label: "總院", icon: "database" },
-  { id: "campus-north", kind: "db", label: "北區分院", icon: "database" },
-  { id: "campus-south", kind: "db", label: "南區分院", icon: "database" },
-]
-
-// 下方既有使用端
+// 下方既有使用端(與五套源頭資料庫一一對應)
 export const DOWNSTREAM: NodeDef[] = [
   { id: "ds-clinic", kind: "downstream", label: "門診工作站", icon: "stethoscope" },
   { id: "ds-ward",   kind: "downstream", label: "護理站",     icon: "heart-pulse" },
   { id: "ds-admin",  kind: "downstream", label: "行政批價",   icon: "receipt" },
+  { id: "ds-pacs",   kind: "downstream", label: "影像判讀",   icon: "scan" },
   { id: "ds-lab",    kind: "downstream", label: "檢驗室",     icon: "flask-conical" },
-  // 情境 8:導入前,資料要靠 IT 人工撈取
+  // 導入前,資料要靠 IT 人工撈取
   { id: "ds-it",     kind: "person",     label: "IT 部門",    icon: "person" },
-  // 情境 4:手工整併匯出檔的人員
+  // 手工整併匯出檔的人員
   { id: "manual",    kind: "person",     label: "人工處理",   icon: "person-clock" },
-  // 情境 8:提出資料需求的 AI 部門
+  // 提出資料需求的 AI 部門
   { id: "ds-aiteam", kind: "downstream", label: "AI 部門",    icon: "users" },
   // FHIR 對外交換:院外的診所、藥局
   { id: "ext-clinic",   kind: "downstream", label: "診所", icon: "building-2" },
@@ -46,21 +40,18 @@ export const APPS: NodeDef[] = [
   { id: "app-ap",   kind: "app", label: "AP 應用程式",  icon: "app-window" },
   { id: "app-fhir", kind: "app", label: "FHIR Server",  icon: "share-2" },
   { id: "app-bi",   kind: "app", label: "BI Dashboard", icon: "bar-chart-3" },
-  { id: "app-ai",   kind: "app", label: "AI",           icon: "sparkles" },
-  // 情境 4:手工整併後的產出
-  { id: "app-claim",  kind: "app", label: "健保申報",   icon: "receipt" },
+  { id: "app-ai",   kind: "app", label: "地端 AI",      icon: "sparkles" },
+  // 手工整併後的產出
+  { id: "app-claim",    kind: "app", label: "健保申報", icon: "receipt" },
   { id: "app-accredit", kind: "app", label: "評鑑資料", icon: "clipboard-check" },
-  // 情境 3:沒人在用、也沒人維護的舊系統,API 還接著
-  { id: "ghost-1", kind: "app", label: "停用系統", icon: "ghost" },
-  { id: "ghost-2", kind: "app", label: "停用系統", icon: "ghost" },
 ]
 
 export const PLASMA: NodeDef = { id: "plasma", kind: "plasma", label: "Plasma", icon: "layers", logo: { light: plasmaLogo, dark: plasmaLogoDark } }
-// Plasma 整理後的資料落地到這台 PostgreSQL,再提供給 AP 使用(與左側 NIS 的源頭資料庫 PostgreSQL 不同台)
+// Plasma 整理後的資料落地到這台 PostgreSQL,再提供給 AP 使用(與左側源頭資料庫的 PostgreSQL 不同台)
 export const SERVING_PG: NodeDef = { id: "serving-pg", kind: "serving", label: "PostgreSQL", icon: "database", brand: postgresLogo }
 export const KB: NodeDef = { id: "kb", kind: "kb", label: "知識庫", icon: "book-open" }
 
-export const ALL_NODES: NodeDef[] = [...DBS, ...CAMPUSES, ...DOWNSTREAM, ...APPS, PLASMA, SERVING_PG, KB]
+export const ALL_NODES: NodeDef[] = [...DBS, ...DOWNSTREAM, ...APPS, PLASMA, SERVING_PG, KB]
 export const NODE_BY_ID: Record<string, NodeDef> =
   Object.fromEntries(ALL_NODES.map((n) => [n.id, n]))
 
@@ -82,7 +73,7 @@ export const AGENT_SCRIPT: AgentTurn[] = [
   { role: "tool", text: "呼叫 Plasma MCP · list_tables → 找到 計費（MS SQL）、就診主檔（Oracle HIS）" },
   { role: "tool", text: "呼叫 describe_columns → 由知識庫補上欄位語意（DEPT_C=科別、DX_CD=診斷碼…）" },
   { role: "tool", text: "呼叫 query → 由 Plasma 跨 Oracle、MS SQL 彙整，不影響正式資料庫" },
-  { role: "assistant", text: "完成。本月住院計費彙總（依科別）：新陳代謝 NT$1.82M、心臟內科 NT$2.41M、腎臟科 NT$0.96M。報表已產出。" },
+  { role: "assistant", text: "完成。本月住院計費彙總（依科別）：新陳代謝 NT$1.82M、心臟內科 NT$2.41M、腎臟科 NT$0.96M。報表已產出，全程在院內地端執行，資料不出院。" },
 ]
 
 // 情境 6 Agent 產出的示意圖表資料

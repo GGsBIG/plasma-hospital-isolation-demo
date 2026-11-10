@@ -5,8 +5,8 @@ import { SCENES } from "../scenes"
 import { ShieldCheck } from "lucide-react"
 import { FILE_ICONS, FILE_ICON_VIEWBOX } from "../fileIcons"
 import { dotScale, iconScale, place, sceneBox, stageSize, useLayoutMode, zoneRect, type Box } from "../layout"
-import { dominantStates, frameAt, loadsAt, recapAt, segmentAt, segmentIndex, stageKey, statesAt, structure, type EdgeSlot } from "../timeline"
-import { plasmaMix } from "../plasma"
+import { dominantStates, frameAt, loadsAt, segmentAt, segmentIndex, stageKey, statesAt, structure, type EdgeSlot } from "../timeline"
+import { plasmaMix, plasmaOn } from "../plasma"
 import { phaseOf } from "../phase"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
 import { Node, type Badge } from "./Node"
@@ -14,6 +14,8 @@ import { Edge } from "./Edge"
 import { drawDots, dotLen, lutOf, type DotEdge, type Lut } from "./dots"
 import { BrainNet, brainVisibility } from "./BrainNet"
 import { entryAt, entryKey, onReplay, useEntryEpoch } from "../entry"
+import { useUploadDone } from "../upload"
+import { UploadDialog } from "./UploadDialog"
 
 // 進場時節點依資料流順序(左 → 右,同一欄由上而下)一個接一個升起
 const ENTRY_STEP = 70
@@ -27,11 +29,16 @@ const SAFE = 40 // 桌機舞台四周的安全邊距(螢幕 px)
 const REVEAL_MS = 900 // 連線逐步畫出的時間
 const DOT_PAD = (compact: boolean) => (compact ? 700 : 80) // 光點 canvas 超出舞台的邊(手機版連線會延伸到舞台外)
 // 文件上傳:第一份開始飛的時間、每份間隔(秒),各份的起點(相對大腦中心,舞台 px)
-const DOC_DELAY = 1.8
-const DOC_STEP = 1.0
-const DOC_FROM: [number, number][] = [[-580, -390], [-290, -430], [0, -450], [290, -430], [580, -390]]
-// 手機版:舞台上緣較近、卡片字大,五份文件上下交錯排成兩列並往左偏(右邊緊貼鏡頭邊緣),才留在鏡頭內
-const DOC_FROM_COMPACT: [number, number][] = [[-700, -460], [-420, -330], [-140, -460], [120, -330], [380, -460]]
+const DOC_DELAY = 1.0 // 按下 Upload 後,文件一起浮現再一起飛進去
+const DOC_FLY = 1.5 // 與 index.css 的 doc-fly 時長一致
+// 文件飛進 Plasma 之後,知識庫才在 Plasma 上長出來;知識庫長好,大腦才開始長
+const KB_AT = DOC_DELAY + DOC_FLY
+const KB_GROW = 1.0 // 與 index.css 的 kb-grow 時長一致
+// 文件在 Plasma 上方排成一直列,由上到下(相對大腦光暈中心的位移,舞台 px)
+const DOC_COL = (top: number, step: number): [number, number][] => [0, 1, 2, 3, 4].map((k) => [0, top + k * step])
+const DOC_FROM = DOC_COL(-450, 62)
+// 手機版:卡片字大,列距跟著放大
+const DOC_FROM_COMPACT = DOC_COL(-566, 70)
 const BRAIN_W = 1000 // 大腦網路寬度(舞台 px,壓扁成 70% 高):包住疊在 Plasma 上的知識庫
 
 function loadBadge(v: number): Badge {
@@ -161,6 +168,8 @@ export function Stage() {
   const near = ranked[0]
   // 大腦頁的文件上傳動畫(大腦光暈出現時,依目前最像的那個有大腦的狀態決定要不要播)
   const upload = ranked.find((x) => x.brain)?.upload ?? false
+  // 有上傳動畫的頁:使用者按下上傳視窗的 Upload 之後,文件才開始飛、大腦才開始長
+  const uploadDone = useUploadDone()
   const loads = loadsAt(p)
 
   // 滑鼠停在哪個節點:它與直接相連的節點、連線保持清楚,其餘淡化
@@ -205,6 +214,45 @@ export function Stage() {
     merging.current.clear()
     lastKey.current = ""
   }), [])
+  // 有上傳關卡的頁:按 Upload 之前看不到知識庫;按下後等文件飛進 Plasma,知識庫才在上面長出來
+  const gated = useRef(false)
+  useEffect(() => {
+    gated.current = upload
+    const plat = nodeEls.current.get("kb")?.el.querySelector<HTMLElement>(".node-platform")
+    if (!plat) return
+    plat.classList.remove("kb-grow")
+    plat.style.animationDelay = ""
+    plat.style.clipPath = ""
+    if (!upload) {
+      plat.style.visibility = ""
+      return
+    }
+    plat.classList.remove("kb-drop")
+    plat.style.visibility = uploadDone ? "" : "hidden"
+    if (!uploadDone) return
+    // 量出知識庫立方體的底邊(等角 V 字),V 以下裁掉;換算回舞台座標(舞台有縮放)
+    const svg = plat.querySelector("svg")
+    const cube = svg?.querySelector("g")
+    if (svg && cube) {
+      const o = plat.getBoundingClientRect()
+      const k = svg.getBoundingClientRect().width / svg.width.baseVal.value || 1
+      const r = cube.getBoundingClientRect()
+      const bottom = (r.bottom - o.top) / k
+      const hw = r.width / 2 / k
+      const cx = (r.left + r.width / 2 - o.left) / k
+      const far = 5000
+      plat.style.clipPath = `polygon(${-far}px ${-far}px, ${far}px ${-far}px, ${far}px ${bottom - hw / 2}px, ${cx + hw}px ${bottom - hw / 2}px, ${cx}px ${bottom}px, ${cx - hw}px ${bottom - hw / 2}px, ${-far}px ${bottom - hw / 2}px)`
+      const done = (e: AnimationEvent) => {
+        if (e.animationName !== "kb-grow") return
+        plat.style.clipPath = ""
+        plat.removeEventListener("animationend", done)
+      }
+      plat.addEventListener("animationend", done)
+    }
+    plat.style.animationDelay = `${KB_AT}s`
+    void plat.offsetWidth
+    plat.classList.add("kb-grow")
+  }, [upload, uploadDone, epoch])
   // 手機版鏡頭:各畫面狀態的外框依權重內插
   useScrollEffect((p) => {
     if (!compact) return
@@ -257,13 +305,6 @@ export function Stage() {
     return f as (el: SVGGElement | null) => void
   }
 
-  // 結尾總覽完全蓋住時,舞台整個隱藏:底下的動畫都不必再畫
-  useScrollEffect((p) => {
-    const el = ref.current
-    // display:none 才會連 SVG 與 CSS 動畫一起停(visibility:hidden 底下的動畫仍在跑)
-    if (el) el.style.display = recapAt(p) >= 0.99 ? "none" : ""
-  }, [])
-
   useScrollEffect((p) => {
     // 畫面沒有任何變化(同一捲動位置、同一切換進度、同一幕)就整格略過
     const i = segmentIndex(p)
@@ -304,7 +345,7 @@ export function Stage() {
         rec.el.style.pointerEvents = n.opacity < 0.15 ? "none" : ""
       }
       // 疊到 Plasma 上合體的節點(知識庫):每次出現時重播「落下合體」動畫
-      if (mergedIds.has(n.id)) {
+      if (mergedIds.has(n.id) && !gated.current) {
         const vis = n.opacity > 0.5
         if (vis && !merging.current.has(n.id)) {
           const plat = rec.el.querySelector(".node-platform")
@@ -419,7 +460,7 @@ export function Stage() {
     }
   }, [])
 
-  // 光點動畫:每秒 30 格畫在 canvas 上;分頁在背景時 requestAnimationFrame 自動暫停,結尾總覽蓋住時清空不畫
+  // 光點動畫:每秒 30 格畫在 canvas 上;分頁在背景時 requestAnimationFrame 自動暫停
   useEffect(() => {
     const canvas = canvasRef.current
     const ctx = canvas?.getContext("2d")
@@ -441,7 +482,6 @@ export function Stage() {
       }
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.clearRect(0, 0, cw, ch)
-      if (recapAt(scrollStore.get()) >= 0.99) return
       ctx.setTransform(k, 0, 0, k, pad * k, pad * k)
       const hv = hoverRef.current
       for (const e of edgeEls.current.values()) e.faded = hv !== null && e.from !== hv && e.to !== hv
@@ -510,26 +550,28 @@ export function Stage() {
             style={{ width: 620 * iconScale("plasma"), height: 500 * iconScale("plasma"), left: -310 * iconScale("plasma"), top: -250 * iconScale("plasma") }}
           />
           {/* 大腦輪廓:線條逐筆畫出,把知識庫與 Plasma 包在裡面;有上傳動畫時等文件都飛進去才開始畫 */}
-          <BrainNet
-            key={epoch}
-            width={BRAIN_W * iconScale("plasma")}
-            delay={upload ? DOC_DELAY + DOC_FILES.length * DOC_STEP + 0.3 : 0.2}
-            mode={upload ? "full" : "idle"}
-          />
+          {(!upload || uploadDone) && (
+            <BrainNet
+              key={`${epoch}-${uploadDone}`}
+              width={BRAIN_W * iconScale("plasma")}
+              delay={upload ? KB_AT + KB_GROW + 0.1 : 0.2}
+              mode={upload ? "full" : "idle"}
+            />
+          )}
           {/* 上傳到知識庫的文件:從上方各自飛進知識庫後消失 */}
-          {/* 先一起浮現在上方排成一列(doc-appear),再一份一份飛進去(doc-fly) */}
-          {upload && DOC_FILES.map((f, k) => (
-            <div key={`${f.name}-${epoch}`} className="doc-appear absolute left-0 top-0" style={{ animationDelay: `${0.4 + k * 0.2}s` }}>
+          {/* 在上方由上到下排成一直列浮現(doc-appear),再五份同時飛進去(doc-fly) */}
+          {upload && uploadDone && DOC_FILES.map((f, k) => (
+            <div key={`${f.name}-${epoch}`} className="doc-appear absolute left-0 top-0" style={{ animationDelay: `${0.2 + k * 0.1}s` }}>
             <div
               className="doc-fly absolute left-0 top-0"
               style={{
                 ["--x0" as string]: `${(compact ? DOC_FROM_COMPACT : DOC_FROM)[k][0]}px`,
                 ["--y0" as string]: `${(compact ? DOC_FROM_COMPACT : DOC_FROM)[k][1]}px`,
-                animationDelay: `${DOC_DELAY + k * DOC_STEP}s`,
+                animationDelay: `${DOC_DELAY}s`,
               }}
             >
-              <div className={`flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-xl border border-border bg-card font-medium text-foreground ${compact ? "px-6 py-3.5 text-[38px]" : "px-4 py-2.5 text-[26px]"}`}>
-                <svg viewBox={FILE_ICON_VIEWBOX} className={`shrink-0 text-[rgb(37_132_235)] dark:text-[rgb(110_175_255)] ${compact ? "h-14 w-14" : "h-9 w-9"}`} fill="currentColor" aria-hidden>
+              <div className={`flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-none border border-border bg-card font-medium text-foreground ${compact ? "w-[340px] px-5 py-2.5 text-[30px]" : "w-[270px] px-4 py-2.5 text-[26px]"}`}>
+                <svg viewBox={FILE_ICON_VIEWBOX} className={`shrink-0 text-[rgb(37_132_235)] dark:text-[rgb(110_175_255)] ${compact ? "h-11 w-11" : "h-9 w-9"}`} fill="currentColor" aria-hidden>
                   {FILE_ICONS[f.icon].map((d, j) => <path key={j} d={d} />)}
                 </svg>
                 {f.name}
@@ -564,9 +606,12 @@ export function Stage() {
           )
         })}
       </div>
+      {/* 上傳視窗:文件已就緒,等使用者按 Upload */}
+      {/* 只在這頁真的切到導入後時出現(換頁中導入後正在淡出的那一瞬間不跳出來) */}
+      {near.upload && !uploadDone && plasmaOn(Math.round(Math.min(SCENES.length - 1, Math.max(0, p)))) && <UploadDialog compact={compact} />}
       {/* 大腦圖示的授權標註(Noun Project 免費圖示須標註作者),只在大腦頁導入後出現 */}
       {near.upload && (
-        <span className="pointer-events-none absolute bottom-1 right-2 whitespace-nowrap text-[11px] text-muted-foreground/60 pp:text-[9px]">Brain by Clockwise, File icons by Febri Ardianto, Knowledge by Suwarjo from the Noun Project</span>
+        <span className="pointer-events-none absolute bottom-1 right-2 whitespace-nowrap text-[11px] text-muted-foreground/60 pp:left-auto pp:max-w-[60%] pp:whitespace-normal pp:text-right pp:text-[9px] pp:leading-tight">Brain by Clockwise, File icons by Febri Ardianto, Knowledge by Suwarjo from the Noun Project</span>
       )}
     </div>
   )

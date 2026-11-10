@@ -11,7 +11,7 @@ const APP_Y: Record<string, number> = {
 // 既有系統與各自的源頭資料庫對齊
 const DS_Y: Record<string, number> = {
   "ds-clinic": DB_Y["db-oracle"], "ds-ward": DB_Y["db-postgres"],
-  "ds-admin": DB_Y["db-mssql"], "ds-lab": DB_Y["db-informix"],
+  "ds-admin": DB_Y["db-mssql"], "ds-pacs": DB_Y["db-mysql"], "ds-lab": DB_Y["db-informix"],
 }
 
 // Plasma 出現後(情境 3 起)固定在同一位置,切換時只有周邊節點移動
@@ -21,7 +21,6 @@ const PLASMA_POS = { x: 800, y: 525 }
 // nodes 裡 kb 要寫在 plasma 後面,才會畫在 Plasma 上層
 const KB_DOCK = { x: 800, y: 439 } // Plasma 核心立方體頂面(Plasma 中心往上 PLASMA_LIFT × 1.3)
 const BRAIN_BADGE = { tone: "ok" as const, text: "資料大腦 · 理解所有表與欄位" }
-const ASK = "上月心臟內科住院幾人？"
 
 const col = (ys: Record<string, number>, x: number) =>
   Object.fromEntries(Object.entries(ys).map(([id, y]) => [id, { x, y }]))
@@ -33,61 +32,11 @@ const dbIds = Object.keys(DB_Y)
 const appIds = Object.keys(APP_Y)
 const dsIds = Object.keys(DS_Y)
 
-const campusIds = ["campus-main", "campus-north", "campus-south"]
-const branchIds = ["campus-north", "campus-south"]
-// 總院在左、兩間分院在右;導入後 Plasma 插在中間
-const CAMPUS_POS = { "campus-main": { x: 260, y: 525 }, "campus-north": { x: 1340, y: 300 }, "campus-south": { x: 1340, y: 750 } }
-// 一來一回兩條線並排(上去、送回來);reveal 給延遲毫秒時,先畫出去程、再畫出回程
-const twoWay = (a: string, b: string, reveal?: number) => [
-  { from: a, to: b, state: "isolated" as const, lane: -9, reveal },
-  { from: b, to: a, state: "isolated" as const, lane: 9, reveal: reveal === undefined ? undefined : reveal + 350 },
-]
-
-// 跨院區導入前:分院透過 DB Link 向總院拉資料,白天尖峰不能拉,只能等凌晨離峰;
-// 一來一回兩條線(分院送出查詢、總院資料送回)依序畫出
-const DBLINK_PHASES: Phase[] = [
-  {
-    ms: 2600,
-    patch: {
-      edges: [],
-      badges: {
-        "campus-main": { tone: "warn", text: "看診尖峰" },
-        ...Object.fromEntries(branchIds.map((id) => [id, { tone: "idle" as const, text: "等凌晨同步" }])),
-      },
-      callouts: { "campus-main": { tone: "idle", q: "白天尖峰，不能拉資料", time: "08:00–24:00" } },
-    },
-  },
-  {
-    ms: 3200,
-    patch: {
-      edges: branchIds.flatMap((id, k) => [
-        { from: id, to: "campus-main", state: "risk" as const, lane: -9, reveal: k * 300 },
-        { from: "campus-main", to: id, state: "risk" as const, lane: 9, reveal: 450 + k * 300 },
-      ]),
-      badges: {
-        "campus-main": { tone: "idle", text: "離峰" },
-        ...Object.fromEntries(branchIds.map((id) => [id, { tone: "warn" as const, text: "DB Link 拉取中" }])),
-      },
-      callouts: { "campus-main": { tone: "idle", q: "凌晨離峰，DB Link 拉資料", time: "02:00" } },
-    },
-  },
-  {
-    ms: 2800,
-    patch: {
-      edges: [],
-      badges: Object.fromEntries(branchIds.map((id) => [id, { tone: "danger" as const, text: "資料是昨天的" }])),
-      callouts: { "campus-main": { tone: "danger", q: "分院隔天才看得到", time: "隔天 08:00" } },
-    },
-  },
-]
-
 // FHIR 對外交換:FHIR Server 與院外的診所、藥局
 const extIds = ["ext-clinic", "ext-pharmacy"]
-// 導入後是五段流程(資料庫 → Plasma → PostgreSQL → FHIR Server → 診所／藥局),這頁的 Plasma 往左移,各欄間距平均
-const FHIR_POS = { x: 1230, y: 525 }
+// 導入後是四段流程(資料庫 → Plasma → FHIR Server → 診所／藥局),Plasma 在固定位置
+const GW_POS = { x: 1230, y: 525 }
 const EXT_POS = { "ext-clinic": { x: 1480, y: 400 }, "ext-pharmacy": { x: 1480, y: 650 } }
-const FHIR_PLASMA = { x: 640, y: 525 }
-const FHIR_PG = { x: 960, y: 525 }
 
 // 資料都經過 Plasma:源頭資料庫 → Plasma → 各應用
 const viaPlasma = (ids: string[]) => [
@@ -103,20 +52,20 @@ const dsEdges = [
   { from: "db-oracle", to: "ds-clinic", state: "normal" as const },
   { from: "db-postgres", to: "ds-ward", state: "normal" as const },
   { from: "db-mssql", to: "ds-admin", state: "normal" as const },
+  { from: "db-mysql", to: "ds-pacs", state: "normal" as const },
   { from: "db-informix", to: "ds-lab", state: "normal" as const },
 ]
 
 // 情境 6:五個資料庫輪流被 AI 的 DELETE 打掛
 const CRASH_ORDER = ["db-oracle", "db-postgres", "db-mssql", "db-mysql", "db-informix"]
-const DS_OF: Record<string, string> = { "db-oracle": "ds-clinic", "db-postgres": "ds-ward", "db-mssql": "ds-admin", "db-informix": "ds-lab" }
+const DS_OF: Record<string, string> = { "db-oracle": "ds-clinic", "db-postgres": "ds-ward", "db-mssql": "ds-admin", "db-mysql": "ds-pacs", "db-informix": "ds-lab" }
 const SEV1: Callout = {
-  tone: "danger", side: "bottom", q: "重大事故（Sev-1）· 線上系統停機",
-  brief: "醫院須於 1 小時內通報主管機關",
+  tone: "danger", q: "重大事故（Sev-1）· 線上系統停機",
+  brief: "醫院須於知悉後 1 小時內通報主管機關",
   rows: [
-    ["機構", "通報時限", "主管機關"],
-    ["銀行", "確認後 30 分鐘內（電話）、7 日內補公文", "金管會銀行局"],
-    ["政府機關", "知悉後 1 小時內", "數位發展部資安署"],
-    ["醫院", "資安事件 1 小時內／重大醫療事故 7 個工作日內", "數位發展部、衛福部"],
+    ["機構", "時限", "通報對象"],
+    ["公立醫院（公務機關）", "1 小時內", "上級或監督機關"],
+    ["醫院（特定非公務機關）", "1 小時內", "衛生福利部"],
   ],
 }
 
@@ -195,7 +144,7 @@ const HANDOFF: Callout = {
   ],
 }
 
-// 情境 4:人工逐一到各資料庫匯出,再手動合併,最後產出健保申報、評鑑資料
+// 情境 3:人工逐一到各資料庫匯出,再手動合併,最後產出健保申報、評鑑資料
 const outIds = ["app-claim", "app-accredit"]
 const OUT_POS = { "app-claim": { x: 1340, y: 400 }, "app-accredit": { x: 1340, y: 650 } }
 const PULL_DAY: Record<string, string> = {
@@ -257,7 +206,7 @@ const MID = PLASMA_POS.y // 單線流程(檔案、IT、報表…)排在 Plasma �
 
 // 情境 2 導入後:資料庫(與對應的既有系統)上下間距收緊,外圍的防護框連同下緣標題才放得進舞台
 const TIGHT_Y: Record<string, number> = { "db-oracle": 165, "db-postgres": 350, "db-mssql": 535, "db-mysql": 720, "db-informix": 905 }
-const DS_DB: Record<string, string> = { "ds-clinic": "db-oracle", "ds-ward": "db-postgres", "ds-admin": "db-mssql", "ds-lab": "db-informix" }
+const DS_DB: Record<string, string> = { "ds-clinic": "db-oracle", "ds-ward": "db-postgres", "ds-admin": "db-mssql", "ds-pacs": "db-mysql", "ds-lab": "db-informix" }
 const tight = (ids: string[], x: number) => Object.fromEntries(ids.map((id) => [id, { x, y: TIGHT_Y[DS_DB[id] ?? id] }]))
 
 // 每頁一個痛點:預設畫面是「導入前」,右上角切到「導入 Plasma 後」看解法。
@@ -269,7 +218,7 @@ export const SCENES: SceneDef[] = [
     title: "醫院現況",
     short: "醫院現況",
     bullets: [
-      "院內有五套不同廠牌的資料庫，分別支援 HIS、NIS、ERP、PACS、LIS 等系統。",
+      "院內有五套不同廠牌的資料庫，支援 HIS、NIS、ERP、PACS、LIS 等系統。",
       "各系統直接存取自己的資料庫，目前運作穩定。",
     ],
     nodes: { ...dbCol(560), ...dsCol(1060) },
@@ -311,53 +260,13 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 3. API 串接蜘蛛網化 → 單一入口
-  {
-    id: "api",
-    title: "API 串接蜘蛛網化",
-    short: "API 串接",
-    pain: "每個應用各接五套資料庫，語法各異；廢棄的 API 成為資安破口。",
-    fix: "單一入口、一種 SQL，集中管理所有資料庫。",
-    nodes: { ...dbCol(260), ...appCol(1340), "ghost-1": { x: 1060, y: 60 }, "ghost-2": { x: 1060, y: 985 } },
-    active: [...appIds, ...dbIds, "ghost-1", "ghost-2"],
-    edges: [
-      ...appIds.flatMap((app) => dbIds.map((db) => ({ from: db, to: app, state: "risk" as const }))),
-      // 停用系統的 API 沒拔掉:灰色虛線,沒有資料在流,卻還開著
-      ...["db-oracle", "db-postgres", "db-mssql"].map((db) => ({ from: db, to: "ghost-1", state: "dead" as const })),
-      ...["db-mssql", "db-mysql", "db-informix"].map((db) => ({ from: db, to: "ghost-2", state: "dead" as const })),
-    ],
-    loads: HIGH,
-    badges: {
-      ...Object.fromEntries(appIds.map((id) => [id, { tone: "danger" as const, text: "串接 5 套 API" }])),
-      "ghost-1": { tone: "danger", text: "無人維護 · 資安破口" },
-      "ghost-2": { tone: "danger", text: "無人維護 · 資安破口" },
-    },
-    // 同一個需求,各家資料庫寫法都不同
-    callouts: {
-      "app-bi": {
-        tone: "danger", side: "left", q: "同一需求：取前 10 筆",
-        code: [["Oracle", "WHERE ROWNUM <= 10"], ["MS SQL", "SELECT TOP 10"], ["MySQL／PG", "LIMIT 10"], ["Informix", "SELECT FIRST 10"]],
-      },
-    },
-    plasma: {
-      nodes: { ...dbCol(260), plasma: PLASMA_POS, ...appCol(1340) },
-      active: [...appIds, "plasma", ...dbIds],
-      edges: viaPlasma(appIds),
-      loads: NORMAL,
-      badges: { plasma: { tone: "ok", text: "單一入口 · 統一 SQL" } },
-      callouts: {
-        plasma: { tone: "ok", q: "同一需求：取前 10 筆", code: [["Plasma", "SELECT … LIMIT 10"]], a: "一種 SQL 查詢 5 套資料庫" },
-      },
-    },
-  },
-
-  // 4. 手工合併資料:人工逐一匯出 → 手動合併 → 產出(健保申報、評鑑資料),數字對不上再重來 → Plasma 自動整合
+  // 3. 手工合併資料:人工逐一匯出 → 手動合併 → 產出(健保申報、評鑑資料),數字對不上再重來 → Plasma 自動整合
   {
     id: "manual",
     title: "手工合併資料",
     short: "手工合併",
-    pain: "人工逐一到各資料庫匯出，再手動合併，數字要等好幾天。",
-    fix: "Plasma 自動整合，健保申報、評鑑資料一次到位。",
+    pain: "人工到各資料庫匯出再手動合併，報表要等好幾天。",
+    fix: "Plasma 自動整合，健保申報、評鑑資料直接產出。",
     nodes: { ...dbCol(260), manual: { x: 800, y: MID }, ...OUT_POS },
     active: [...dbIds, "manual", ...outIds],
     edges: [],
@@ -375,38 +284,14 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 5. 跨院區:分院透過 DB Link 向總院拉資料,只能等凌晨離峰 → 各院區與 Plasma 雙向即時同步
-  {
-    id: "campus",
-    title: "跨院區資料不同步",
-    short: "跨院區",
-    pain: "分院透過 DB Link 向總院拉資料，只能等凌晨離峰，隔天才看得到。",
-    fix: "各院區即時同步，資料就在院區本地。",
-    nodes: CAMPUS_POS,
-    active: campusIds,
-    edges: [],
-    // 依時間輪播:白天尖峰不能拉 → 凌晨 DB Link 拉資料 → 隔天才看得到
-    phases: DBLINK_PHASES,
-    plasma: {
-      nodes: { ...CAMPUS_POS, plasma: PLASMA_POS },
-      active: [...campusIds, "plasma"],
-      // 切到導入後:總院、北區、南區依序與 Plasma 畫出雙向連線
-      edges: campusIds.flatMap((id, k) => twoWay(id, "plasma", k * 250)),
-      badges: {
-        plasma: { tone: "ok", text: "即時同步" },
-        ...Object.fromEntries(branchIds.map((id) => [id, { tone: "ok" as const, text: "即時可查" }])),
-      },
-    },
-  },
-
-  // 6. FHIR 對外交換:轉檔程式直連核心資料庫 → Plasma 整理後寫入 PostgreSQL,FHIR Server 只讀這台,以標準格式與院外交換
+  // 4. FHIR 對外交換:轉檔程式直連核心資料庫 → Plasma 整理成標準代碼,FHIR Server 只向 Plasma 取用,與院外診所、藥局交換
   {
     id: "fhir",
     title: "FHIR 對外交換",
     short: "FHIR 交換",
-    pain: "FHIR 轉檔直連核心資料庫，負載過高、格式不一。",
-    fix: "Plasma 整理好資料存入 PostgreSQL，FHIR 只讀這一台。",
-    nodes: { ...dbCol(220), "app-fhir": FHIR_POS, ...EXT_POS },
+    pain: "FHIR 轉檔直連核心資料庫，負載過高、代碼不一。",
+    fix: "Plasma 統一代碼，FHIR Server 只向 Plasma 取用。",
+    nodes: { ...dbCol(220), "app-fhir": GW_POS, ...EXT_POS },
     active: [...dbIds, "app-fhir", ...extIds],
     edges: [
       ...dbIds.map((id) => ({ from: id, to: "app-fhir", state: "overload" as const })),
@@ -415,33 +300,32 @@ export const SCENES: SceneDef[] = [
     loads: HIGH,
     badges: Object.fromEntries(extIds.map((id) => [id, { tone: "danger" as const, text: "格式不一" }])),
     plasma: {
-      nodes: { ...dbCol(220), plasma: FHIR_PLASMA, "serving-pg": FHIR_PG, "app-fhir": FHIR_POS, ...EXT_POS },
-      active: [...dbIds, "plasma", "serving-pg", "app-fhir", ...extIds],
+      nodes: { ...dbCol(220), plasma: PLASMA_POS, "app-fhir": GW_POS, ...EXT_POS },
+      active: [...dbIds, "plasma", "app-fhir", ...extIds],
       // 進 Plasma 前光點各色(各系統格式不一),出來後統一成同一色
       edges: [
         ...dbIds.map((id) => ({ from: id, to: "plasma", state: "raw" as const })),
-        { from: "plasma", to: "serving-pg", state: "isolated" },
-        { from: "serving-pg", to: "app-fhir", state: "isolated" },
+        { from: "plasma", to: "app-fhir", state: "isolated" },
         ...extIds.map((id) => ({ from: "app-fhir", to: id, state: "isolated" as const })),
       ],
       loads: NORMAL,
-      stack: ["serving-pg", "app-fhir"],
+      stack: ["app-fhir"],
       badges: {
         plasma: { tone: "ok", text: "清洗 · 統一代碼" },
-        "serving-pg": { tone: "ok", text: "標準化資料" },
-        ...Object.fromEntries(extIds.map((id) => [id, { tone: "ok" as const, text: "電子處方箋" }])),
+        ...Object.fromEntries(extIds.map((id) => [id, { tone: "ok" as const, text: "FHIR 標準格式" }])),
       },
     },
   },
 
-  // 7. 資安風險:AI 大量查詢拖垮效能,誤下 DELETE 讓資料庫停機 → 重大事故、依法限時通報
+  // 5. 資安風險:AI 大量查詢拖垮效能,誤下 DELETE 讓資料庫停機 → 重大事故、依法限時通報
   {
     id: "ai-risk",
     title: "AI 的資安與效能風險",
     short: "資安風險",
-    pain: "AI 直連正式資料庫，一個錯誤指令就可能讓系統停機。",
+    pain: "AI 直連正式資料庫，一個錯誤指令就能讓系統停機。",
     fix: "AI 只能透過 Plasma 唯讀存取，資料不會被誤刪。",
-    nodes: { ...dsCol(150), ...dbCol(480), "app-ai": { x: 1340, y: MID } },
+    // 地端 AI 靠右一點:上方的重大事故警報卡才不會壓到資料庫的負載徽章
+    nodes: { ...dsCol(150), ...dbCol(480), "app-ai": { x: 1400, y: MID } },
     active: [...dsIds, ...dbIds, "app-ai"],
     // 第 1 幕(預設內容):AI 大量查詢,所有資料庫過載冒煙
     edges: [...dsEdges, ...dbIds.map((id) => ({ from: id, to: "app-ai", state: "overload" as const }))],
@@ -451,7 +335,7 @@ export const SCENES: SceneDef[] = [
     phases: crashPhases,
     phaseAll: CRASH_ALL,
     plasma: {
-      nodes: { ...dsCol(150), ...dbCol(480), plasma: PLASMA_POS, "app-ai": { x: 1340, y: MID } },
+      nodes: { ...dsCol(150), ...dbCol(480), plasma: PLASMA_POS, "app-ai": { x: 1400, y: MID } },
       active: [...dsIds, ...dbIds, "plasma", "app-ai"],
       edges: [...dsEdges, ...viaPlasma(["app-ai"])],
       loads: NORMAL,
@@ -462,39 +346,14 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 8. AI 不了解院內資料 → 知識庫與 Plasma 合體成資料大腦,AI 答得準
-  {
-    id: "knowledge",
-    title: "AI 不了解院內資料",
-    short: "Plasma 大腦",
-    pain: "欄位多為代碼，AI 看不懂，答案容易出錯。",
-    fix: "匯入資料字典，Plasma 成為最懂院內資料的大腦。",
-    // 源頭資料庫靠左、AI 靠右,中間留給大腦輪廓
-    nodes: { ...dbCol(150), "app-ai": { x: 1460, y: MID } },
-    active: [...dbIds, "app-ai"],
-    edges: dbIds.map((id) => ({ from: id, to: "app-ai", state: "risk" as const })),
-    badges: { "app-ai": { tone: "danger", text: "回答不準確" } },
-    callouts: { "app-ai": { tone: "danger", q: ASK, a: "無法判斷 DEPT_C 欄位意義" } },
-    plasma: {
-      nodes: { ...dbCol(150), plasma: PLASMA_POS, kb: KB_DOCK, "app-ai": { x: 1460, y: MID } },
-      active: ["plasma", "kb", "app-ai"],
-      edges: viaPlasma(["app-ai"]),
-      brain: true,
-      // 系統文件、資料庫描述等文件依序飛進知識庫,接著大腦輪廓把知識庫與 Plasma 包在一起
-      upload: true,
-      merged: ["kb"],
-      badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "回答精準" } },
-      callouts: { "app-ai": { tone: "ok", q: ASK, a: "312 人" } },
-    },
-  },
-
-  // 9. 跨部門溝通成本 → AI Agent 透過 MCP 自助取得資料
+  // 6. AI 用不了院內資料(拿不到、看不懂):導入前是 AI 部門與 IT 來回協調;
+  //    導入後文件飛進知識庫、與 Plasma 合體長出資料大腦,接著 AI Agent 透過 MCP 自助取得資料
   {
     id: "mcp",
-    title: "跨部門溝通成本",
-    short: "跨部門協作",
-    pain: "需求在 AI 部門與 IT 之間來回，動輒數月。",
-    fix: "AI Agent 透過 MCP 直接取用資料，數分鐘完成。",
+    title: "AI 用不了院內資料",
+    short: "Plasma 大腦",
+    pain: "AI 要資料得找 IT 來回協調，動輒數月；拿到了也看不懂欄位代碼。",
+    fix: "匯入資料字典，Plasma 成為資料大腦；AI Agent 透過 MCP 自助取用，數分鐘完成。",
     nodes: { ...dbCol(260), "ds-it": { x: 800, y: MID }, "ds-aiteam": { x: 1340, y: MID } },
     active: [...dbIds, "ds-it", "ds-aiteam"],
     edges: [
@@ -507,11 +366,13 @@ export const SCENES: SceneDef[] = [
     callouts: { "ds-aiteam": HANDOFF, "ds-it": HANDOFF },
     badges: { "ds-aiteam": { tone: "warn", text: "等待資料" } },
     plasma: {
-      // 同大腦頁:源頭資料庫靠左、AI 靠右,中間留給大腦輪廓
+      // 源頭資料庫靠左、AI 靠右,中間留給大腦輪廓
       nodes: { ...dbCol(150), plasma: PLASMA_POS, kb: KB_DOCK, "app-ai": { x: 1460, y: MID } },
       active: ["plasma", "kb", "app-ai"],
       edges: viaPlasma(["app-ai"]),
       brain: true,
+      // 系統文件、資料字典等文件依序飛進知識庫,接著大腦輪廓把知識庫與 Plasma 包在一起;大腦長好後才播 Agent 對話
+      upload: true,
       merged: ["kb"],
       badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "數分鐘取得結果" } },
       showAgent: true,

@@ -400,13 +400,27 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
   from { transform: translateY(-160px) scale(1.15); opacity: 0; }
   60% { opacity: 1; }
 }
+/* 知識庫從 Plasma 頂面「長」出來(文件都飛進去之後):剛硬的機械推升,不彈跳、不縮放。
+   立方體從 Plasma 裡往上推出,分三段推、段與段之間停頓卡住,最後往下一頓坐實。
+   低於知識庫底邊(等角 V 字)的部分由外層裁掉(Stage 量好寫進 clip-path),看起來像從頂面升上來 */
+.kb-grow > svg { animation: kb-grow 1s linear both; animation-delay: inherit; }
+@keyframes kb-grow {
+  0%   { transform: translateY(100%); animation-timing-function: cubic-bezier(0.6, 0, 0.4, 1); }
+  26%  { transform: translateY(64%);  animation-timing-function: steps(1, end); }
+  36%  { transform: translateY(64%);  animation-timing-function: cubic-bezier(0.6, 0, 0.4, 1); }
+  58%  { transform: translateY(30%);  animation-timing-function: steps(1, end); }
+  68%  { transform: translateY(30%);  animation-timing-function: cubic-bezier(0.6, 0, 0.4, 1); }
+  88%  { transform: translateY(0);    animation-timing-function: cubic-bezier(0.5, 0, 1, 1); }
+  93%  { transform: translateY(3px);  animation-timing-function: linear; }
+  100% { transform: none; }
+}
 /* 文件上傳:先在上方淡入排成一列,再一份一份縮小飛進知識庫後消失 */
 .doc-appear { animation: doc-appear 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
 @keyframes doc-appear {
   from { opacity: 0; transform: translateY(-16px); }
   to { opacity: 1; transform: none; }
 }
-.doc-fly { animation: doc-fly 1.5s cubic-bezier(0.55, 0, 0.3, 1) both; }
+.doc-fly { transform-origin: 0 0; animation: doc-fly 1.5s cubic-bezier(0.55, 0, 0.3, 1) both; }
 @keyframes doc-fly {
   0% { opacity: 1; transform: translate(var(--x0), var(--y0)) scale(1); }
   70% { opacity: 1; }
@@ -421,7 +435,7 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
   to { opacity: 1; translate: 0 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .brain-aura, .callout-in, .brain-net, .brain-line, .brain-node, .kb-drop { animation: none !important; }
+  .brain-aura, .callout-in, .brain-net, .brain-line, .brain-node, .kb-drop, .kb-grow > svg { animation: none !important; }
   .doc-appear { display: none; }
 }
 
@@ -479,3 +493,67 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
   .replay-spin { animation: none; }
   .arc button:active { transform: none; }
 }
+
+/* 導入前／後切換:投影時要一眼看到。桌機放大,目前狀態那顆上色(導入前紅、導入後綠) */
+.plasma-toggle { --tg-before: 0 72% 51%; --tg-after: 142 64% 38%; }
+.dark .plasma-toggle { --tg-before: 0 84% 66%; --tg-after: 142 65% 58%; }
+.plasma-toggle [data-fbg-item][aria-pressed="true"] { font-weight: 600; }
+.plasma-toggle [data-fbg-item][aria-label="導入前"][aria-pressed="true"] { background: hsl(var(--tg-before) / 0.12); color: hsl(var(--tg-before)); }
+.plasma-toggle [data-fbg-item][aria-label="導入 Plasma 後"][aria-pressed="true"] { background: hsl(var(--tg-after) / 0.14); color: hsl(var(--tg-after)); }
+/* 第一次引導:「導入 Plasma 後」外圈脈動,下方提示輕輕上下浮動 */
+.plasma-toggle.hint [data-fbg-item][aria-label="導入 Plasma 後"] { color: hsl(var(--tg-after)); animation: tg-pulse 1.8s ease-out infinite; }
+@keyframes tg-pulse {
+  0% { box-shadow: 0 0 0 0 hsl(var(--tg-after) / 0.45); }
+  70% { box-shadow: 0 0 0 12px hsl(var(--tg-after) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--tg-after) / 0); }
+}
+.toggle-hint { font-size: 15px; animation: hint-float 2.4s ease-in-out infinite; }
+/* 手機舞台小,提示卡會蓋住圖,只留按鈕脈動 */
+.compact .toggle-hint { display: none; }
+.toggle-hint::before { content: ""; position: absolute; right: 48px; top: -6px; width: 12px; height: 12px; background: inherit; transform: rotate(45deg); border-radius: 2px; }
+@keyframes hint-float { 50% { transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .plasma-toggle.hint [data-fbg-item][aria-label="導入 Plasma 後"], .toggle-hint { animation: none; }
+}
+
+/* 1400 寬以下:底部切換列加上自動播放鈕會太寬,自動播放只留圖示、切換列每格收窄 */
+@media (max-width: 1399px) {
+  .autoplay-label { display: none; }
+  .stepper-item { padding-inline: 10px; }
+}
+
+/* 上傳視窗的 Upload 鈕:外圈脈動 + 光澤掃過 + 圖示上下彈跳,滑鼠移上去放大一點,讓人知道要按 */
+.upload-cta { animation: upload-pulse 1.6s ease-out infinite; transition: transform 160ms ease, box-shadow 160ms ease; }
+.upload-cta:hover { transform: translateY(-1px) scale(1.02); }
+.upload-cta:active { transform: scale(0.98); }
+@keyframes upload-pulse {
+  0% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.45); }
+  70% { box-shadow: 0 0 0 14px hsl(var(--primary) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+}
+.upload-shine { background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.35), transparent); transform: translateX(-120%); animation: upload-shine 2.2s ease-in-out infinite; }
+.dark .upload-shine { background: linear-gradient(100deg, transparent, rgb(0 0 0 / 0.25), transparent); }
+@keyframes upload-shine { 0%, 35% { transform: translateX(-120%); } 75%, 100% { transform: translateX(320%); } }
+.upload-arrow { animation: upload-arrow 1.1s ease-in-out infinite; }
+@keyframes upload-arrow { 0%, 100% { transform: translateY(1px); } 50% { transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .upload-cta, .upload-shine, .upload-arrow { animation: none; }
+  .upload-shine { display: none; }
+}
+
+/* 手機版資料庫 logo 疊在圓柱前方:描一圈底色,跟後面的圓柱線條分開 */
+.brand-in { filter: drop-shadow(0 0 3px hsl(var(--background))) drop-shadow(0 0 3px hsl(var(--background))); }
+
+/* 手機版:標題列與舞台右上角的按鈕統一 30px 高(自動播放、主題、重播、導入前後切換),全部圓角 */
+.replay-btn.compact [role="toolbar"], .plasma-toggle.compact [role="toolbar"] { --fbg-h: 24px; --fbg-pad: 2px; --fbg-gap: 2px; --fbg-pad-x: 9px; --fbg-outer: 999px; }
+.replay-btn.compact [data-fbg-item], .plasma-toggle.compact [data-fbg-item] { border-radius: 999px; }
+.plasma-toggle.compact [data-fbg-item] { font-size: 12.5px; }
+.replay-btn.compact [data-fbg-item] svg, .plasma-toggle.compact [data-fbg-item] svg { width: 14px; height: 14px; }
+.theme-btn.compact button { width: 30px; min-width: 30px; height: 30px; min-height: 30px; border-radius: 999px; }
+.theme-btn.compact button svg { width: 15px; height: 15px; }
+
+/* 手機版不用滑動換頁(見 App.tsx):關掉下拉重新整理與回彈 */
+html.no-swipe, html.no-swipe body { overscroll-behavior: none; }
+
+/* 說明欄上緣:上半段實心蓋住上一段的尾巴,下半段漸層淡出 */
+.narr-top-fade { background: linear-gradient(to bottom, hsl(var(--background)) 0%, hsl(var(--background)) 50%, hsl(var(--background) / 0) 100%); }

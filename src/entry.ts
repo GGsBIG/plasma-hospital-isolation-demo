@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react"
 import { scrollStore } from "./scroll"
 import { restartPhases } from "./phase"
 
-// 頁面「進場」時間軸:換頁(切換列、方向鍵、總覽卡片)與重播鈕都會從頭播放一次目前這一頁的效果。
+// 頁面「進場」時間軸:換頁(切換列、方向鍵、說明卡片)與重播鈕都會從頭播放一次目前這一頁的效果。
 // 畫面仍然由捲動進度算出,進場只是在上面再乘一層「依時間出現」的程度:
 // 節點依資料流順序升起、連線依序畫出、左側說明逐字浮現;播放期間每格通知 scrollStore 重算。
 // 手動捲動不觸發進場(捲到一半停在一半的行為不變)。
@@ -34,7 +34,7 @@ function bump(i: number) {
   epochListeners.forEach((fn) => fn())
 }
 
-// 完整重播第 i 頁:分幕從第 1 幕、需要重掛的元件(大腦、總覽)重掛、節點/連線/說明依序進場
+// 完整重播第 i 頁:分幕從第 1 幕、需要重掛的元件(大腦)重掛、節點/連線/說明依序進場
 export function replay(i: number) {
   restartPhases(i)
   bump(i)
@@ -78,7 +78,10 @@ export function onReplay(fn: (i: number) => void) {
   }
 }
 
-// 重播次數:當 React key 用,讓大腦、總覽這類自帶計時器的元件重新掛載、從頭播
+// 目前的重播次數(非 React 的地方讀)
+export const entryEpoch = () => epoch
+
+// 重播次數:當 React key 用,讓大腦這類自帶計時器的元件重新掛載、從頭播
 export function useEntryEpoch() {
   return useSyncExternalStore(
     (cb) => {

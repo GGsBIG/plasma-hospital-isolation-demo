@@ -28,6 +28,9 @@ export function phasesOf(i: number, cycle = 0): Phase[] {
 
 const total = (i: number) => phasesOf(i).reduce((n, ph) => n + ph.ms, 0)
 
+// 第 i 頁分幕一整輪多長(毫秒);沒有分幕回傳 0。自動播放用來決定導入前停多久
+export const cycleMs = (i: number) => (SCENES[i]?.phases ? total(i) : 0)
+
 export function phaseOf(i: number): { idx: number; cycle: number } {
   const t0 = start.get(i)
   if (!SCENES[i]?.phases || t0 === undefined) return { idx: 0, cycle: 0 }

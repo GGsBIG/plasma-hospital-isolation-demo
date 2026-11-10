@@ -1,13 +1,13 @@
 // 產生單一 HTML 檔(JS、CSS、圖片全部內嵌),雙擊即可用瀏覽器開啟,不需安裝或架站。
 // 直接開 file:// 時瀏覽器不允許載入外部的 JS 模組檔,所以必須全部內嵌。
 //
-//   npm run build:single   →  dist-single/plasma-hospital-demo.html
+//   npm run build:single   →  dist-single/plasma-demo.html
 import { build } from "vite"
 import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 
 const tmp = "dist-single/.tmp"
-const out = "dist-single/plasma-hospital-demo.html"
+const out = "dist-single/plasma-demo.html"
 
 rmSync("dist-single", { recursive: true, force: true })
 await build({
