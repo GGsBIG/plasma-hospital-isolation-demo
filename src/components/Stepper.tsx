@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { SCENES } from "../scenes"
-import { clampProgress, LAST } from "../timeline"
+import { clampProgress, LAST, RECAP_INDEX, recapAt } from "../timeline"
 import { scrollStore, useScrollEffect, useScrollSelector } from "../scroll"
 
 interface Slot { left: number; width: number }
@@ -9,7 +9,7 @@ interface Slot { left: number; width: number }
 // 上一步 / 各情境 / 下一步 連成一條 bar;指示器跟著捲動位置等速移動
 export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
   // 只有「目前是哪個情境」改變時重繪;指示器位置每格直接改 DOM
-  const current = useScrollSelector((p) => Math.round(clampProgress(p)))
+  const current = useScrollSelector((p) => (recapAt(p) >= 0.5 ? RECAP_INDEX : Math.round(clampProgress(p))))
   const barRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
   const glassRef = useRef<HTMLSpanElement>(null)
@@ -21,12 +21,14 @@ export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
 
   const place = useCallback((p: number) => {
     const q = clampProgress(p)
-    const i = Math.min(Math.floor(q), LAST - 1)
+    // 結尾總覽:指示器從最後一個情境滑到「總覽」那一格
+    const rc = recapAt(p)
+    const i = rc > 0 ? LAST : Math.min(Math.floor(q), LAST - 1)
     const a = slots.current[i]
     const b = slots.current[i + 1]
     const el = glassRef.current
     if (!a || !b || !el) return
-    const m = q - i
+    const m = rc > 0 ? rc : q - i
     const l = a.left + (b.left - a.left) * m
     const r = a.left + a.width + (b.left + b.width - a.left - a.width) * m
     if (Math.abs(p - lastP.current) > 0.6) {
@@ -82,6 +84,17 @@ export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
             <span className="whitespace-nowrap">{s.short}</span>
           </button>
         ))}
+        {/* 結尾總覽(不是情境) */}
+        <button
+          ref={(el) => { itemRefs.current[RECAP_INDEX] = el }}
+          onClick={() => onSelect(RECAP_INDEX)}
+          aria-current={current === RECAP_INDEX ? "step" : undefined}
+          className={`stepper-item relative z-0 inline-flex h-10 items-center gap-2 rounded-full px-4 text-[14px] transition-[color,transform] duration-300 active:scale-[0.97] ${ring}
+            ${current === RECAP_INDEX ? "scale-[1.04] font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <span className={`text-[12px] tabular-nums ${current === RECAP_INDEX ? "font-semibold opacity-100" : "opacity-60"}`}>{RECAP_INDEX + 1}</span>
+          <span className="whitespace-nowrap">總覽</span>
+        </button>
         <span
           ref={glassRef}
           aria-hidden
@@ -91,7 +104,7 @@ export function Stepper({ onSelect }: { onSelect: (i: number) => void }) {
       </div>
 
       <span className="mx-1 h-5 w-px bg-foreground/10" />
-      <button onClick={() => onSelect(current + 1)} disabled={current === LAST} className={nav} aria-label="下一步">
+      <button onClick={() => onSelect(current + 1)} disabled={current === RECAP_INDEX} className={nav} aria-label="下一步">
         <ChevronRight className="h-4 w-4" />
       </button>
     </div>

@@ -20,6 +20,7 @@ const PLASMA_POS = { x: 800, y: 525 }
 // 知識庫與 Plasma 合體:知識庫疊在 Plasma 的平台上(落下合體),不顯示名稱;
 // nodes 裡 kb 要寫在 plasma 後面,才會畫在 Plasma 上層
 const KB_DOCK = { x: 800, y: 439 } // Plasma 核心立方體頂面(Plasma 中心往上 PLASMA_LIFT × 1.3)
+const ASK = "上月心臟內科住院幾人？"
 const BRAIN_BADGE = { tone: "ok" as const, text: "已匯入資料字典 · 欄位有說明" }
 
 const col = (ys: Record<string, number>, x: number) =>
@@ -31,6 +32,54 @@ const dsCol = (x: number) => col(DS_Y, x)
 const dbIds = Object.keys(DB_Y)
 const appIds = Object.keys(APP_Y)
 const dsIds = Object.keys(DS_Y)
+
+const campusIds = ["campus-main", "campus-north", "campus-south"]
+const branchIds = ["campus-north", "campus-south"]
+// 總院在左、兩個分院在右;導入後 Plasma 插在中間
+const CAMPUS_POS = { "campus-main": { x: 260, y: 525 }, "campus-north": { x: 1340, y: 300 }, "campus-south": { x: 1340, y: 750 } }
+// 一來一回兩條線並排(上去、送回來);reveal 給延遲毫秒時,先畫出去程、再畫出回程
+const twoWay = (a: string, b: string, reveal?: number) => [
+  { from: a, to: b, state: "isolated" as const, lane: -9, reveal },
+  { from: b, to: a, state: "isolated" as const, lane: 9, reveal: reveal === undefined ? undefined : reveal + 350 },
+]
+
+// 跨院區導入前:分院透過 DB Link 向總院拉資料,白天看診尖峰不能拉,只能等凌晨離峰;
+// 一來一回兩條線(分院送出查詢、總院資料送回)依序畫出
+const DBLINK_PHASES: Phase[] = [
+  {
+    ms: 2600,
+    patch: {
+      edges: [],
+      badges: {
+        "campus-main": { tone: "warn", text: "看診尖峰" },
+        ...Object.fromEntries(branchIds.map((id) => [id, { tone: "idle" as const, text: "等凌晨同步" }])),
+      },
+      callouts: { "campus-main": { tone: "idle", q: "白天尖峰，不能拉資料", time: "08:00–24:00" } },
+    },
+  },
+  {
+    ms: 3200,
+    patch: {
+      edges: branchIds.flatMap((id, k) => [
+        { from: id, to: "campus-main", state: "risk" as const, lane: -9, reveal: k * 300 },
+        { from: "campus-main", to: id, state: "risk" as const, lane: 9, reveal: 450 + k * 300 },
+      ]),
+      badges: {
+        "campus-main": { tone: "idle", text: "離峰" },
+        ...Object.fromEntries(branchIds.map((id) => [id, { tone: "warn" as const, text: "DB Link 拉取中" }])),
+      },
+      callouts: { "campus-main": { tone: "idle", q: "凌晨離峰，DB Link 拉資料", time: "02:00" } },
+    },
+  },
+  {
+    ms: 2800,
+    patch: {
+      edges: [],
+      badges: Object.fromEntries(branchIds.map((id) => [id, { tone: "danger" as const, text: "資料是昨天的" }])),
+      callouts: { "campus-main": { tone: "danger", q: "分院隔天才看得到", time: "隔天 08:00" } },
+    },
+  },
+]
 
 // FHIR 對外交換:FHIR Server 與院外的診所、藥局
 const extIds = ["ext-clinic", "ext-pharmacy"]
@@ -260,7 +309,47 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 3. 手工合併資料:人工逐一匯出 → 手動合併 → 產出(健保申報、評鑑資料),數字對不上再重來 → Plasma 自動整合
+  // 3. API 串接蜘蛛網化 → 單一入口
+  {
+    id: "api",
+    title: "API 串接蜘蛛網化",
+    short: "API 串接",
+    pain: "每個應用各接五套資料庫，SQL 寫法都不同；沒人維護的舊 API 還開著，是資安破口。",
+    fix: "應用只接 Plasma，用同一種 SQL 查五套資料庫。",
+    nodes: { ...dbCol(260), ...appCol(1340), "ghost-1": { x: 1060, y: 60 }, "ghost-2": { x: 1060, y: 985 } },
+    active: [...appIds, ...dbIds, "ghost-1", "ghost-2"],
+    edges: [
+      ...appIds.flatMap((app) => dbIds.map((db) => ({ from: db, to: app, state: "risk" as const }))),
+      // 停用系統的 API 沒拔掉:灰色虛線,沒有資料在流,卻還開著
+      ...["db-oracle", "db-postgres", "db-mssql"].map((db) => ({ from: db, to: "ghost-1", state: "dead" as const })),
+      ...["db-mssql", "db-mysql", "db-informix"].map((db) => ({ from: db, to: "ghost-2", state: "dead" as const })),
+    ],
+    loads: HIGH,
+    badges: {
+      ...Object.fromEntries(appIds.map((id) => [id, { tone: "danger" as const, text: "串接 5 套 API" }])),
+      "ghost-1": { tone: "danger", text: "無人維護 · 資安破口" },
+      "ghost-2": { tone: "danger", text: "無人維護 · 資安破口" },
+    },
+    // 同一個需求,各家資料庫寫法都不同
+    callouts: {
+      "app-bi": {
+        tone: "danger", side: "left", q: "同一需求：取前 10 筆",
+        code: [["Oracle", "WHERE ROWNUM <= 10"], ["MS SQL", "SELECT TOP 10"], ["MySQL／PG", "LIMIT 10"], ["Informix", "SELECT FIRST 10"]],
+      },
+    },
+    plasma: {
+      nodes: { ...dbCol(260), plasma: PLASMA_POS, ...appCol(1340) },
+      active: [...appIds, "plasma", ...dbIds],
+      edges: viaPlasma(appIds),
+      loads: NORMAL,
+      badges: { plasma: { tone: "ok", text: "單一入口 · 統一 SQL" } },
+      callouts: {
+        plasma: { tone: "ok", q: "同一需求：取前 10 筆", code: [["Plasma", "SELECT … LIMIT 10"]], a: "一種 SQL 查詢 5 套資料庫" },
+      },
+    },
+  },
+
+  // 4. 手工合併資料:人工逐一匯出 → 手動合併 → 產出(健保申報、評鑑資料),數字對不上再重來 → Plasma 自動整合
   {
     id: "manual",
     title: "手工合併資料",
@@ -284,7 +373,31 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 4. FHIR 對外交換:轉檔程式直連核心資料庫 → Plasma 整理成標準代碼,FHIR Server 只向 Plasma 取用,與院外診所、藥局交換
+  // 5. 跨院區:分院透過 DB Link 向總院拉資料,只能等凌晨離峰 → 各院區與 Plasma 雙向即時同步
+  {
+    id: "campus",
+    title: "跨院區資料不同步",
+    short: "跨院區",
+    pain: "分院透過 DB Link 向總院拉資料，只能等凌晨離峰，隔天才看得到。",
+    fix: "各院區即時同步，分院隨時查得到總院的資料。",
+    nodes: CAMPUS_POS,
+    active: campusIds,
+    edges: [],
+    // 依時間輪播:白天尖峰不能拉 → 凌晨 DB Link 拉資料 → 隔天才看得到
+    phases: DBLINK_PHASES,
+    plasma: {
+      nodes: { ...CAMPUS_POS, plasma: PLASMA_POS },
+      active: [...campusIds, "plasma"],
+      // 切到導入後:總院、北區、南區依序與 Plasma 畫出雙向連線
+      edges: campusIds.flatMap((id, k) => twoWay(id, "plasma", k * 250)),
+      badges: {
+        plasma: { tone: "ok", text: "即時同步" },
+        ...Object.fromEntries(branchIds.map((id) => [id, { tone: "ok" as const, text: "即時可查" }])),
+      },
+    },
+  },
+
+  // 6. FHIR 對外交換:轉檔程式直連核心資料庫 → Plasma 整理成標準代碼,FHIR Server 只向 Plasma 取用,與院外診所、藥局交換
   {
     id: "fhir",
     title: "FHIR 對外交換",
@@ -317,7 +430,7 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 5. 資安風險:AI 大量查詢拖垮效能,誤下 DELETE 讓資料庫停機 → 重大事故、依法限時通報
+  // 7. 資安風險:AI 大量查詢拖垮效能,誤下 DELETE 讓資料庫停機 → 重大事故、依法限時通報
   {
     id: "ai-risk",
     title: "AI 的資安與效能風險",
@@ -346,14 +459,39 @@ export const SCENES: SceneDef[] = [
     },
   },
 
-  // 6. AI 用不了院內資料(拿不到、看不懂):導入前是 AI 部門與 IT 來回協調;
-  //    導入後文件飛進知識庫、與 Plasma 合體長出資料大腦,接著 AI Agent 透過 MCP 自助取得資料
+  // 8. AI 不了解院內資料 → 匯入資料字典,知識庫與 Plasma 合體,AI 看得懂欄位
+  {
+    id: "knowledge",
+    title: "AI 不了解院內資料",
+    short: "Plasma 大腦",
+    pain: "欄位多半是代碼，AI 看不懂，回答容易出錯。",
+    fix: "匯入資料字典後，Plasma 看得懂欄位代碼，AI 答得出正確數字。",
+    // 源頭資料庫靠左、AI 靠右,中間留給大腦輪廓
+    nodes: { ...dbCol(150), "app-ai": { x: 1460, y: MID } },
+    active: [...dbIds, "app-ai"],
+    edges: dbIds.map((id) => ({ from: id, to: "app-ai", state: "risk" as const })),
+    badges: { "app-ai": { tone: "danger", text: "回答不準確" } },
+    callouts: { "app-ai": { tone: "danger", q: ASK, a: "無法判斷 DEPT_C 欄位意義" } },
+    plasma: {
+      nodes: { ...dbCol(150), plasma: PLASMA_POS, kb: KB_DOCK, "app-ai": { x: 1460, y: MID } },
+      active: ["plasma", "kb", "app-ai"],
+      edges: viaPlasma(["app-ai"]),
+      brain: true,
+      // 先跳出上傳視窗,按 Upload 後文件依序飛進知識庫,接著大腦輪廓把知識庫與 Plasma 包在一起
+      upload: true,
+      merged: ["kb"],
+      badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "回答正確" } },
+      callouts: { "app-ai": { tone: "ok", q: ASK, a: "312 人" } },
+    },
+  },
+
+  // 9. 跨部門溝通成本 → AI Agent 透過 MCP 自己取資料
   {
     id: "mcp",
-    title: "AI 用不了院內資料",
-    short: "AI 取資料",
-    pain: "AI 要資料得找 IT 來回協調，常常要好幾個月；拿到了也看不懂欄位代碼。",
-    fix: "匯入資料字典後，Plasma 看得懂欄位代碼；AI Agent 透過 MCP 自己取資料，幾分鐘就有結果。",
+    title: "跨部門溝通成本",
+    short: "跨部門協作",
+    pain: "AI 要資料得找 IT 來回協調，常常要好幾個月。",
+    fix: "AI Agent 透過 MCP 自己取資料，幾分鐘就有結果。",
     nodes: { ...dbCol(260), "ds-it": { x: 800, y: MID }, "ds-aiteam": { x: 1340, y: MID } },
     active: [...dbIds, "ds-it", "ds-aiteam"],
     edges: [
@@ -366,13 +504,11 @@ export const SCENES: SceneDef[] = [
     callouts: { "ds-aiteam": HANDOFF, "ds-it": HANDOFF },
     badges: { "ds-aiteam": { tone: "warn", text: "等待資料" } },
     plasma: {
-      // 源頭資料庫靠左、AI 靠右,中間留給大腦輪廓
+      // 同大腦頁:源頭資料庫靠左、AI 靠右,中間留給大腦輪廓(上一頁已匯入,這頁不再上傳)
       nodes: { ...dbCol(150), plasma: PLASMA_POS, kb: KB_DOCK, "app-ai": { x: 1460, y: MID } },
       active: ["plasma", "kb", "app-ai"],
       edges: viaPlasma(["app-ai"]),
       brain: true,
-      // 系統文件、資料字典等文件依序飛進知識庫,接著大腦輪廓把知識庫與 Plasma 包在一起;大腦長好後才播 Agent 對話
-      upload: true,
       merged: ["kb"],
       badges: { plasma: BRAIN_BADGE, "app-ai": { tone: "ok", text: "幾分鐘拿到結果" } },
       showAgent: true,

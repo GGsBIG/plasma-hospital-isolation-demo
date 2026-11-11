@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { SCENES, validateScenes } from "./scenes"
 import { agentReveal, AGENT_REVEAL_AT } from "./agentReveal"
-import { agentAt, CHAT_SPAN, clamp01, clampProgress, END, LAST } from "./timeline"
+import { agentAt, CHAT_SPAN, clamp01, clampProgress, END, LAST, RECAP_AT, RECAP_INDEX, recapAt } from "./timeline"
+import { Recap } from "./components/Recap"
 import { quantize, scrollStore, useScrollEffect, useScrollSelector } from "./scroll"
 import { layoutMode, useLayoutMode } from "./layout"
 import { Stepper } from "./components/Stepper"
@@ -109,12 +110,13 @@ function AgentPanel() {
 
 // 頂部進度條:一頁一段,目前這頁(含)以前填滿,過場中跟著捲動漸進;每頁完整抵達處留一道細縫當刻度。
 // 每一段都可以點(手機沒有底部切換列,靠它直接跳頁)。填滿長度每格直接寫進 DOM(transform),不觸發重繪
-const SEGMENTS = LAST + 1
-const progressFill = (p: number) => (clampProgress(p) + 1) / SEGMENTS
+// 最後多一段是結尾總覽
+const SEGMENTS = LAST + 2
+const progressFill = (p: number) => (clampProgress(p) + 1 + recapAt(p)) / SEGMENTS
 
 function ProgressBar({ onSelect }: { onSelect: (i: number) => void }) {
   const fill = useRef<HTMLDivElement>(null)
-  const current = useScrollSelector((p) => Math.round(clampProgress(p)))
+  const current = useScrollSelector((p) => (recapAt(p) >= 0.5 ? RECAP_INDEX : Math.round(clampProgress(p))))
   useScrollEffect((p) => {
     if (fill.current) fill.current.style.transform = `scaleX(${progressFill(p)})`
   }, [])
@@ -137,7 +139,7 @@ function ProgressBar({ onSelect }: { onSelect: (i: number) => void }) {
       </div>
       {/* 點擊區:每段一顆透明按鈕,往上延伸到標題列下緣、往下只到窄帶底,不蓋到下方的切換鈕與重播鈕 */}
       <nav aria-label="頁面" className="pointer-events-auto absolute -top-2 bottom-0 flex" style={{ left: "var(--bar-x)", right: "var(--bar-x)" }}>
-        {SCENES.map((s, k) => (
+        {[...SCENES.map((s) => ({ id: s.id, title: s.title })), { id: "recap", title: "總覽" }].map((s, k) => (
           <button
             key={s.id}
             type="button"
@@ -156,6 +158,7 @@ export function App() {
   // 捲動進度(整數 = 某情境置中,小數 = 卡在兩情境之間)放在 scrollStore,不是 React state:
   // App 本身只在「目前情境」改變時重繪(標題列的頁碼)
   const current = useScrollSelector((p) => Math.round(clampProgress(p)))
+  const recap = useScrollSelector((p) => recapAt(p) >= 0.5)
   // 捲到別頁也一律回到導入前(第一次載入不動)
   const lastPage = useRef(current)
   useEffect(() => {
@@ -276,6 +279,12 @@ export function App() {
     if (!h) return
     stopAuto()
     window.clearTimeout(chatTimer.current)
+    // 結尾總覽:捲到最底(總覽整塊蓋上來),不是情境、沒有重播
+    if (i >= RECAP_INDEX) {
+      window.scrollTo({ top: END * h, behavior: "instant" })
+      scrollStore.set(END)
+      return
+    }
     const target = Math.max(0, Math.min(i, LAST))
     // 換到別頁一律從導入前開始
     if (target !== Math.round(clampProgress(scrollStore.get()))) plasmaOff()
@@ -328,14 +337,17 @@ export function App() {
         await wait(beforeMs(i))
         if (!alive) return
         togglePlasma(i, true)
-        if (i === LAST && GATED) {
+        const gated = !!SCENES[i].plasma?.upload
+        if (gated) {
           await wait(AUTO_UPLOAD)
           if (!alive) return
           uploadGate.go()
         }
-        await wait(i === LAST ? AUTO_LAST : AUTO_AFTER)
+        // 有上傳的頁:等文件飛完、大腦長好再多看一下;最後一頁等 Agent 對話播完
+        await wait(i === LAST ? AUTO_LAST : gated ? AGENT_REVEAL_AT + 4000 : AUTO_AFTER)
       }
-      if (alive) autoplay.set(false)
+      // 全部播完:停在結尾總覽
+      if (alive) { goTo(RECAP_INDEX); autoplay.set(false) }
     })()
     // 手動操作(方向鍵、P、R、點切換列／說明卡／切換鈕、滾輪、觸控)中斷自動播放;自動播放鈕本身與空白鍵除外
     const stop = () => autoplay.set(false)
@@ -372,10 +384,13 @@ export function App() {
       if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
         e.preventDefault()
         const cur = Math.round(clampProgress(raw))
-        // 最後一頁導入後、對話還沒播完:→ 讓對話播完;最後一頁之後沒有下一頁
-        if (e.key === "ArrowRight" && cur === LAST && plasmaOn(LAST) && raw < END - 0.01 && (!GATED || uploadGate.done())) playChat()
-        else if (e.key === "ArrowRight") { if (cur < LAST) goTo(cur + 1) }
-        else goTo(cur - 1)
+        const onRecap = recapAt(raw) >= 0.5
+        // 最後一頁導入後、對話還沒播完:→ 讓對話播完;再按一次到結尾總覽。在總覽按 ← 回到最後一頁
+        if (e.key === "ArrowRight" && cur === LAST && plasmaOn(LAST) && raw < RECAP_AT - 0.01 && (!GATED || uploadGate.done())) playChat()
+        else if (e.key === "ArrowRight") { if (!onRecap) goTo(cur === LAST ? RECAP_INDEX : cur + 1) }
+        else goTo(onRecap ? LAST : cur - 1)
+      } else if (recapAt(raw) >= 0.5) {
+        // 總覽沒有導入前後切換,也沒有重播
       } else if ((e.key === "p" || e.key === "P") && !e.metaKey && !e.ctrlKey && !e.altKey) {
         // P:切換目前這頁導入前後
         const cur = Math.round(clampProgress(raw))
@@ -405,7 +420,7 @@ export function App() {
         </div>
         <div className="flex items-center gap-4">
           <span className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
-            {String(current + 1).padStart(2, "0")} / {String(LAST + 1).padStart(2, "0")}
+            {String((recap ? RECAP_INDEX : current) + 1).padStart(2, "0")} / {String(RECAP_INDEX + 1).padStart(2, "0")}
             {/* 操作提示只在桌機顯示(手機不能捲動換頁,靠上方進度條) */}
             <span className={`ml-3 hidden ${mode === "desktop" ? "sm:inline" : ""}`}>{playing ? "自動播放中，按空白鍵暫停" : "捲動或 ← → 換頁，P 切換導入前後，空白鍵自動播放"}</span>
           </span>
@@ -449,6 +464,9 @@ export function App() {
           </div>
         </div>
       </main>
+
+      {/* 結尾總覽:對話播完後再往下,蓋住說明欄與舞台 */}
+      <Recap onSelect={goTo} />
 
       {/* 底部情境切換列只在桌機出現;手機用捲動切換(也可點說明卡片) */}
       {mode === "desktop" && (

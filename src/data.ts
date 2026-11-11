@@ -17,6 +17,13 @@ export const DBS: NodeDef[] = [
   { id: "db-informix", kind: "db", label: "Informix",   icon: "database", brand: ibmLogo },
 ]
 
+// 跨院區:不同院區各有一套 HIS
+export const CAMPUSES: NodeDef[] = [
+  { id: "campus-main",  kind: "db", label: "總院", icon: "database" },
+  { id: "campus-north", kind: "db", label: "北區分院", icon: "database" },
+  { id: "campus-south", kind: "db", label: "南區分院", icon: "database" },
+]
+
 // 下方既有使用端(與五套源頭資料庫一一對應)
 export const DOWNSTREAM: NodeDef[] = [
   { id: "ds-clinic", kind: "downstream", label: "門診工作站", icon: "stethoscope" },
@@ -44,6 +51,9 @@ export const APPS: NodeDef[] = [
   // 手工整併後的產出
   { id: "app-claim",    kind: "app", label: "健保申報", icon: "receipt" },
   { id: "app-accredit", kind: "app", label: "評鑑資料", icon: "clipboard-check" },
+  // 沒人在用、也沒人維護的舊系統,API 還接著
+  { id: "ghost-1", kind: "app", label: "停用系統", icon: "ghost" },
+  { id: "ghost-2", kind: "app", label: "停用系統", icon: "ghost" },
 ]
 
 export const PLASMA: NodeDef = { id: "plasma", kind: "plasma", label: "Plasma", icon: "layers", logo: { light: plasmaLogo, dark: plasmaLogoDark } }
@@ -51,7 +61,7 @@ export const PLASMA: NodeDef = { id: "plasma", kind: "plasma", label: "Plasma", 
 export const SERVING_PG: NodeDef = { id: "serving-pg", kind: "serving", label: "PostgreSQL", icon: "database", brand: postgresLogo }
 export const KB: NodeDef = { id: "kb", kind: "kb", label: "知識庫", icon: "book-open" }
 
-export const ALL_NODES: NodeDef[] = [...DBS, ...DOWNSTREAM, ...APPS, PLASMA, SERVING_PG, KB]
+export const ALL_NODES: NodeDef[] = [...DBS, ...CAMPUSES, ...DOWNSTREAM, ...APPS, PLASMA, SERVING_PG, KB]
 export const NODE_BY_ID: Record<string, NodeDef> =
   Object.fromEntries(ALL_NODES.map((n) => [n.id, n]))
 

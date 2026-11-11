@@ -96,10 +96,10 @@ const SLOT: Record<string, { y: number; b: boolean; x?: number }> = {
   "team-rnd": { y: ROW_A[0], b: false, x: FLOW_APP },
   "team-mfg": { y: ROW_A[1], b: false, x: FLOW_APP },
   "team-fin": { y: ROW_A[2], b: false, x: FLOW_APP },
-  // 跨部門節點(此版未使用)
-  "dept-main": { y: ROW_A[1], b: false },
-  "dept-north": { y: ROW_A[0], b: false, x: FLOW_APP },
-  "dept-south": { y: ROW_A[2], b: false, x: FLOW_APP },
+  // 跨院區:總院在最左欄中間,兩個分院在應用欄的上下(導入後 Plasma 插在中間)
+  "campus-main": { y: ROW_A[1], b: false },
+  "campus-north": { y: ROW_A[0], b: false, x: FLOW_APP },
+  "campus-south": { y: ROW_A[2], b: false, x: FLOW_APP },
   // FHIR 對外交換:FHIR Server 之後再往右一欄的診所、藥局
   "ext-clinic": { y: ROW_A[1] - 200, b: false, x: FLOW_EXT },
   "ext-pharmacy": { y: ROW_A[1] + 200, b: false, x: FLOW_EXT },
