@@ -1,0 +1,228 @@
+import { useSyncExternalStore } from "react"
+import type { NodeKind, Pos } from "./types"
+
+// 三種版面:
+//   desktop          桌機/平板,橫式舞台 1600×1100,說明欄在左
+//   phone-portrait   手機或平板直拿(寬 < 1024),上舞台、下說明,資料流由左而右
+//   phone-landscape  手機橫拿,左說明、右舞台,資料流由左而右
+// 兩種手機版面都用「緊湊版」舞台(見下方座標),元件、字、線、光點都放大
+export type LayoutMode = "desktop" | "phone-portrait" | "phone-landscape"
+
+// 與 tailwind.config.js 的 pp / pl 斷點一致
+const MQ_PORTRAIT = "(max-width: 1023px) and (orientation: portrait)"
+const MQ_LANDSCAPE = "(max-height: 500px) and (orientation: landscape)"
+
+const mqP = window.matchMedia(MQ_PORTRAIT)
+const mqL = window.matchMedia(MQ_LANDSCAPE)
+const compute = (): LayoutMode => (mqP.matches ? "phone-portrait" : mqL.matches ? "phone-landscape" : "desktop")
+let mode = compute()
+const listeners = new Set<() => void>()
+const onChange = () => {
+  const next = compute()
+  if (next === mode) return
+  mode = next
+  listeners.forEach((fn) => fn())
+}
+mqP.addEventListener("change", onChange)
+mqL.addEventListener("change", onChange)
+
+export const layoutMode = () => mode
+
+export function useLayoutMode() {
+  return useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb)
+      return () => {
+        listeners.delete(cb)
+      }
+    },
+    () => mode,
+  )
+}
+
+// ---- 緊湊版座標:兩種手機版面都用「由左而右」的資料流 ----
+// 橫軸(流向):源頭資料庫 → Plasma → 應用;縱軸:同一層的元件由上而下排
+// 5 個源頭資料庫折成兩欄(3+2,第二欄往右錯開半格),4 個應用排成一欄,整張圖接近方形,
+// 手機直拿時舞台只佔畫面 4 成、寬高比約 1:1,這樣縮放後才放得最大
+
+const W = 1390
+const H = 1250
+const PAD_L = 170 // 最左欄的名稱比圖示寬,留邊才不會被舞台左緣切掉
+
+// 縱軸位置:A 欄 3 個、B 欄 2 個(置於 A 欄之間);應用一欄 4 個
+const ROW_A = [200, 515, 830]
+const ROW_B = [357, 673]
+// 間距 300:名稱 + 徽章才不會壓到下一個;整欄中心對齊源頭資料庫那組的中心(515),上下置中
+const APP_ROW = [65, 365, 665, 965]
+// 既有系統 5 個一欄,中心對齊 515;間距 250(名稱 + 徽章剛好不重疊),整欄才不會比資料庫高太多
+const DS_ROW = [15, 265, 515, 765, 1015]
+// 橫軸位置:B 欄比 A 欄往右 B_SHIFT
+const B_SHIFT = 250
+const FLOW_APP = 1050
+// 一直列(手機版所有情境的資料庫與既有系統):五個資料庫由上到下排成一列,既有系統用同一組列位一一對齊,
+// 順序 Oracle、MySQL、PostgreSQL、Informix、MS SQL(和既有系統對應,連線是水平直線)。
+// 間距 290:資料庫左上角的 logo + 平台 + 名稱與負載(同一行)不會壓到下一個
+const COL_ROW = [-65, 225, 515, 805, 1095]
+const COL_Y: Record<string, number> = {
+  "db-oracle": COL_ROW[0], "db-mysql": COL_ROW[1], "db-postgres": COL_ROW[2], "db-informix": COL_ROW[3], "db-mssql": COL_ROW[4],
+  "ds-rnd": COL_ROW[0], "ds-hr": COL_ROW[1], "ds-mfg": COL_ROW[2], "ds-qa": COL_ROW[3], "ds-fin": COL_ROW[4],
+}
+const FLOW_SOURCE = 0 // 最左層:各情境的源頭資料庫、情境 2 的既有系統
+const FLOW_MID = 560 // 情境 1 的既有系統
+// 情境 2 的源頭資料庫:A、B 兩欄的中心(+B_SHIFT/2)剛好在左側既有系統與右側應用的正中間
+const FLOW_MID_DB = (FLOW_SOURCE + FLOW_APP) / 2 - B_SHIFT / 2
+const FLOW_PLASMA = 640 // Plasma、知識庫、落地 PostgreSQL
+const FLOW_HANDOFF = 820 // 情境 4 的 IT 部門(匯出檔與報表之間)
+const FLOW_EXT = 1460 // 對外交換頁的協力廠商、上級機關(交換閘道在應用欄)
+// 情境 2 導入後:既有系統在源頭資料庫的更左邊(情境資料的 x < DS_FAR_MAX)
+const DS_FAR_MAX = 200
+const FLOW_DS_FAR = -560
+
+// x:固定的緊湊版橫軸位置(不依情境資料換算)
+const SLOT: Record<string, { y: number; b: boolean; x?: number }> = {
+  "db-oracle": { y: ROW_A[0], b: false },
+  "db-postgres": { y: ROW_A[1], b: false },
+  "db-mssql": { y: ROW_A[2], b: false },
+  "db-mysql": { y: ROW_B[0], b: true },
+  "db-informix": { y: ROW_B[1], b: true },
+  // 既有系統 5 個排成同一欄,間距同應用欄(名稱 + 徽章不會壓到下一個)
+  // 由上而下的順序跟各自的資料庫一樣(Oracle、MySQL、PostgreSQL、Informix、MS SQL),連線才不會交叉
+  "ds-rnd": { y: DS_ROW[0], b: false },
+  "ds-hr": { y: DS_ROW[1], b: false },
+  "ds-mfg": { y: DS_ROW[2], b: false },
+  "ds-qa": { y: DS_ROW[3], b: false },
+  "ds-fin": { y: DS_ROW[4], b: false },
+  // 機敏資料分權:三個部門排在應用欄的上、中、下
+  "team-rnd": { y: ROW_A[0], b: false, x: FLOW_APP },
+  "team-mfg": { y: ROW_A[1], b: false, x: FLOW_APP },
+  "team-fin": { y: ROW_A[2], b: false, x: FLOW_APP },
+  // 跨部門:製造中心在最左欄中間,研發一處、品保中心在應用欄的上下(導入後 Plasma 插在中間)
+  "dept-main": { y: ROW_A[1], b: false },
+  "dept-north": { y: ROW_A[0], b: false, x: FLOW_APP },
+  "dept-south": { y: ROW_A[2], b: false, x: FLOW_APP },
+  // 對外資料交換:交換閘道之後再往右一欄的協力廠商、上級機關
+  "ext-vendor": { y: ROW_A[1] - 200, b: false, x: FLOW_EXT },
+  "ext-agency": { y: ROW_A[1] + 200, b: false, x: FLOW_EXT },
+  // 情境 4、8 的 IT 部門、情境 8 的 AI 部門:和 Plasma 同一列
+  "ds-it": { y: ROW_A[1], b: false },
+  "ds-aiteam": { y: ROW_A[1], b: false },
+  // 情境 4 的人工處理:和 Plasma 同一位置(導入後由 Plasma 取代)
+  manual: { y: ROW_A[1], b: false },
+}
+// 情境 3 的停用系統:應用欄的上方與下方之外,放在中間
+const GHOST: Record<string, number> = { "ghost-1": -130, "ghost-2": 1160 }
+// 情境 4 的兩種產出:預算執行報告在 Plasma 那列上方、稽核資料在下方
+const APP_SLOT: Record<string, number> = {
+  "app-ap": APP_ROW[0], "app-gateway": APP_ROW[1], "app-bi": APP_ROW[2], "app-ai": APP_ROW[3],
+  "app-budget": ROW_A[1] - 170, "app-audit": ROW_A[1] + 170,
+}
+
+// 情境資料的桌機 x(流向上的那一欄)→ 緊湊版橫軸
+function flowX(x: number): number {
+  if (x <= 560) return FLOW_SOURCE
+  if (x === 800) return FLOW_PLASMA
+  if (x === 1000) return FLOW_HANDOFF
+  if (x < 1000) return FLOW_MID_DB
+  if (x < 1300) return FLOW_MID
+  return FLOW_APP
+}
+
+const PLASMA_ROW = 525 // 情境資料裡 Plasma 那一列的桌機 y
+const SIDE_Y = 130 // 知識庫、落地 PostgreSQL:放在 Plasma 正上方
+const KB_DOCK_MIN = 300 // 情境資料裡知識庫 y 大於此值 = 與 Plasma 合體
+const KB_DOCK_DY = 124 // 合體時知識庫疊在 Plasma 核心立方體頂面,比 Plasma 中心高多少(PLASMA_LIFT × 1.3 × 緊湊版倍率 1.45)
+
+function compactPos(id: string, p: Pos): Pos {
+  if (id === "plasma") return { x: PAD_L + FLOW_PLASMA, y: ROW_A[1] }
+  // 知識庫與 Plasma 合體時(情境資料的 y 在 Plasma 上方不遠):疊在 Plasma 正上方
+  if (id === "kb" && p.y > KB_DOCK_MIN) return { x: PAD_L + FLOW_PLASMA, y: ROW_A[1] - KB_DOCK_DY }
+  if (id === "kb" || id === "serving-pg") return { x: PAD_L + FLOW_PLASMA, y: SIDE_Y }
+  if (id in GHOST) return { x: PAD_L + FLOW_MID, y: GHOST[id] }
+  if (id in APP_SLOT) {
+    // 只有單一應用的頁面,應用和 Plasma 同一列:放在 Plasma 正右方
+    const y = p.y === PLASMA_ROW ? ROW_A[1] : APP_SLOT[id]
+    return { x: PAD_L + FLOW_APP, y }
+  }
+  const slot = SLOT[id]
+  // 一直列:橫軸照原本的欄位換算(不分 A、B 兩欄),縱軸用一直列的列位
+  if (id in COL_Y) {
+    const fx = id.startsWith("ds-") ? (p.x < DS_FAR_MAX ? FLOW_DS_FAR : p.x >= 1000 ? FLOW_APP : flowX(p.x)) : flowX(p.x)
+    return { x: PAD_L + fx, y: COL_Y[id] }
+  }
+  // 開場頁的既有系統(情境資料 x ≥ 1000)放到最右欄:整張圖拉寬,手機上才會和下方說明一樣寬
+  const fx = slot.x ?? (id.startsWith("ds-") && p.x < DS_FAR_MAX ? FLOW_DS_FAR : id.startsWith("ds-") && p.x >= 1000 ? FLOW_APP : flowX(p.x))
+  return { x: PAD_L + fx + (slot.b ? B_SHIFT : 0), y: slot.y }
+}
+
+// 舞台座標系大小
+export const stageSize = () => (mode === "desktop" ? { w: 1600, h: 1100 } : { w: W, h: H })
+
+// 情境資料都用桌機座標寫;手機版換算成緊湊版
+export function place(id: string, p: Pos): Pos {
+  return mode === "desktop" ? p : compactPos(id, p)
+}
+
+// 連線接法:每種版面的流向都是左 → 右(手機直拿也是),水平為主時接左右角
+export const verticalFlow = () => false
+
+// 緊湊版的圖示放大倍率:源頭資料庫與資料中台最大,其餘次之
+const ICON_SCALE: Partial<Record<NodeKind, number>> = { db: 1.45, plasma: 1.45 }
+export const iconScale = (kind: NodeKind) => (mode === "desktop" ? 1 : ICON_SCALE[kind] ?? 1.3)
+
+// 緊湊版的連線粗細與光點大小倍率
+export const lineScale = () => (mode === "desktop" ? 1 : 2.2)
+export const dotScale = () => (mode === "desktop" ? 1 : 1.75)
+
+// ---- 手機版的鏡頭:依每個情境實際出現的元件外框縮放,內容填滿寬度、左右留白與下方文字一致 ----
+// 外框 = 節點中心 +「圖示 + 名稱 + 徽章」的範圍(舞台座標,依實際量測值;
+// 改了緊湊版的字級或圖示倍率要重新量)
+const EXTENT: Record<NodeKind, { half: number; top: number; bottom: number }> = {
+  db: { half: 225, top: 120, bottom: 160 }, // 品牌 logo 在平台左上角;名稱與負載同一行
+  serving: { half: 200, top: 65, bottom: 222 },
+  downstream: { half: 100, top: 41, bottom: 205 },
+  app: { half: 140, top: 54, bottom: 214 },
+  plasma: { half: 259, top: 98, bottom: 363 },
+  kb: { half: 107, top: 215, bottom: 70 }, // 標籤在上方(疊在 Plasma 上時)
+  file: { half: 60, top: 80, bottom: 30 },
+  person: { half: 120, top: 95, bottom: 205 },
+}
+
+// 徽章特別長的節點(機敏資料分權頁的三個部門):外框加寬,鏡頭才不會切掉徽章
+const WIDE: Record<string, number> = { "team-rnd": 165, "team-mfg": 165, "team-fin": 165 }
+
+export interface Box { x0: number; y0: number; x1: number; y1: number }
+
+export function sceneBox(nodes: Record<string, Pos>, kindOf: (id: string) => NodeKind, zone?: string[]): Box {
+  const b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
+  for (const id of Object.keys(nodes)) {
+    const p = place(id, nodes[id])
+    const e = EXTENT[kindOf(id)]
+    const half = WIDE[id] ?? e.half
+    b.x0 = Math.min(b.x0, p.x - half)
+    b.x1 = Math.max(b.x1, p.x + half)
+    b.y0 = Math.min(b.y0, p.y - e.top)
+    b.y1 = Math.max(b.y1, p.y + e.bottom)
+  }
+  // 防護框比節點外框大一圈,也要放進鏡頭
+  if (zone) {
+    const z = zoneRect(zone.map((id) => place(id, nodes[id])))
+    b.x0 = Math.min(b.x0, z.x0)
+    b.x1 = Math.max(b.x1, z.x1)
+    b.y0 = Math.min(b.y0, z.y0)
+    b.y1 = Math.max(b.y1, z.y1)
+  }
+  return b
+}
+
+// 防護框:圍住一組節點(含名稱、徽章),下緣多留一點給框的標題
+export function zoneRect(points: Pos[]): Box {
+  const k = mode === "desktop" ? 1 : 1.6
+  const xs = points.map((p) => p.x)
+  const ys = points.map((p) => p.y)
+  return {
+    x0: Math.min(...xs) - 190 * k,
+    x1: Math.max(...xs) + 190 * k,
+    y0: Math.min(...ys) - 110 * k,
+    y1: Math.max(...ys) + 170 * k,
+  }
+}

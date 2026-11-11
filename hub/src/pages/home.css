@@ -51,6 +51,11 @@ main { flex: 1; min-height: 0; display: flex; }
 
 /* 入口按鈕:白色實心方塊、黑字,靠左上下堆疊,寬度隨文字;指到或主標輪到時轉成 logo 紅 */
 .cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+/* 手機:按鈕排成兩欄,五顆也放得進一個畫面 */
+@media (max-width: 767px) {
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cards .card { display: block; min-width: 0; padding: 12px 14px; font-size: 1rem; text-align: center; white-space: nowrap; }
+}
 /* 電腦與平板:三顆按鈕由左至右排成一列,緊接在主標與頁籤下方(手機仍放在畫面底部) */
 @media (min-width: 768px) { .hero > .container { justify-content: flex-start; gap: 48px; } }
 @media (min-width: 768px) { .cards { flex-direction: row; flex-wrap: wrap; gap: 14px; } }

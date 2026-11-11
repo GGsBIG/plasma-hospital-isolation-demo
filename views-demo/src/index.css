@@ -1,0 +1,561 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { min-height: 100%; }
+
+/* 捲動版面:header、底部按鈕列固定,舞台高度 = 視窗扣掉兩者;左側每段說明也同高 */
+:root {
+  /* 頂部進度條左右對齊頁面內容(桌機為 main 的左右內距) */
+  --bar-x: 24px;
+  --header-h: 48px;
+  --footer-h: 73px;
+  --stage-h: calc(100vh - var(--header-h) - var(--footer-h));
+  /* 固定在畫面上的區域高度:桌機是舞台(說明欄在旁邊);手機是舞台 + 下方說明區 */
+  --pin-h: var(--stage-h);
+  /* 兩個情境之間要捲多少距離(越大過場越慢) */
+  --scroll-step: calc(var(--stage-h) * 1);
+  /* 左側說明段落在畫面上的間距(越小,上下相鄰段落露出越多);與捲動距離無關 */
+  --section-h: calc(var(--stage-h) * 0.6);
+}
+
+/* 手機/平板直拿(寬 < 1024,與 src/layout.ts、tailwind 的 pp 一致):上舞台 55%、下說明 45%。
+   圖以寬度為上限填滿(左右留白和說明文字一樣),舞台多出的高度平均留在圖的上下,沒有底部情境切換列。
+   用 svh(不含網址列的高度),捲動時網址列伸縮不會讓版面跳動 */
+@media (max-width: 1023px) and (orientation: portrait) {
+  :root {
+    --header-h: 44px;
+    --footer-h: 0px;
+    --view-h: calc(100svh - var(--header-h));
+    --gutter: 24px;
+    --bar-x: var(--gutter);
+    --stage-h: calc(var(--view-h) * 0.55);
+    --narr-h: calc(var(--view-h) - var(--stage-h));
+    --section-h: var(--narr-h);
+    --pin-h: var(--view-h);
+    --scroll-step: calc(var(--view-h) * 0.7);
+  }
+}
+/* 手機橫拿(pl):左說明、右舞台(舞台在右側區域內置中、盡量放大),標題列變矮,沒有底部情境切換列 */
+@media (max-height: 500px) and (orientation: landscape) {
+  :root {
+    --header-h: 40px;
+    --footer-h: 0px;
+    --stage-h: calc(100svh - var(--header-h));
+    --narr-w: 28vw;
+    --bar-x: 12px;
+    --section-h: calc(var(--stage-h) * 0.8);
+    --pin-h: var(--stage-h);
+    --scroll-step: calc(var(--stage-h) * 1.3);
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --primary: 0 0% 12%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 42%;
+    --accent: 0 0% 95%;
+    --accent-foreground: 0 0% 9%;
+    --border: 0 0% 87%;
+    --ring: 0 0% 30%;
+    --glow: 0 0% 60%;
+    --ok: 142 64% 38%;
+    --warn: 32 95% 44%;
+    --danger: 0 72% 51%;
+    --view: 217 80% 48%;
+    --radius: 0.9rem;
+
+    /* 舞台 SVG 用色 */
+    --iso-top: #f4f4f5;
+    --iso-left: #dcdce0;
+    --iso-right: #c4c4cc;
+    --iso-line: #85858e;
+    --iso-hot: #dc2626;
+    --iso-raised: #ffffff;
+    --iso-cyl-top: #fafafa;
+    --iso-cyl-top-hot: #fecaca;
+    --iso-pad: #c4c4cc;
+    --iso-ring-track: #c4c4cc;
+    --iso-ring: #27272a;
+    --iso-glow: #71717a;
+    --iso-glow-opacity: 0.08;
+    --edge-normal: #85858e;
+    --edge-overload: #f87171;
+    --edge-isolated: #5c5c66;
+    --dot-normal: #52525b;
+    --dot-overload: #dc2626;
+    --dot-isolated: #18181b;
+  }
+
+  .dark {
+    --background: 0 0% 8%;
+    --foreground: 0 0% 93%;
+    --card: 0 0% 11%;
+    --card-foreground: 0 0% 93%;
+    --primary: 0 0% 90%;
+    --primary-foreground: 0 0% 8%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 58%;
+    --accent: 0 0% 17%;
+    --accent-foreground: 0 0% 93%;
+    --border: 0 0% 20%;
+    --ring: 0 0% 85%;
+    --glow: 0 0% 60%;
+    --ok: 142 65% 58%;
+    --warn: 38 92% 56%;
+    --danger: 0 84% 66%;
+    --view: 217 90% 66%;
+
+    --iso-top: #2a2a2a;
+    --iso-left: #222222;
+    --iso-right: #1b1b1b;
+    --iso-line: #4d4d4d;
+    --iso-hot: #f87171;
+    --iso-raised: #3a3a3a;
+    --iso-cyl-top: #303030;
+    --iso-cyl-top-hot: #4a2323;
+    --iso-pad: #1d1d1d;
+    --iso-ring-track: #3f3f3f;
+    --iso-ring: #e5e5e5;
+    --iso-glow: #ffffff;
+    --iso-glow-opacity: 0.05;
+    --edge-normal: #5c5c5c;
+    --edge-overload: #b94a4a;
+    --edge-isolated: #6e6e6e;
+    --dot-normal: #bdbdbd;
+    --dot-overload: #f87171;
+    --dot-isolated: #f2f2f2;
+  }
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground;
+    font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  /* Agent 對話面板 */
+  .glass {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+  }
+}
+
+/* 過載平台底下的紅色光暈(HTML 圖層,漸層 + 透明度動畫,交給 GPU 合成) */
+.hot-glow {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(248 113 113 / 0.9), rgb(248 113 113 / 0));
+  animation: hot-pulse 1.2s ease-in-out infinite;
+  will-change: opacity;
+}
+@keyframes hot-pulse {
+  0%, 100% { opacity: 0.18; }
+  50% { opacity: 0.42; }
+}
+/* 轉動的齒輪、Plasma 圓環 */
+.spin { position: absolute; animation: spin linear infinite; will-change: transform; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .hot-glow, .spin { animation: none; }
+}
+
+/* uiarc 元件(src/components/arc)用到的設計變數。uiarc 的 --foreground 等是完整顏色值,
+   本專案的同名變數是 HSL 三元組,所以只在 .arc 容器內覆寫,不影響其他元件。
+   提示框(tooltip)由 Radix 掛到 body 底下,不在 .arc 裡,所以它的外層(popper wrapper)也套同一組變數 */
+.arc,
+[data-radix-popper-content-wrapper] {
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --text-sm: 14px;
+  --leading-body: 1.5;
+  --radius-control: 999px;
+  --control-height-sm: 32px;
+  --control-height-md: 38px;
+  --control-height-lg: 44px;
+  --duration-instant: 0.12s;
+  --duration-fast: 0.16s;
+  --duration-spring: 0.42s;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --foreground: hsl(0 0% 9%);
+  --background: hsl(0 0% 100%);
+  --surface: hsl(0 0% 100%);
+  --surface-muted: hsl(0 0% 95%);
+  --border: hsl(0 0% 87%);
+  --border-strong: hsl(0 0% 70%);
+  --text-secondary: hsl(0 0% 30%);
+  --text-muted: hsl(0 0% 42%);
+  --danger: hsl(0 72% 51%);
+  --shadow-resting: 0 1px 2px rgb(0 0 0 / 0.08);
+  --text-xs: 12px;
+  --font-body: inherit;
+  --tracking-body: 0;
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --control-on: hsl(0 0% 9%);
+  --surface-raised: hsl(0 0% 100%);
+  --shadow-raised: 0 2px 8px rgb(0 0 0 / 0.12);
+  --shadow-floating: 0 8px 24px rgb(0 0 0 / 0.10), 0 2px 6px rgb(0 0 0 / 0.06);
+}
+.arc {
+  display: inline-flex;
+}
+.dark .arc,
+.dark [data-radix-popper-content-wrapper] {
+  --foreground: hsl(0 0% 93%);
+  --background: hsl(0 0% 8%);
+  --surface: hsl(0 0% 11%);
+  --surface-muted: hsl(0 0% 17%);
+  --border: hsl(0 0% 20%);
+  --border-strong: hsl(0 0% 35%);
+  --text-secondary: hsl(0 0% 75%);
+  --text-muted: hsl(0 0% 58%);
+  --danger: hsl(0 84% 66%);
+  --shadow-resting: 0 1px 2px rgb(0 0 0 / 0.4);
+  --control-on: hsl(0 0% 93%);
+  --surface-raised: hsl(0 0% 13%);
+  --shadow-raised: 0 2px 8px rgb(0 0 0 / 0.5);
+  --shadow-floating: 0 8px 24px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
+}
+
+/* 主題切換的 reveal:新主題以圓形從按鈕位置展開(動畫由 ThemeToggle 驅動) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* 底部情境切換 bar */
+.liquid-bar {
+  background: hsl(var(--muted) / 0.7);
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), inset 0 1px 0 rgb(255 255 255 / 0.6);
+}
+.dark .liquid-bar {
+  background: hsl(var(--card) / 0.8);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+/* liquid glass 指示器:中央透明不糊字,靠邊緣高光、內陰影與底下內容的飽和/提亮做出玻璃感 */
+.liquid-glass {
+  background:
+    radial-gradient(140% 100% at 50% -20%, rgb(255 255 255 / 0.45), rgb(255 255 255 / 0) 55%),
+    rgb(255 255 255 / 0.06);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow:
+    0 6px 18px rgb(0 0 0 / 0.12),
+    0 1px 2px rgb(0 0 0 / 0.08),
+    inset 0 1px 1px rgb(255 255 255 / 0.9),
+    inset 0 -2px 4px rgb(0 0 0 / 0.06),
+    inset 0 0 0 1px rgb(255 255 255 / 0.25);
+  -webkit-backdrop-filter: saturate(1.8) brightness(1.04) contrast(1.05);
+  backdrop-filter: saturate(1.8) brightness(1.04) contrast(1.05);
+}
+.dark .liquid-glass {
+  background:
+    radial-gradient(140% 100% at 50% -20%, rgb(255 255 255 / 0.18), rgb(255 255 255 / 0) 55%),
+    rgb(255 255 255 / 0.03);
+  border-color: rgb(255 255 255 / 0.22);
+  box-shadow:
+    0 6px 18px rgb(0 0 0 / 0.5),
+    inset 0 1px 1px rgb(255 255 255 / 0.35),
+    inset 0 -2px 4px rgb(0 0 0 / 0.3),
+    inset 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+/* 滑鼠停在舞台節點上:平台投影(淺色)/ 光暈(深色) */
+.node-platform { filter: drop-shadow(0 0 0 rgb(0 0 0 / 0)); }
+.node-platform[data-hovered] { filter: drop-shadow(0 18px 16px rgb(0 0 0 / 0.16)); }
+.dark .node-platform[data-hovered] { filter: drop-shadow(0 0 18px rgb(255 255 255 / 0.18)); }
+
+/* 左側說明卡片的 hover。--hover-mix 用 @property 註冊才能做 transition;
+   透明度 = 捲動亮度 --e 往 1 拉近 --hover-mix 的比例,捲動部分不受 transition 拖慢 */
+@property --hover-mix {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+/* --e 每格都在變;註冊成不繼承,才不會連帶讓卡片裡每個字重算樣式 */
+@property --e {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+.narration-card {
+  --hover-mix: 0;
+  opacity: calc(var(--e) + (1 - var(--e)) * var(--hover-mix));
+  transition: --hover-mix 0.3s ease, background-color 0.3s ease;
+}
+@media (hover: hover) {
+  .narration-card:hover {
+    --hover-mix: 0.75;
+    background-color: hsl(var(--foreground) / 0.035);
+  }
+  .narration-card:hover .narration-accent { transform: scaleY(1); }
+  .narration-card:hover .narration-title { transform: translateX(6px); }
+}
+.narration-card:focus-visible {
+  --hover-mix: 0.75;
+  background-color: hsl(var(--foreground) / 0.035);
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.5);
+}
+.narration-accent {
+  transform: scaleY(0);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.narration-card:focus-visible .narration-accent { transform: scaleY(1); }
+.narration-title { transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .narration-card, .narration-accent, .narration-title { transition: none; }
+}
+
+/* 隱藏捲軸(頁面右側、Agent 對話列表),仍可正常捲動 */
+html, .no-scrollbar { scrollbar-width: none; }
+html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Agent 對話的 loading 動畫:這些是持續的小動畫;進行到哪個階段由捲動決定 */
+.shimmer-text {
+  background: linear-gradient(90deg, hsl(var(--muted-foreground)) 0%, hsl(var(--foreground)) 50%, hsl(var(--muted-foreground)) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+.typing-dot { animation: typing-dot 1s ease-in-out infinite; }
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+
+.caret { animation: caret 1s steps(1) infinite; }
+@keyframes caret { 50% { opacity: 0; } }
+
+.skeleton {
+  background: linear-gradient(90deg, hsl(var(--muted)) 0%, hsl(var(--accent) / 0.6) 50%, hsl(var(--muted)) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-text, .typing-dot, .caret, .skeleton { animation: none; }
+  .shimmer-text { color: hsl(var(--muted-foreground)); background: none; }
+}
+
+/* 左側說明的捲動 text reveal:每個字一個 span,浮現程度(透明度/位移/模糊)由 NarrationPanel 直接寫入,
+   每格只改浮現邊緣附近幾個字 */
+.rv {
+  display: inline-block;
+  white-space: pre;
+}
+.rv-line { transform: scaleX(0); }
+
+/* 分頁在背景時暫停所有 CSS 持續動畫(SVG 光點由 App 呼叫 pauseAnimations 暫停) */
+.page-hidden *, .page-hidden *::before, .page-hidden *::after { animation-play-state: paused !important; }
+
+/* 知識庫與 Plasma 合體的「資料大腦」光暈:柔和、緩慢呼吸 */
+.brain-aura {
+  background: radial-gradient(closest-side, rgb(113 113 122 / 0.16), rgb(113 113 122 / 0.07) 55%, rgb(113 113 122 / 0) 100%);
+  animation: brain-breathe 4s ease-in-out infinite;
+}
+.dark .brain-aura {
+  background: radial-gradient(closest-side, rgb(212 212 216 / 0.16), rgb(212 212 216 / 0.06) 55%, rgb(212 212 216 / 0) 100%);
+}
+@keyframes brain-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+/* 資料大腦(神經網路):連線由內往外畫出、節點一顆顆浮現(延遲寫在各元素上);只用 backwards 填滿,
+   動畫結束後回到原本狀態,滑鼠探照與點擊漣漪才能改透明度與位置 */
+/* Plasma 藍的線條與節點 */
+.brain-net { color: rgb(37 132 235); }
+.dark .brain-net { color: rgb(110 175 255); }
+/* 線寬用大腦座標單位(不用 non-scaling-stroke:那會讓 pathLength 的虛線變成螢幕 px,整條變成點線) */
+.brain-line { stroke: currentColor; stroke-opacity: 0.45; stroke-width: 0.16; stroke-dasharray: 1; transition: opacity 0.25s; }
+.brain-node { fill: currentColor; fill-opacity: 0.7; transform-box: fill-box; transform-origin: center; }
+.brain-node-wrap { transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s; }
+.brain-net.grow .brain-line { animation: brain-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.brain-net.grow .brain-node { animation: brain-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+.brain-net.idle { animation: brain-fade 0.8s ease backwards; }
+@keyframes brain-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes brain-pop { from { transform: scale(0); } }
+@keyframes brain-fade { from { opacity: 0; } }
+/* 訊號光點(HTML,交給 GPU 合成):原點在左上,用 transform 移動到連線上的位置 */
+.brain-dot { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; will-change: transform; }
+.brain-dot.strong { left: -4.5px; top: -4.5px; width: 9px; height: 9px; background: #10b981; }
+.brain-ring { fill: none; stroke: currentColor; stroke-width: 0.3; transform-box: fill-box; transform-origin: center; }
+/* 知識庫落下、疊到 Plasma 上合體 */
+.kb-drop { animation: kb-drop 0.9s cubic-bezier(0.34, 1.3, 0.64, 1) backwards; }
+@keyframes kb-drop {
+  from { transform: translateY(-160px) scale(1.15); opacity: 0; }
+  60% { opacity: 1; }
+}
+/* 知識庫從 Plasma 頂面「長」出來(文件都飛進去之後):剛硬的機械推升,不彈跳、不縮放。
+   立方體從 Plasma 裡往上推出,分三段推、段與段之間停頓卡住,最後往下一頓坐實。
+   低於知識庫底邊(等角 V 字)的部分由外層裁掉(Stage 量好寫進 clip-path),看起來像從頂面升上來 */
+.kb-grow > svg { animation: kb-grow 1s linear both; animation-delay: inherit; }
+@keyframes kb-grow {
+  0%   { transform: translateY(100%); animation-timing-function: cubic-bezier(0.6, 0, 0.4, 1); }
+  26%  { transform: translateY(64%);  animation-timing-function: steps(1, end); }
+  36%  { transform: translateY(64%);  animation-timing-function: cubic-bezier(0.6, 0, 0.4, 1); }
+  58%  { transform: translateY(30%);  animation-timing-function: steps(1, end); }
+  68%  { transform: translateY(30%);  animation-timing-function: cubic-bezier(0.6, 0, 0.4, 1); }
+  88%  { transform: translateY(0);    animation-timing-function: cubic-bezier(0.5, 0, 1, 1); }
+  93%  { transform: translateY(3px);  animation-timing-function: linear; }
+  100% { transform: none; }
+}
+/* 文件上傳:先在上方淡入排成一列,再一份一份縮小飛進知識庫後消失 */
+.doc-appear { animation: doc-appear 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes doc-appear {
+  from { opacity: 0; transform: translateY(-16px); }
+  to { opacity: 1; transform: none; }
+}
+.doc-fly { transform-origin: 0 0; animation: doc-fly 1.5s cubic-bezier(0.55, 0, 0.3, 1) both; }
+@keyframes doc-fly {
+  0% { opacity: 1; transform: translate(var(--x0), var(--y0)) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(0, var(--kb-dy, 0px)) scale(0.2); }
+}
+/* 問答泡泡換內容時淡入 */
+.callout-in { animation: callout-in 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+/* 逐步畫出的連線:消失時淡出 */
+.edge-reveal { transition: opacity 0.45s ease; }
+@keyframes callout-in {
+  from { opacity: 0; translate: 0 8px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brain-aura, .callout-in, .brain-net, .brain-line, .brain-node, .kb-drop, .kb-grow > svg { animation: none !important; }
+  .doc-appear { display: none; }
+}
+
+/* 防護框:綠色虛線,底色極淡 */
+.zone {
+  border-color: hsl(var(--ok) / 0.55);
+  background: hsl(var(--ok) / 0.04);
+}
+
+/* 過載冒煙 */
+/* 過載冒煙(HTML 圖層,漸層柔邊,只動 transform / opacity) */
+:root { --smoke: #a1a1aa; }
+.dark { --smoke: #d4d4d8; }
+.smoke-puff {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--smoke), transparent);
+  opacity: 0;
+  animation: smoke-rise 2.1s ease-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes smoke-rise {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  25% { opacity: 0.45; }
+  100% { opacity: 0; transform: translateY(-70px) scale(1.7); }
+}
+/* 停機的節點:褪色變暗 */
+.iso-down { filter: grayscale(1) brightness(0.75); }
+@media (prefers-reduced-motion: reduce) {
+  .smoke-puff { animation: none; opacity: 0.3; }
+}
+
+/* 資料庫垮掉的瞬間:平台劇烈晃動一下,再停在變暗的狀態 */
+.iso-down { animation: iso-crash 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+@keyframes iso-crash {
+  0% { filter: none; transform: translate(0, 0); }
+  15% { transform: translate(-6px, 2px); }
+  30% { transform: translate(6px, -2px); filter: brightness(1.6) saturate(2); }
+  45% { transform: translate(-5px, 1px); }
+  60% { transform: translate(4px, 0); }
+  75% { transform: translate(-2px, 0); }
+  100% { transform: translate(0, 0); filter: grayscale(1) brightness(0.75); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iso-down { animation: none; }
+}
+
+/* 重播鈕:按下時圖示逆時針轉一圈(key 每次換新,所以每按一次都重轉) */
+.replay-spin { animation: replay-spin 720ms cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes replay-spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+/* 舞台右上角這組柔和按鈕:按下時輕微縮一下,回饋點擊 */
+.arc button { transition-property: color, background-color, transform; }
+.arc button:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .replay-spin { animation: none; }
+  .arc button:active { transform: none; }
+}
+
+/* 導入前／後切換:投影時要一眼看到。桌機放大,目前狀態那顆上色(導入前紅、導入後綠) */
+.plasma-toggle { --tg-before: 217 80% 48%; --tg-after: 142 64% 38%; }
+.dark .plasma-toggle { --tg-before: 217 90% 66%; --tg-after: 142 65% 58%; }
+.plasma-toggle [data-fbg-item][aria-pressed="true"] { font-weight: 600; }
+.plasma-toggle [data-fbg-item][aria-label="View"][aria-pressed="true"] { background: hsl(var(--tg-before) / 0.12); color: hsl(var(--tg-before)); }
+.plasma-toggle [data-fbg-item][aria-label="Materialized View"][aria-pressed="true"] { background: hsl(var(--tg-after) / 0.14); color: hsl(var(--tg-after)); }
+/* 第一次引導:「導入 Plasma 後」外圈脈動,下方提示輕輕上下浮動 */
+.plasma-toggle.hint [data-fbg-item][aria-label="Materialized View"] { color: hsl(var(--tg-after)); animation: tg-pulse 1.8s ease-out infinite; }
+@keyframes tg-pulse {
+  0% { box-shadow: 0 0 0 0 hsl(var(--tg-after) / 0.45); }
+  70% { box-shadow: 0 0 0 12px hsl(var(--tg-after) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--tg-after) / 0); }
+}
+.toggle-hint { font-size: 15px; animation: hint-float 2.4s ease-in-out infinite; }
+/* 手機舞台小,提示卡會蓋住圖,只留按鈕脈動 */
+.compact .toggle-hint { display: none; }
+.toggle-hint::before { content: ""; position: absolute; right: 48px; top: -6px; width: 12px; height: 12px; background: inherit; transform: rotate(45deg); border-radius: 2px; }
+@keyframes hint-float { 50% { transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .plasma-toggle.hint [data-fbg-item][aria-label="Materialized View"], .toggle-hint { animation: none; }
+}
+
+/* 1400 寬以下:底部切換列加上自動播放鈕會太寬,自動播放只留圖示、切換列每格收窄 */
+@media (max-width: 1399px) {
+  .autoplay-label { display: none; }
+  .stepper-item { padding-inline: 10px; }
+}
+
+/* 上傳視窗的 Upload 鈕:外圈脈動 + 光澤掃過 + 圖示上下彈跳,滑鼠移上去放大一點,讓人知道要按 */
+.upload-cta { animation: upload-pulse 1.6s ease-out infinite; transition: transform 160ms ease, box-shadow 160ms ease; }
+.upload-cta:hover { transform: translateY(-1px) scale(1.02); }
+.upload-cta:active { transform: scale(0.98); }
+@keyframes upload-pulse {
+  0% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.45); }
+  70% { box-shadow: 0 0 0 14px hsl(var(--primary) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+}
+.upload-shine { background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.35), transparent); transform: translateX(-120%); animation: upload-shine 2.2s ease-in-out infinite; }
+.dark .upload-shine { background: linear-gradient(100deg, transparent, rgb(0 0 0 / 0.25), transparent); }
+@keyframes upload-shine { 0%, 35% { transform: translateX(-120%); } 75%, 100% { transform: translateX(320%); } }
+.upload-arrow { animation: upload-arrow 1.1s ease-in-out infinite; }
+@keyframes upload-arrow { 0%, 100% { transform: translateY(1px); } 50% { transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .upload-cta, .upload-shine, .upload-arrow { animation: none; }
+  .upload-shine { display: none; }
+}
+
+/* 手機版資料庫 logo 疊在圓柱前方:描一圈底色,跟後面的圓柱線條分開 */
+.brand-in { filter: drop-shadow(0 0 3px hsl(var(--background))) drop-shadow(0 0 3px hsl(var(--background))); }
+
+/* 手機版:標題列與舞台右上角的按鈕統一 30px 高(自動播放、主題、重播、導入前後切換),全部圓角 */
+.replay-btn.compact [role="toolbar"], .plasma-toggle.compact [role="toolbar"] { --fbg-h: 24px; --fbg-pad: 2px; --fbg-gap: 2px; --fbg-pad-x: 9px; --fbg-outer: 999px; }
+.replay-btn.compact [data-fbg-item], .plasma-toggle.compact [data-fbg-item] { border-radius: 999px; }
+.plasma-toggle.compact [data-fbg-item] { font-size: 12.5px; }
+.replay-btn.compact [data-fbg-item] svg, .plasma-toggle.compact [data-fbg-item] svg { width: 14px; height: 14px; }
+.theme-btn.compact button { width: 30px; min-width: 30px; height: 30px; min-height: 30px; border-radius: 999px; }
+.theme-btn.compact button svg { width: 15px; height: 15px; }
+
+/* 手機版不用滑動換頁(見 App.tsx):關掉下拉重新整理與回彈 */
+html.no-swipe, html.no-swipe body { overscroll-behavior: none; }
+
+/* 說明欄上緣:上半段實心蓋住上一段的尾巴,下半段漸層淡出 */
+.narr-top-fade { background: linear-gradient(to bottom, hsl(var(--background)) 0%, hsl(var(--background)) 50%, hsl(var(--background) / 0) 100%); }

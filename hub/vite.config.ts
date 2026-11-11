@@ -10,6 +10,7 @@ const DEMO_DIRS: Record<string, string> = {
   hospital: resolve(__dirname, "release/demos/hospital"),
   "ui-hospital": resolve(__dirname, "release/demos/ui-hospital"),
   ops: resolve(__dirname, "release/demos/ops"),
+  views: resolve(__dirname, "release/demos/views"),
   powerbi: resolve(__dirname, "../powerbi"),
 }
 const MIME: Record<string, string> = {

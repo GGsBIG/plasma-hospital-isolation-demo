@@ -6,6 +6,7 @@
 |---|---|
 | `hub/` | Demo 入口頁與 Plasma 元件總覽(React),`hub/build.sh` 產生上傳 WordPress 的 zip |
 | `ui-demo/` | 醫院 UI 操作 demo(React) |
+| `views-demo/` | View 與 Materialized View 圖解(React,沿用資料隔離 demo 的引擎,切換改成 View／Materialized View) |
 | `ops-demo/` | Plasma 操作 demo(React),官網 bbg-web 的 `public/plasma-demo/` 也是它 build 出來的 |
 | `powerbi/` | Plasma × Power BI 簡報對外版(靜態 HTML) |
 
