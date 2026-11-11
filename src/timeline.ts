@@ -19,11 +19,8 @@ export const clampProgress = (p: number) => Math.min(LAST, Math.max(0, p))
 
 // 抵達最後一個情境(MCP Agent)後,再留多少段 --scroll-step 的捲動距離給右側對話逐步播放
 export const CHAT_SPAN = 2.5
-// 對話播完後再一段是結尾總覽(不是情境,整塊蓋在說明欄與舞台上);RECAP_INDEX 是它在切換列上的位置
-export const RECAP_AT = LAST + CHAT_SPAN
-export const END = RECAP_AT + 1
-export const RECAP_INDEX = SCENES.length
-export const recapAt = (p: number) => clamp01(p - RECAP_AT)
+// 捲動終點:最後一個情境的 Agent 對話播完
+export const END = LAST + CHAT_SPAN
 
 // 目前所在的兩個情境與兩者之間的過場進度:與捲動等速,畫面跟著滾輪與手指走
 export function segmentAt(p: number): { a: SceneDef; b: SceneDef; t: number } {
