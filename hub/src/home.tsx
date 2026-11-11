@@ -29,14 +29,6 @@ const HEADS: { key: string; tab: string; lines: [string, string]; lead: ReactNod
     key: "tech", tab: "技術人員", lines: ["Plasma 元件", "逐一說明"],
     lead: <>從資料庫連線、View、排程、資料產品到 MCP，說明每個元件的用途、規格與限制。</>,
   },
-  {
-    key: "ops", tab: "操作流程", lines: ["不用申請", "直接看 Plasma 操作"],
-    lead: <>連上資料庫、讓 AI 看懂欄位，再用一張截圖產生能接回報表的資料 API。</>,
-  },
-  {
-    key: "views", tab: "View 原理", lines: ["View 和", "Materialized View"],
-    lead: <>同一段 SQL，可以每次查詢時才執行，也可以先執行好存成快照。看兩種做法差在哪裡。</>,
-  },
 ]
 const HOLD = 6500
 
@@ -45,8 +37,6 @@ const CARDS = [
   { key: "manufacturing", href: "manufacturing/", title: "製造業情境" },
   { key: "hospital", href: "hospital/", title: "醫院情境" },
   { key: "tech", href: "tech/", title: "元件總覽" },
-  { key: "ops", href: "ops/", title: "操作示範" },
-  { key: "views", href: "views/", title: "View 原理" },
 ]
 
 /** 主標的 text reveal:每一行有遮罩,字一個接一個從遮罩下方升上來 */
