@@ -9,58 +9,57 @@
 
 html, body, #root { height: 100%; }
 
-/* Brobridge 企業識別手冊 tokens：paper #fff · ink #111 · red #b42622 · sheet #ece9e2 */
+/* 與真正的 Plasma 前端相同的色彩 tokens（plasma-frontend src/styles/index.css） */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 7%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 7%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 7%;
-    --primary: 0 0% 7%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 40 17% 91%;
-    --secondary-foreground: 0 0% 7%;
-    --muted: 40 17% 91%;
-    --muted-foreground: 0 0% 30%;
-    --accent: 40 17% 91%;
-    --accent-foreground: 0 0% 7%;
-    --destructive: 2 68% 42%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 83%;
-    --input: 0 0% 7%;
-    --ring: 2 68% 42%;
-    --radius: 0rem;
-    --sidebar: 40 17% 91%;
-    --sidebar-background: 40 17% 91%;
-    --sidebar-foreground: 0 0% 7%;
-    --sidebar-primary: 0 0% 7%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 40 14% 85%;
-    --sidebar-accent-foreground: 0 0% 7%;
-    --sidebar-border: 0 0% 7%;
-    --sidebar-ring: 2 68% 42%;
+    --background: 210 20% 99%;
+    --foreground: 210 15% 8%;
+    --card: 210 20% 99%;
+    --card-foreground: 210 15% 8%;
+    --popover: 210 20% 99%;
+    --popover-foreground: 210 15% 8%;
+    --primary: 210 18% 12%;
+    --primary-foreground: 210 15% 98%;
+    --secondary: 210 12% 95%;
+    --secondary-foreground: 210 15% 8%;
+    --muted: 210 12% 95%;
+    --muted-foreground: 210 8% 48%;
+    --accent: 210 12% 90%;
+    --accent-foreground: 210 15% 8%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 14% 88%;
+    --input: 210 14% 88%;
+    --ring: 210 15% 8%;
+    --radius: 0.5rem;
+    --sidebar: 210 15% 97%;
+    --sidebar-background: 210 15% 97%;
+    --sidebar-foreground: 210 12% 26%;
+    --sidebar-primary: 210 18% 12%;
+    --sidebar-primary-foreground: 210 15% 98%;
+    --sidebar-accent: 210 12% 92%;
+    --sidebar-accent-foreground: 210 15% 10%;
+    --sidebar-border: 215 14% 90%;
+    --sidebar-ring: 226 70% 52%;
   }
 }
 
 @layer base {
   * { @apply border-border; }
-  body { @apply bg-background text-foreground antialiased; font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
-  :focus-visible { outline: 2px solid #b42622; outline-offset: 2px; }
-  ::selection { background: #b42622; color: #fff; }
+  body { @apply bg-background text-foreground; }
 }
 
 @layer components {
-  /* 手冊條目語氣：粗體大寫小字＋表格數字 */
+  /* 示範外框（字幕、片段列、外部工具畫面）用的小標字 */
   .t-label { font-size: 0.6875rem; line-height: 1.4; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
   .t-num { font-weight: 900; font-stretch: 75%; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
 }
 
-/* thin square scrollbar */
-* { scrollbar-width: thin; scrollbar-color: rgba(17,17,17,.35) transparent; }
+/* 與真正前端相同的半透明細捲軸 */
+* { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,.2) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background-color: rgba(17,17,17,.35); border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,.2); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
 
 /* fake cursor */
 .demo-cursor {
@@ -70,7 +69,7 @@ html, body, #root { height: 100%; }
 }
 .demo-ripple {
   position: fixed; z-index: 59; width: 12px; height: 12px; border-radius: 999px;
-  background: #b42622; pointer-events: none; opacity: 0;
+  background: hsl(226 70% 52%); pointer-events: none; opacity: 0;
   transform: translate(-50%, -50%) scale(1);
 }
 .demo-ripple.on { animation: demo-ripple-a .5s ease-out; }

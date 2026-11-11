@@ -40,12 +40,12 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
-  const crumb =
-    s.page === "detail" ? "Database / oracle_erp"
-    : s.page === "mview" ? "Materialized View"
-    : s.page === "api" ? "Data Product / Data API"
-    : s.page === "mcp" ? "MCP"
-    : "Database"
+  const crumbs =
+    s.page === "detail" ? ["Data Access", "Detail"]
+    : s.page === "mview" ? ["Materialized View"]
+    : s.page === "api" ? ["Data Product"]
+    : s.page === "mcp" ? ["MCP"]
+    : ["Data Access"]
 
   const page =
     s.page === "detail" ? <DatabaseDetailPage s={s} />
@@ -66,10 +66,10 @@ export function App() {
         ) : s.screen === "chatgpt" ? (
           <ChatGPTAgent s={s} />
         ) : (
-          <div className="h-full w-full flex border-t-[6px] border-red">
+          <div className="relative h-full w-full flex">
             <Sidebar s={s} />
             <div className="flex-1 min-w-0 flex flex-col">
-              <TopBar crumb={crumb} />
+              <TopBar crumbs={crumbs} />
               <div className="flex-1 min-h-0 overflow-hidden flex flex-col">{page}</div>
             </div>
 
@@ -83,10 +83,10 @@ export function App() {
 
             {/* AI 分析中 toast */}
             {s.analyzing && (
-              <div className="absolute bottom-8 right-8 z-50 flex items-center gap-2 border-2 border-ink border-l-[6px] border-l-red bg-paper px-4 py-3 shadow-[0_12px_32px_rgb(17_17_17/0.18)] fadeup on">
-                <Sparkles className="h-4 w-4 text-red" />
-                <span className="text-sm font-bold">AI 正在分析文件…</span>
-                <Loader2 className="h-4 w-4 animate-spin text-ink" />
+              <div className="absolute bottom-8 right-8 z-50 flex items-center gap-2 rounded-lg border bg-background px-4 py-3 shadow-lg fadeup on">
+                <Sparkles className="h-4 w-4 text-sidebar-ring" />
+                <span className="text-sm font-medium">AI 正在分析文件…</span>
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             )}
           </div>

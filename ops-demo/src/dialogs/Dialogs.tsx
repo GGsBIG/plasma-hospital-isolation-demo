@@ -1,14 +1,15 @@
 import { useEffect, useRef } from "react"
-import { UploadCloud, FileText, X, CheckCircle2, Check, Search } from "lucide-react"
+import { UploadCloud, FileText, X, Check, Database, Bot } from "lucide-react"
 import {
-  Button, Input, Textarea, Badge, FakeSelect, StatusDot,
-  DialogShell, DialogHeaderRow,
+  Button, Input, Textarea, Badge, FakeSelect, StatusDot, Label, SearchBox,
+  DialogShell, DialogHeaderRow, DialogFooter,
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+  DataTable, DTHeadRow, DTHead, DTRow, DTCell,
 } from "@/components/ui"
 import type { DemoState } from "@/demo/store"
-import { T_ORD_M_ROWS, MCP_TOOLS } from "@/demo/data"
+import { T_ORD_M_ROWS } from "@/demo/data"
 
-/* ---------- 1. Add Database ---------- */
+/* ---------- 1. Add Data Access（真前端 AddDataAccessDialog + DynamicConnectorForm） ---------- */
 export function AddDatabaseDialog({ s }: { s: DemoState }) {
   const f = s.form
   const statusLabel =
@@ -17,31 +18,35 @@ export function AddDatabaseDialog({ s }: { s: DemoState }) {
     : s.connStatus === "preparing" ? "Testing connection…"
     : "Not Connected"
   return (
-    <DialogShell open={s.addOpen} className="sm:max-w-[600px]">
-      <DialogHeaderRow title="Add Database" />
+    <DialogShell open={s.addOpen} className="sm:max-w-[600px] max-h-[90%] overflow-auto px-6 pb-6 pt-4">
+      <DialogHeaderRow title="Add Data Access" icon={Database} />
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Name"><Input data-t="f-name" value={f.display_name} readOnly /></Field>
-          <Field label="Database Type"><FakeSelect value={f.db_type} placeholder=" " /></Field>
+          <Field label="Name" required><Input data-t="f-name" value={f.display_name} readOnly /></Field>
+          <Field label="Data Type" required><FakeSelect value={f.db_type} placeholder=" " /></Field>
         </div>
-        <Field label="Description"><Textarea rows={2} className="resize-none" value={f.description} readOnly /></Field>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Host"><Input data-t="f-host" value={f.host} readOnly /></Field>
-          <Field label="Port"><Input value={f.port} readOnly /></Field>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Database Name"><Input value={f.db_name} readOnly /></Field>
-          <div />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Username"><Input value={f.username} readOnly /></Field>
-          <Field label="Password"><Input type="password" value={f.password} readOnly /></Field>
-        </div>
-        <div className="t-label flex items-center gap-2">
+        <Field label="Description"><Textarea className="resize-none" value={f.description} readOnly /></Field>
+        {f.db_type && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Host" required><Input data-t="f-host" value={f.host} readOnly /></Field>
+              <Field label="Port" required><Input value={f.port} readOnly /></Field>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Database Name" required><Input value={f.db_name} readOnly /></Field>
+              <div />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Username" required><Input value={f.username} readOnly /></Field>
+              <Field label="Password" required><Input type="password" value={f.password} readOnly /></Field>
+            </div>
+          </>
+        )}
+        <div className="font-light text-xs flex items-center gap-2">
           <StatusDot status={s.connStatus} size={6} label={statusLabel} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Button data-t="btn-verify" variant="default" className={s.connStatus === "preparing" ? "opacity-80" : ""}>
+          <Button data-t="btn-verify" variant="default" disabled={!f.db_type} className={s.connStatus === "preparing" ? "opacity-80" : ""}>
             Verify Connection
           </Button>
           <Button data-t="btn-save" variant="brand" disabled={s.connStatus !== "ready"}>
@@ -53,16 +58,16 @@ export function AddDatabaseDialog({ s }: { s: DemoState }) {
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
-      <label className="t-label">{label}</label>
+    <div className="space-y-1">
+      <Label required={required}>{label}</Label>
       {children}
     </div>
   )
 }
 
-/* ---------- 2. Upload Documentation ---------- */
+/* ---------- 2. Upload Documentation（真前端 UploadDocumentationDialog） ---------- */
 export function UploadDocDialog({ s }: { s: DemoState }) {
   const listRef = useRef<HTMLDivElement>(null)
   // 檔案上傳完，過一秒再捲到底，露出被擋住的檔案
@@ -75,50 +80,48 @@ export function UploadDocDialog({ s }: { s: DemoState }) {
     return () => clearTimeout(t)
   }, [s.files.length])
   return (
-    <DialogShell open={s.uploadOpen} className="sm:max-w-[480px]">
-      <DialogHeaderRow title="Upload Documentation" />
+    <DialogShell open={s.uploadOpen} className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto px-6 pb-6 pt-4">
+      <DialogHeaderRow title="Upload Documentation" icon={Database} />
       <div
         data-t="dropzone"
-        className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-ink bg-sheet p-8 transition-colors data-[drag=on]:border-red"
+        className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 cursor-pointer transition-colors border-border data-[drag=on]:border-primary/50 data-[drag=on]:bg-muted/40"
       >
-        <UploadCloud className="h-10 w-10 text-red" strokeWidth={1.75} />
+        <UploadCloud className="h-10 w-10 text-muted-foreground" />
         <p className="text-sm text-center">
-          <span className="font-bold text-red underline decoration-2 underline-offset-4">Click to upload</span> or drag files here
+          <span className="font-medium text-primary">Click to upload</span> or drag and drop
         </p>
-        <p className="t-label text-ink-soft">.txt, .md</p>
+        <p className="text-xs text-muted-foreground">.txt, .md</p>
       </div>
       {s.files.length > 0 && (
         <div ref={listRef} className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
           {s.files.map((name) => (
-            <div key={name} className="flex items-center gap-2.5 border border-ink border-l-4 border-l-red px-3 py-2 fadeup on">
-              <FileText className="h-4 w-4 shrink-0 text-ink" />
-              <span className="text-sm font-medium truncate flex-1">{name}</span>
-              <X className="h-4 w-4 shrink-0 text-ink" />
+            <div key={name} className="flex items-center gap-2.5 rounded-md border px-3 py-2 fadeup on">
+              <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="text-sm truncate flex-1">{name}</span>
+              <X className="h-4 w-4 shrink-0 text-muted-foreground" />
             </div>
           ))}
         </div>
       )}
-      <div className="flex justify-end gap-2">
+      <DialogFooter>
         <Button variant="outline">Cancel</Button>
         <Button data-t="btn-upload" variant="brand" disabled={s.files.length === 0}>Upload</Button>
-      </div>
+      </DialogFooter>
     </DialogShell>
   )
 }
 
-/* ---------- 2.5 View Schema（對齊真前端 ViewTableSchemaDialog） ---------- */
+/* ---------- 2.5 View Schema（真前端 ViewTableSchemaDialog） ---------- */
 export function ViewSchemaDialog({ s }: { s: DemoState }) {
   return (
-    <DialogShell open={s.schemaOpen} className="max-w-[520px] h-[80vh] flex flex-col">
-      <DialogHeaderRow title={`Table Schema - ${"T_ORD_M"}`} />
-      <div className="flex items-center gap-2 h-9 border border-ink px-3 text-sm text-ink-soft">
-        <Search className="h-4 w-4" /> Search
-      </div>
-      <div className="flex-1 overflow-auto border border-ink">
+    <DialogShell open={s.schemaOpen} closeT="btn-schema-close" className="max-w-[520px] max-h-[90vh] h-[80vh] flex flex-col px-6 pb-6 pt-4">
+      <DialogHeaderRow title={`Table Schema - ${"T_ORD_M"}`} icon={Database} />
+      <SearchBox />
+      <div className="flex-1 overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="pl-3">Column Name</TableHead>
+              <TableHead>Column Name</TableHead>
               <TableHead>Data Type</TableHead>
               <TableHead className="w-28 text-center">Primary Key</TableHead>
             </TableRow>
@@ -126,80 +129,60 @@ export function ViewSchemaDialog({ s }: { s: DemoState }) {
           <TableBody>
             {s.columns.map((col) => (
               <TableRow key={col.name}>
-                <TableCell className="pl-3 font-mono font-bold">{col.name}</TableCell>
-                <TableCell className="text-ink-soft font-mono text-xs">{col.type}</TableCell>
+                <TableCell>{col.name}</TableCell>
+                <TableCell className="text-muted-foreground">{col.type}</TableCell>
                 <TableCell className="text-center">
-                  {col.name === "ORD_NO" && <Check className="h-5 w-5 mx-auto text-red" strokeWidth={3} />}
+                  {col.name === "ORD_NO" && <Check className="h-4 w-4 mx-auto text-sidebar-ring" />}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
-      <div className="flex justify-end">
-        <Button data-t="btn-schema-close" variant="outline">Close</Button>
-      </div>
     </DialogShell>
   )
 }
 
-/* ---------- 2.6 View Data（對齊真前端 ViewDataDialog：SELECT * 結果） ---------- */
+/* ---------- 2.6 View Data（真前端 ViewDataDialog） ---------- */
 export function ViewDataDialog({ s }: { s: DemoState }) {
   const cols = T_ORD_M_ROWS.length ? Object.keys(T_ORD_M_ROWS[0]) : []
   return (
-    <DialogShell open={s.viewDataOpen} className="max-w-[90vw] w-[1000px] h-[80vh] flex flex-col">
-      <DialogHeaderRow title={"T_ORD_M"} />
-      <div className="flex-1 overflow-auto border border-ink">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {cols.map((c) => (
-                <TableHead key={c} className="pl-3 whitespace-nowrap">{c}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {T_ORD_M_ROWS.map((row) => (
-              <TableRow key={row.ORD_NO}>
-                {cols.map((c) => (
-                  <TableCell key={c} className="pl-3 font-mono text-xs whitespace-nowrap">{row[c]}</TableCell>
-                ))}
-              </TableRow>
+    <DialogShell open={s.viewDataOpen} closeT="btn-viewdata-close" closeTop="top-6" className="max-w-[90vw] max-h-[90vh] w-[1000px] flex flex-col">
+      <DialogHeaderRow title={`View Table Data - ${"T_ORD_M"}`} />
+      <div className="flex-1 min-h-0 flex flex-col">
+        <DataTable className="flex-1 min-h-0">
+          <DTHeadRow>
+            {cols.map((c) => (
+              <DTHead key={c} className="whitespace-nowrap">{c}</DTHead>
             ))}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex justify-end">
-        <Button data-t="btn-viewdata-close" variant="outline">Close</Button>
+          </DTHeadRow>
+          <tbody className="[&_tr:last-child]:border-0">
+            {T_ORD_M_ROWS.map((row) => (
+              <DTRow key={row.ORD_NO}>
+                {cols.map((c) => (
+                  <DTCell key={c} className="whitespace-nowrap">{row[c]}</DTCell>
+                ))}
+              </DTRow>
+            ))}
+          </tbody>
+        </DataTable>
       </div>
     </DialogShell>
   )
 }
 
-/* ---------- 2.7 Add MCP（在 Plasma 註冊對外 MCP，接給 ChatGPT agent） ---------- */
+/* ---------- 2.7 Add Group（真前端 MCP AddGroupDialog） ---------- */
 export function AddMcpDialog({ s }: { s: DemoState }) {
   const f = s.mcpForm
   return (
-    <DialogShell open={s.mcpAddOpen} className="sm:max-w-[560px]">
-      <DialogHeaderRow title="Add MCP" />
+    <DialogShell open={s.mcpAddOpen} className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto px-6 pb-6 pt-4">
+      <DialogHeaderRow title="Add Group" icon={Bot} />
       <div className="space-y-4">
-        <Field label="Name"><Input data-t="f-mcp-name" value={f.name} readOnly /></Field>
-        <Field label="Endpoint"><Input data-t="f-mcp-endpoint" value={f.endpoint} readOnly /></Field>
-        <Field label="Target Agent"><FakeSelect value={f.target} placeholder="Select an MCP-capable agent" /></Field>
-        <div className="flex flex-col gap-2">
-          <span className="t-label">Exposed Tools</span>
-          <div className="flex flex-wrap gap-1.5">
-            {MCP_TOOLS.map((t) => (
-              <span key={t} className="inline-flex items-center gap-1 border border-ink bg-paper px-2 py-1 text-[11px] font-mono text-ink">
-                <CheckCircle2 className="h-3 w-3 text-red" /> {t}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline">Cancel</Button>
-          <Button data-t="btn-mcp-create" variant="brand">Create &amp; Connect</Button>
-        </div>
+        <Field label="Name" required><Input data-t="f-mcp-name" value={f.name} readOnly /></Field>
+        <Field label="Description"><Textarea data-t="f-mcp-endpoint" value={f.endpoint} readOnly /></Field>
+        <DialogFooter>
+          <Button data-t="btn-mcp-create" className="w-full">Save</Button>
+        </DialogFooter>
       </div>
     </DialogShell>
   )
@@ -229,33 +212,33 @@ export function EditTableDescriptionDialog({ s }: { s: DemoState }) {
     return () => clearInterval(id)
   }, [allFilled])
   return (
-    <DialogShell open={s.editOpen} className="max-w-[600px]">
-      <DialogHeaderRow title={`Edit Table Description - ${"T_ORD_M"}`} />
-      <div ref={scrollRef} className="max-h-[64vh] overflow-y-auto flex flex-col gap-4 pr-1">
+    <DialogShell open={s.editOpen} className="max-w-[600px] max-h-[90vh] h-[80vh] flex flex-col px-6 pb-6 pt-4">
+      <DialogHeaderRow title={`Edit Description - ${"T_ORD_M"}`} icon={Database} />
+      <div ref={scrollRef} className="flex-1 overflow-y-auto flex flex-col gap-4 pr-1">
         <div className="flex flex-col gap-2">
-          <span className="t-label">Table Description</span>
-          <Textarea rows={2} readOnly value="訂單主檔：記錄每一筆會員訂單的金額、數量、商品與狀態。" />
+          <span className="text-sm font-medium">Table Description</span>
+          <Textarea rows={3} readOnly value="訂單主檔：記錄每一筆會員訂單的金額、數量、商品與狀態。" />
         </div>
         <div className="flex flex-col gap-2">
-          <span className="t-label">Column Descriptions</span>
+          <span className="text-sm font-medium">Column Descriptions</span>
+          <SearchBox />
           <div className="flex flex-col gap-2">
             {s.columns.map((col) => (
-              <div key={col.name} className={"flex flex-col gap-1.5 border p-3 transition-colors " + (col.desc ? "border-ink border-l-4 border-l-red" : "border-hair")}>
+              <div key={col.name} className="flex flex-col gap-1.5 rounded-md border p-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold font-mono">{col.name}</span>
+                  <span className="text-sm font-medium">{col.name}</span>
                   <Badge variant="secondary" className="font-mono text-xs">{col.type}</Badge>
-                  {col.desc && <CheckCircle2 className="h-3.5 w-3.5 text-red ml-auto" />}
                 </div>
-                <Input className="h-8 text-sm" value={col.desc} readOnly placeholder="(no description yet)" />
+                <Input className="h-8 text-sm" value={col.desc} readOnly />
               </div>
             ))}
           </div>
         </div>
       </div>
-      <div className="flex justify-end gap-2">
+      <DialogFooter>
         <Button variant="outline">Cancel</Button>
-        <Button data-t="btn-save-desc" variant="brand">Save</Button>
-      </div>
+        <Button data-t="btn-save-desc">Save</Button>
+      </DialogFooter>
     </DialogShell>
   )
 }

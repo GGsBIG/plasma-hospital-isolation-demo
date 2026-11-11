@@ -1,16 +1,12 @@
 /** @type {import('tailwindcss').Config} */
+// 色彩、圓角與真正的 Plasma 前端（plasma-frontend）一致；paper/ink/red/sheet 只給示範用的外框（字幕、片段列、外部工具畫面）
 export default {
   darkMode: ["class"],
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
-    // 直角世界：所有圓角歸零，只保留 full（甜甜圈圖等真圓形）
-    borderRadius: { none: "0", sm: "0", DEFAULT: "0", md: "0", lg: "0", xl: "0", "2xl": "0", "3xl": "0", full: "9999px" },
     extend: {
-      fontFamily: {
-        sans: ["ui-sans-serif", "system-ui", "-apple-system", "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "sans-serif"], mono: ["ui-sans-serif", "system-ui", "-apple-system", "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "sans-serif"],
-      },
+      borderRadius: { lg: "var(--radius)", md: "calc(var(--radius) - 2px)", sm: "calc(var(--radius) - 4px)" },
       colors: {
-        // Brobridge 企業識別手冊：白紙、墨、唯一的紅
         paper: "#ffffff",
         ink: { DEFAULT: "#111111", soft: "#4d4d4d" },
         red: { DEFAULT: "#b42622", deep: "#8f1d1a" },
@@ -39,8 +35,6 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
-      transitionDuration: { DEFAULT: "200ms" },
-      transitionTimingFunction: { DEFAULT: "cubic-bezier(0.25, 0.1, 0.25, 1)" },
     },
   },
   plugins: [require("tailwindcss-animate")],

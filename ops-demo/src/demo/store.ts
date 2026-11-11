@@ -15,7 +15,7 @@ export interface DemoState {
   loggingIn: boolean
 
   page: "list" | "detail" | "mview" | "api" | "mcp"
-  detailTab: "general" | "tables"
+  detailTab: "general" | "tables" | "mcp"
   connections: { name: string; type: string; status: string }[]
   navActive: string
 
