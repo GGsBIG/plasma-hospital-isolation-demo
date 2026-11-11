@@ -7,7 +7,6 @@ import { Recap } from "./components/Recap"
 import { quantize, scrollStore, useScrollEffect, useScrollSelector } from "./scroll"
 import { layoutMode, useLayoutMode } from "./layout"
 import { Stepper } from "./components/Stepper"
-import { Legend } from "./components/Legend"
 import { AutoplayButton } from "./components/AutoplayButton"
 import { autoplay, useAutoplay } from "./autoplay"
 import { cycleMs } from "./phase"
@@ -446,7 +445,6 @@ export function App() {
           <NarrationPanel onSelect={goTo} />
           {/* 上一段露出的尾巴:上緣漸層淡出,不會在欄位頂端被硬切成半行字 */}
           <div aria-hidden className="narr-top-fade pointer-events-none absolute inset-x-0 top-0 h-24 pp:h-10" />
-          <Legend />
         </aside>
 
         {/* 舞台固定在畫面上,不隨頁面捲動 */}
