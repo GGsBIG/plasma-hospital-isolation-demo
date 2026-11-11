@@ -4,7 +4,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"   # repo/hub
 REPO="$(cd "$HERE/.." && pwd)"           # plasma-hospital-isolation-demo
-DEMOS="$(cd "$REPO/.." && pwd)"          # 中科院版在 repo 外(private repo)
+DEMOS="$(cd "$REPO/.." && pwd)"          # 製造業版在 repo 外(private repo)
 OUT="$HERE/release/demos"
 rm -rf "$HERE/release" && mkdir -p "$OUT"
 
@@ -12,9 +12,9 @@ need() { [ -d "$1/node_modules" ] || (cd "$1" && npm ci --silent); }
 
 echo "› 入口頁與技術頁"
 need "$HERE";              (cd "$HERE" && npx tsc -b && npx vite build --outDir "$OUT" --emptyOutDir --logLevel warn)
-echo "› 中科院版"
+echo "› 製造業版"
 need "$DEMOS/plasma-data-isolation-demo"
-(cd "$DEMOS/plasma-data-isolation-demo" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/ncsist" --emptyOutDir --logLevel warn)
+(cd "$DEMOS/plasma-data-isolation-demo" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/manufacturing" --emptyOutDir --logLevel warn)
 echo "› 醫院版"
 need "$REPO";              (cd "$REPO" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/hospital" --emptyOutDir --logLevel warn)
 echo "› 醫院 UI 操作"

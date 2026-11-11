@@ -4,9 +4,9 @@ import { existsSync, readFileSync, statSync } from "fs"
 import { extname, join, resolve } from "path"
 
 // 開發時讓入口卡也點得進各個 demo:
-// /ncsist/、/hospital/、/ui-hospital/ 讀 ./build.sh 產出的 release/demos/;/powerbi/ 直接讀 repo 的 powerbi/
+// /manufacturing/、/hospital/、/ui-hospital/ 讀 ./build.sh 產出的 release/demos/;/powerbi/ 直接讀 repo 的 powerbi/
 const DEMO_DIRS: Record<string, string> = {
-  ncsist: resolve(__dirname, "release/demos/ncsist"),
+  manufacturing: resolve(__dirname, "release/demos/manufacturing"),
   hospital: resolve(__dirname, "release/demos/hospital"),
   "ui-hospital": resolve(__dirname, "release/demos/ui-hospital"),
   ops: resolve(__dirname, "release/demos/ops"),

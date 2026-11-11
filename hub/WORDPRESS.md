@@ -16,7 +16,7 @@
 | `/demos/views/` | View 與 Materialized View 圖解 | `views-demo/`(React,資料隔離 demo 的引擎) |
 | `/demos/ops/` | Plasma 操作 demo(跟官網 bbg-web 同一份) | `ops-demo/`(React) |
 | `/demos/powerbi/` | Plasma × Power BI 簡報(對外版) | `powerbi/`(靜態 HTML) |
-| `/demos/ncsist/` | 中科院資料隔離 | 另一個 private repo `plasma-data-isolation-demo`,需放在本 repo 旁邊 |
+| `/demos/manufacturing/` | 製造業資料隔離 | 另一個 private repo `plasma-data-isolation-demo`,需放在本 repo 旁邊 |
 
 所有頁面都加了 `noindex, nofollow`，搜尋引擎不會收錄。入口頁不要放進官網選單。
 

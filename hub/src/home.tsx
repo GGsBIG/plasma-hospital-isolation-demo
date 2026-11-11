@@ -18,7 +18,7 @@ import m941w from "./assets/hero/bridge-mobile-941.webp"
 /** 主標輪播:每則對應一張入口卡,輪到時那張卡轉紅 */
 const HEADS: { key: string; tab: string; lines: [string, string]; lead: ReactNode }[] = [
   {
-    key: "ncsist", tab: "中科院", lines: ["報表和 AI", "改從 Plasma 取資料"],
+    key: "manufacturing", tab: "製造業", lines: ["報表和 AI", "改從 Plasma 取資料"],
     lead: <>正式資料庫不受影響，各單位只看得到自己權限內的資料。</>,
   },
   {
@@ -42,7 +42,7 @@ const HOLD = 6500
 
 /** 入口卡:href 對應 WordPress 上 /demos/ 底下的子資料夾 */
 const CARDS = [
-  { key: "ncsist", href: "ncsist/", title: "中科院情境" },
+  { key: "manufacturing", href: "manufacturing/", title: "製造業情境" },
   { key: "hospital", href: "hospital/", title: "醫院情境" },
   { key: "tech", href: "tech/", title: "元件總覽" },
   { key: "ops", href: "ops/", title: "操作示範" },
@@ -90,7 +90,7 @@ function Viewer({ card, onClose }: { card: Card; onClose: () => void }) {
   useEffect(() => {
     // 開啟時塞一筆瀏覽紀錄,按「上一頁」就關閉視窗、網址回到首頁
     // (開發模式的 StrictMode 會跑兩次 effect,已經推過就不再推)
-    // 網址同步改成該情境的實際網址(例如 /demos/ncsist/);重新整理或分享這個網址會直接打開那個 demo
+    // 網址同步改成該情境的實際網址(例如 /demos/manufacturing/);重新整理或分享這個網址會直接打開那個 demo
     if (history.state?.viewer !== card.key) history.pushState({ viewer: card.key }, "", new URL(card.href, HUB_URL).href)
     const onPop = () => onClose()
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") history.back() }
@@ -121,7 +121,7 @@ function Viewer({ card, onClose }: { card: Card; onClose: () => void }) {
 }
 
 function Home() {
-  // 從 demo 點 logo 回來時網址帶 #ncsist / #hospital / #tech,首頁就停在那個情境
+  // 從 demo 點 logo 回來時網址帶 #manufacturing / #hospital / #tech,首頁就停在那個情境
   const [cur, setCur] = useState(() => Math.max(0, HEADS.findIndex((h) => `#${h.key}` === location.hash)))
   const [still, setStill] = useState(false)
   // 滑鼠移到卡片上時取消輪播高亮,避免兩張卡同時是紅的

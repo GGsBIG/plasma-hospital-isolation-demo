@@ -395,7 +395,7 @@ export function App() {
       >
         <ProgressBar onSelect={goTo} />
         <div className="flex items-center gap-4">
-          {/* 點 logo 回 Demo 首頁(/demos/#ncsist,首頁會停在這個情境);在入口頁的視窗裡開啟時,由入口頁攔下來直接關閉視窗 */}
+          {/* 點 logo 回 Demo 首頁(/demos/#views,首頁會停在這個情境);在入口頁的視窗裡開啟時,由入口頁攔下來直接關閉視窗 */}
           <a href="../#views" target="_top" aria-label="回到 Plasma Demo 首頁" className="shrink-0">
             <img src={logo} alt="Brobridge" className="h-[22px] w-auto dark:hidden" />
             <img src={logoDark} alt="Brobridge" className="hidden h-[26px] w-auto dark:block" />
