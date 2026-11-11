@@ -58,7 +58,7 @@ main { flex: 1; min-height: 0; display: flex; }
 }
 /* 電腦與平板:三顆按鈕由左至右排成一列,緊接在主標與頁籤下方(手機仍放在畫面底部) */
 @media (min-width: 768px) { .hero > .container { justify-content: flex-start; gap: 48px; } }
-@media (min-width: 768px) { .cards { flex-direction: row; flex-wrap: wrap; gap: 14px; } }
+@media (min-width: 768px) { .cards { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 14px; } .card { text-align: center; } }
 .card {
   display: inline-block; min-width: 9em; padding: 12px 26px;
   background: var(--paper); color: var(--ink); text-decoration: none;
