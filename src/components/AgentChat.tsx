@@ -202,7 +202,7 @@ function Chart({ v }: { v: number }) {
               />
             </div>
             <span className="w-10 text-right font-mono tabular-nums" style={{ opacity: clamp01(grow * 1.6 - i * 0.2) }}>
-              {d.amount.toFixed(2)}
+              {d.amount.toFixed(1)}
             </span>
           </div>
         ))}

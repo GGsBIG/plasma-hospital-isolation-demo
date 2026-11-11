@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom"
 import { Check, Upload } from "lucide-react"
 import { DOC_FILES } from "../data"
 import { FILE_ICONS, FILE_ICON_VIEWBOX } from "../fileIcons"
@@ -6,8 +7,12 @@ import { uploadGate } from "../upload"
 // 大腦頁導入後的上傳視窗:五份文件都已就緒,按 Upload 才開始匯入知識庫(之後大腦長出、Agent 對話接著播)。
 // data-autoplay:按這顆不算「手動操作」,不會中斷自動播放(自動播放時會自己幫忙按)
 export function UploadDialog({ compact }: { compact: boolean }) {
-  return (
-    <div className="absolute inset-0 z-[5] flex items-center justify-center bg-background/55 p-4">
+  // 手機:舞台很矮,視窗放在舞台裡會被切掉,改成蓋在整個畫面上(標題列與下方進度條之間)
+  const dialog = (
+    <div
+      className={compact ? "fixed inset-x-0 z-30 flex items-center justify-center bg-background/70 p-4" : "absolute inset-0 z-[5] flex items-center justify-center bg-background/55 p-4"}
+      style={compact ? { top: "var(--header-h)", bottom: "var(--footer-h)" } : undefined}
+    >
       <div
         role="dialog"
         aria-label="匯入知識庫"
@@ -49,4 +54,5 @@ export function UploadDialog({ compact }: { compact: boolean }) {
       </div>
     </div>
   )
+  return compact ? createPortal(dialog, document.body) : dialog
 }

@@ -85,7 +85,7 @@ function AgentPanel() {
   if (mode !== "desktop" || overlayLeft) {
     const box =
       mode === "phone-portrait"
-        ? { className: "fixed inset-x-0 bottom-0 z-10 bg-background px-6 pb-3 pt-2", style: { height: "var(--narr-h)" } }
+        ? { className: "fixed inset-x-0 z-10 bg-background px-6 pb-3 pt-2", style: { bottom: "var(--footer-h)", height: "var(--narr-h)" } }
         : mode === "phone-landscape"
           ? { className: "fixed left-0 z-10 bg-background py-2 pl-3 pr-2", style: { top: "var(--header-h)", width: "calc(var(--narr-w) + 24px)", height: "var(--stage-h)" } }
           : // 剛好蓋住說明欄(main 左內距 24 + 說明欄 300),不蓋到舞台
@@ -114,26 +114,55 @@ const progressFill = (p: number) => (clampProgress(p) + 1) / SEGMENTS
 function ProgressBar({ onSelect }: { onSelect: (i: number) => void }) {
   const fill = useRef<HTMLDivElement>(null)
   const current = useScrollSelector((p) => Math.round(clampProgress(p)))
+  const mode = useLayoutMode()
   useScrollEffect((p) => {
     if (fill.current) fill.current.style.transform = `scaleX(${progressFill(p)})`
-  }, [])
+  }, [mode])
+  const track = (cls: string) => (
+    <div aria-hidden className={`pointer-events-none absolute h-[3px] overflow-hidden rounded-full bg-foreground/10 ${cls}`} style={{ left: "var(--bar-x)", right: "var(--bar-x)" }}>
+      <div ref={fill} className="h-full origin-left rounded-full bg-foreground/80" style={{ transform: "scaleX(0)" }} />
+      {Array.from({ length: SEGMENTS - 1 }, (_, k) => (
+        <span key={k} className="absolute top-0 h-full w-[2px] -translate-x-1/2 bg-background" style={{ left: `${((k + 1) / SEGMENTS) * 100}%` }} />
+      ))}
+    </div>
+  )
+  const tone = (k: number) => (k === current ? "font-semibold text-foreground" : k < current ? "text-foreground/70" : "text-foreground/40")
+
+  // 手機直拿:進度條固定在畫面最下方,每一段下面有編號與情境名稱(跟桌機的切換列一樣),點了直接跳頁
+  if (mode === "phone-portrait") {
+    return (
+      <div className="fixed inset-x-0 bottom-0 z-20 h-[var(--footer-h)] border-t border-border bg-background">
+        {track("top-[9px]")}
+        <nav aria-label="頁面" className="absolute inset-y-0 flex" style={{ left: "var(--bar-x)", right: "var(--bar-x)" }}>
+          {SCENES.map((s, k) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onSelect(k)}
+              aria-label={`第 ${k + 1} 頁：${s.title}`}
+              aria-current={k === current ? "page" : undefined}
+              className={`flex h-full min-w-0 flex-1 cursor-pointer flex-col items-center gap-[3px] pt-[18px] leading-none outline-none focus-visible:bg-foreground/10 ${tone(k)}`}
+            >
+              <span className="text-[10px] tabular-nums opacity-80">{k + 1}</span>
+              {/* 頁數多(9 頁)時一格太窄,名稱改成最多兩行,不被截成「…」 */}
+              {SCENES.length > 6 ? (
+                <span className="flex max-w-full flex-col items-center whitespace-nowrap text-center text-[10px] leading-[1.2] tracking-tight">
+                  {twoLines(s.short).map((t) => <span key={t}>{t}</span>)}
+                </span>
+              ) : (
+                <span className="max-w-full truncate whitespace-nowrap text-[10.5px] tracking-tight">{s.short}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+      </div>
+    )
+  }
+  const numbered = mode !== "desktop" // 手機橫拿:留在標題列下方,只標編號
   return (
     // 標題列正下方一條與背景同色的窄帶(蓋住往上捲到這裡的說明文字),進度條在帶子中間,離標題列下緣約 10px
-    <div className="pointer-events-none absolute inset-x-0 top-full h-[22px] bg-background">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute top-[9px] h-[3px] overflow-hidden rounded-full bg-foreground/10"
-        style={{ left: "var(--bar-x)", right: "var(--bar-x)" }}
-      >
-        <div ref={fill} className="h-full origin-left rounded-full bg-foreground/80" style={{ transform: "scaleX(0)" }} />
-        {Array.from({ length: SEGMENTS - 1 }, (_, k) => (
-          <span
-            key={k}
-            className="absolute top-0 h-full w-[2px] -translate-x-1/2 bg-background"
-            style={{ left: `${((k + 1) / SEGMENTS) * 100}%` }}
-          />
-        ))}
-      </div>
+    <div className={`pointer-events-none absolute inset-x-0 top-full bg-background ${numbered ? "h-[34px]" : "h-[22px]"}`}>
+      {track(numbered ? "top-[24px]" : "top-[9px]")}
       {/* 點擊區:每段一顆透明按鈕,往上延伸到標題列下緣、往下只到窄帶底,不蓋到下方的切換鈕與重播鈕 */}
       <nav aria-label="頁面" className="pointer-events-auto absolute -top-2 bottom-0 flex" style={{ left: "var(--bar-x)", right: "var(--bar-x)" }}>
         {SCENES.map((s, k) => (
@@ -143,8 +172,10 @@ function ProgressBar({ onSelect }: { onSelect: (i: number) => void }) {
             onClick={() => onSelect(k)}
             aria-label={`第 ${k + 1} 頁：${s.title}`}
             aria-current={k === current ? "page" : undefined}
-            className="h-full flex-1 cursor-pointer rounded-sm outline-none focus-visible:bg-foreground/10"
-          />
+            className={`h-full flex-1 cursor-pointer rounded-sm outline-none focus-visible:bg-foreground/10 ${numbered ? "flex items-start justify-center pt-[11px]" : ""}`}
+          >
+            {numbered && <span className={`text-[11px] leading-none tabular-nums ${tone(k)}`}>{String(k + 1).padStart(2, "0")}</span>}
+          </button>
         ))}
       </nav>
     </div>
@@ -327,14 +358,12 @@ export function App() {
         await wait(beforeMs(i))
         if (!alive) return
         togglePlasma(i, true)
-        const gated = !!SCENES[i].plasma?.upload
-        if (gated) {
+        if (i === LAST && GATED) {
           await wait(AUTO_UPLOAD)
           if (!alive) return
           uploadGate.go()
         }
-        // 有上傳的頁:等文件飛完、大腦長好再多看一下;最後一頁等 Agent 對話播完
-        await wait(i === LAST ? AUTO_LAST : gated ? AGENT_REVEAL_AT + 4000 : AUTO_AFTER)
+        await wait(i === LAST ? AUTO_LAST : AUTO_AFTER)
       }
       if (alive) autoplay.set(false)
     })()
@@ -431,19 +460,19 @@ export function App() {
         >
           <NarrationPanel onSelect={goTo} />
           {/* 上一段露出的尾巴:上緣漸層淡出,不會在欄位頂端被硬切成半行字 */}
-          <div aria-hidden className="narr-top-fade pointer-events-none absolute inset-x-0 top-0 h-24 pp:h-10" />
+          <div aria-hidden className="narr-top-fade pointer-events-none absolute inset-x-0 top-0 h-24 pp:h-2" />
         </aside>
 
         {/* 舞台固定在畫面上,不隨頁面捲動 */}
         {/* 上方留一列給「導入前｜導入 Plasma 後」切換(在進度條遮罩帶下方,不被切到),舞台從切換列下面開始,不會被擋住 */}
-        <div className="sticky top-[var(--header-h)] flex h-[var(--stage-h)] min-w-0 flex-1 pt-[92px] pp:order-1 pp:w-full pp:flex-none pp:pb-1.5 pp:pt-[76px] pl:pt-[72px]">
+        <div className="sticky top-[var(--header-h)] flex h-[var(--stage-h)] min-w-0 flex-1 pt-[92px] pp:order-1 pp:w-full pp:flex-none pp:pb-1.5 pp:pt-[50px] pl:pt-[84px]">
           <div className="relative min-h-0 min-w-0 flex-1">
             <Stage />
           </div>
 
           <AgentPanel />
           {/* 重播與切換鈕釘在整欄右上角:最後一頁 Agent 面板滑出、舞台變窄時,位置也跟前面各頁一樣 */}
-          <div className="absolute right-0 top-0 z-10 flex h-[92px] items-end gap-2 pb-2 pp:h-[76px] pp:pb-1.5 pl:h-[72px] pl:pb-1">
+          <div className="absolute right-0 top-0 z-10 flex h-[92px] items-end gap-2 pb-2 pp:h-[50px] pp:pb-1.5 pl:h-[84px] pl:pb-1">
             <ReplayButton onReplay={replayCurrent} />
             <PlasmaToggle onToggle={togglePlasma} />
           </div>
@@ -463,4 +492,12 @@ export function App() {
       )}
     </div>
   )
+}
+
+// 頁名拆成兩行:有空白就從空白斷(「API / 串接」),四個字以上從中間斷(「醫院 / 現況」),三個字以下一行
+function twoLines(t: string): string[] {
+  const sp = t.indexOf(" ")
+  if (sp > 0) return [t.slice(0, sp), t.slice(sp + 1)]
+  if (t.length >= 4) { const h = Math.ceil(t.length / 2); return [t.slice(0, h), t.slice(h)] }
+  return [t]
 }

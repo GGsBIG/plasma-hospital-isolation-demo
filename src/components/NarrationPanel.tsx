@@ -23,7 +23,9 @@ const FIX_LABEL = "導入 Plasma 後"
 
 // 捲動浮現的文字:標題,然後是開場說明,或「導入前」那段。
 // 「導入後」那段排在導入前下方,兩段同時看得到:目前狀態那段全亮、另一段淡化(由切換進度驅動,不是捲動)
-const texts = (s: SceneDef) => [s.title, ...(s.bullets ?? []), ...(s.pain ? [PAIN_LABEL, s.pain] : [])]
+// 導入前／導入後的內容用換行分成幾個條列重點
+const items = (t: string) => t.split("\n")
+const texts = (s: SceneDef) => [s.title, ...(s.bullets ?? []), ...(s.pain ? [PAIN_LABEL, ...items(s.pain)] : [])]
 
 // 每段的字數,用來把 reveal 0~1 換算成「浮現到第幾個字」
 const TOTALS = SCENES.map((s) => texts(s).reduce((n, t) => n + tokens(t).length, 0))
@@ -65,8 +67,10 @@ const Section = memo(function Section({
   onSelect: (i: number) => void
 }) {
   const title = tokens(scene.title)
-  const body = "max-w-[32em] text-[16px] leading-[1.75] text-foreground/80 transition-colors duration-200 hover:text-foreground pl:text-[13.5px] pl:leading-normal pp:text-[16px] pp:leading-relaxed ps:text-[14.5px] ps:leading-normal"
-  const label = "mb-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold leading-5 pl:mb-1 pl:text-[11.5px] ps:mb-1 ps:text-[11.5px]"
+  const body = "max-w-[32em] text-[16px] leading-[1.75] text-foreground/80 transition-colors duration-200 hover:text-foreground pl:text-[13.5px] pl:leading-normal pp:text-[15px] pp:leading-[1.5] ps:text-[14px] ps:leading-normal"
+  const label = "mb-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold leading-5 pp:mb-1 pp:px-2.5 pp:py-0.5 pp:text-[12.5px] pl:mb-1 pl:text-[11.5px] ps:mb-1 ps:text-[11.5px]"
+  // 條列重點:圓點在文字外側,項目之間留一點間距
+  const list = "list-disc space-y-1.5 pl-[1.15em] marker:text-foreground/35 pp:space-y-0.5 pl:space-y-0.5 ps:space-y-0.5"
   const word = (text: string, key: number) => (
     <span key={key} className="rv">
       {text}
@@ -75,7 +79,7 @@ const Section = memo(function Section({
 
   return (
     // 手機直拿:說明區只放得下一段,文字靠上(緊接在舞台下方),不要上下置中留一大塊空白
-    <section className="flex h-[var(--section-h)] flex-col justify-center pp:justify-start pp:pt-4 ps:pt-2">
+    <section className="flex h-[var(--section-h)] flex-col justify-center pp:justify-start pp:overflow-y-auto pp:pb-4 pp:pt-2.5 ps:pt-2">
       <div
         ref={cardRef}
         role="button"
@@ -93,11 +97,11 @@ const Section = memo(function Section({
         className={`narration-card group relative -ml-4 rounded-2xl py-4 pl-4 pr-3 outline-none cp:py-2 pp:mx-0 pp:px-0 pl:ml-0 pl:pl-0 ${isCurrent ? "cursor-default" : "cursor-pointer"}`}
       >
         <span aria-hidden className="narration-accent absolute bottom-5 left-0 top-5 w-[2px] rounded-full bg-foreground" />
-        <h2 className="narration-title text-balance text-[26px] font-semibold leading-snug tracking-tight text-foreground cp:mt-1 pl:text-[19px] pp:text-[22px] ps:text-[19px]">
+        <h2 className="narration-title text-balance text-[26px] font-semibold leading-snug tracking-tight text-foreground cp:mt-1 pl:text-[19px] pp:text-[20px] ps:text-[18px]">
           {title.map(word)}
         </h2>
         <div className="rv-line mt-4 h-px w-12 origin-left bg-foreground/30 cp:mt-2" />
-        <div className="mt-4 space-y-3 cp:mt-2 pl:space-y-1.5 pp:space-y-3 ps:space-y-1.5">
+        <div className="mt-4 space-y-3 cp:mt-2 pl:space-y-1.5 pp:space-y-1.5 ps:space-y-1.5">
           {scene.bullets?.map((b, j) => (
             <p key={j} className={body}>
               {tokens(b).map(word)}
@@ -105,15 +109,15 @@ const Section = memo(function Section({
           ))}
           {/* 導入前在上、導入後在下,兩段都在:目前狀態那段全亮,另一段淡化,一眼看得到前後對比 */}
           {scene.pain && (
-            <div className="space-y-4 pl:space-y-2 ps:space-y-2">
+            <div className="grid [&>*]:col-start-1 [&>*]:row-start-1">
               <div className="pain-block">
                 <div className={`${label} bg-danger/10 text-danger`}>{tokens(PAIN_LABEL).map(word)}</div>
-                <p className={body}>{tokens(scene.pain).map(word)}</p>
+                <ul className={list}>{items(scene.pain).map((t, j) => <li key={j} className={body}>{tokens(t).map(word)}</li>)}</ul>
               </div>
               {scene.fix && (
                 <div className="fix-block">
                   <div className={`${label} bg-ok/10 text-ok`}>{tokens(FIX_LABEL).map(word)}</div>
-                  <p className={body}>{tokens(scene.fix).map(word)}</p>
+                  <ul className={list}>{items(scene.fix).map((t, j) => <li key={j} className={body}>{tokens(t).map(word)}</li>)}</ul>
                 </div>
               )}
             </div>
@@ -187,19 +191,21 @@ export function NarrationPanel({ onSelect }: { onSelect: (i: number) => void }) 
         syncLabel(card.painLabel)
         card.head = head
       }
-      // 導入後那段跟著捲動與進場逐字浮現(比導入前晚一點);切換只改兩段的亮度:目前狀態那段全亮、另一段淡化
+      // 導入前、導入後兩段疊在同一個位置:進到這頁時導入前逐字浮現(上面);
+      // 切換到導入後,導入前先淡出(前 30%),導入後再從同一個位置逐字浮現;切回來則反過來
       const m = plasmaMix(i)
-      const ek = entryAt(i, ENTRY_FIX.delay, ENTRY_FIX.dur)
-      const reveal = clamp01((p - (i - 0.6)) / 0.6)
-      if ((m !== card.m || ek !== card.ek || card.fixHead === null || reveal < 1) && card.pain) {
-        card.ek = ek
-        card.pain.style.opacity = `${1 - (1 - DIMMED) * m}`
-        if (card.fix) card.fix.style.opacity = `${DIMMED + (1 - DIMMED) * m}`
-        const fixHead = Math.round(Math.min(reveal, ek) * (card.fixSpans.length + SOFT) * 4) / 4
+      if (m !== card.m && card.pain) {
+        card.pain.style.opacity = `${1 - clamp01(m / 0.3)}`
+        const fixHead = Math.round(clamp01((m - 0.3) / 0.7) * (card.fixSpans.length + SOFT) * 4) / 4
         if (fixHead !== card.fixHead) {
           paint(card.fixSpans, card.fixHead, fixHead, lite)
           card.fixHead = fixHead
           syncLabel(card.fixLabel)
+          // 條列的圓點跟著該行第一個字出現(字還沒浮現時不先露出一排圓點)
+          card.fix?.querySelectorAll<HTMLElement>("li").forEach((li) => {
+            const first = li.querySelector<HTMLElement>(".rv")
+            li.style.opacity = first && +first.style.opacity > 0 ? "1" : "0"
+          })
         }
         card.m = m
       }

@@ -140,6 +140,22 @@ function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: bool
       return <>{spots.map(([x, y], i) => <Cylinder key={i} cx={x} cy={y} r={10} h={16} hot={hot} />)}</>
     }
     case "app": {
+      // 報表(icon: receipt):立在平台上的一張文件,有摺角、標題列與幾行內容,不要看起來像資料庫
+      if (variant === "receipt") {
+        const w = 30
+        const h = 38
+        const fold = 9
+        return (
+          <g transform={`translate(${-w / 2} ${-h - 3})`} strokeLinejoin="round">
+            <path d={`M 0 0 H ${w - fold} L ${w} ${fold} V ${h} H 0 Z`} strokeWidth={1} style={{ fill: C.top, stroke: C.line }} />
+            <path d={`M ${w - fold} 0 V ${fold} H ${w} Z`} strokeWidth={1} style={{ fill: C.right, stroke: C.line }} />
+            <rect x={5} y={7} width={11} height={3} style={{ fill: C.line }} />
+            {[15, 20, 25, 30].map((y, i) => (
+              <line key={y} x1={5} x2={i === 3 ? 17 : w - 5} y1={y} y2={y} strokeWidth={1.4} strokeLinecap="round" style={{ stroke: C.line }} opacity={0.75} />
+            ))}
+          </g>
+        )
+      }
       const spots = [p(-s, -s), p(s, -s * 0.2), p(-s * 0.4, s)]
       return <>{spots.map(([x, y], i) => <Box key={i} cx={x} cy={y} w={11} h={13} />)}</>
     }

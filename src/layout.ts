@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react"
-import type { NodeKind, Pos } from "./types"
+import type { NodeKind, Pos, SceneState } from "./types"
 
 // 三種版面:
 //   desktop          桌機/平板,橫式舞台 1600×1100,說明欄在左
@@ -225,4 +225,20 @@ export function zoneRect(points: Pos[]): Box {
     y0: Math.min(...ys) - 110 * k,
     y1: Math.max(...ys) + 170 * k,
   }
+}
+
+// 手機版:各畫面狀態的節點橫向間距拉開倍率(由 Stage 依版面算出)。只移動節點的位置,
+// 節點、文字、大腦、連線本身都不變形;連線依新位置重畫
+let spreadProvider: ((key: string, state: SceneState) => { f: number; c: number } | null) | null = null
+export const setSpreadProvider = (fn: typeof spreadProvider) => { spreadProvider = fn }
+export function spreadX(key: string, state: SceneState, x: number): number {
+  if (mode === "desktop" || !spreadProvider) return x
+  const s = spreadProvider(key, state)
+  return s ? s.c + (x - s.c) * s.f : x
+}
+
+// 單一節點的左右延伸估計值(還沒從 DOM 量到實際寬度時用)
+export const nodeExtent = (id: string, kind: NodeKind) => {
+  const half = WIDE[id] ?? EXTENT[kind].half
+  return { l: half, r: half }
 }

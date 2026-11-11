@@ -2,7 +2,7 @@ import type { EdgeState, Pos, SceneDef, SceneState } from "./types"
 import { SCENES } from "./scenes"
 import { NODE_BY_ID } from "./data"
 import { edgePath } from "./geometry"
-import { layoutMode, lineScale, place, verticalFlow } from "./layout"
+import { layoutMode, lineScale, place, verticalFlow, spreadX } from "./layout"
 import { plasmaMix } from "./plasma"
 import { phaseOf, phasesOf } from "./phase"
 
@@ -146,6 +146,7 @@ export function frameAt(p: number): Frame {
       const at = st.s.nodes[id]
       if (!at) continue
       const P = place(id, at)
+      P.x = spreadX(st.key, st.s, P.x)
       x += P.x * st.w
       y += P.y * st.w
       w += st.w

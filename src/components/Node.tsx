@@ -54,7 +54,7 @@ export const Node = memo(function Node({
   // 手機緊湊版:連線可能穿過節點下方的標籤,所以標籤加底色蓋住線;
   // 字放大(手機上舞台縮得比較小)、徽章疊在名稱下方
   const s = compact
-    ? { name: "text-[42px]", badge: "text-[30px] px-3.5 py-1", meta: "text-[28px]", brand: "h-[104px] w-[104px]", bubble: "text-[28px] px-5 py-3 rounded-[24px]" }
+    ? { name: "text-[50px]", badge: "text-[36px] px-4 py-1.5", meta: "text-[32px]", brand: "h-[104px] w-[104px]", bubble: "text-[32px] px-5 py-3 rounded-[24px]" }
     : { name: "text-[30px]", badge: "text-[22px] px-3 py-1", meta: "text-[22px]", brand: "h-[44px] w-[44px]", bubble: "text-[22px] px-4 py-2.5 rounded-2xl" }
 
   const labelStyle = side
@@ -65,7 +65,7 @@ export const Node = memo(function Node({
   const text = (
     <>
       {/* 名稱與狀態徽章同一行,節省垂直空間 */}
-      <div className={`flex gap-2.5 ${side ? "flex-col items-start" : node.logo || (compact && !logoInside) || stack ? `flex-col ${node.brand && !logoInside ? "items-start" : "items-center"}` : "items-center"}`}>
+      <div className={`flex gap-3 ${side ? "flex-col items-start" : node.logo || (compact && !logoInside) || stack ? `flex-col ${node.brand && !logoInside ? "items-start" : "items-center"}` : "items-center"}`}>
         {/* 有 logo 的節點(Plasma):logo 貼在平台的立方體側面上,名稱列只留徽章 */}
         {!node.logo && <span className={`${s.name} font-medium tracking-tight text-foreground`}>{node.label}</span>}
         {badge && (
@@ -91,6 +91,8 @@ export const Node = memo(function Node({
     // 一開始隱藏,由 Stage 依畫面狀態顯示
     <div ref={elRef} className="absolute left-0 top-0 h-0 w-0 will-change-[transform,opacity]" style={{ display: "none" }}>
       <div
+        // --ux:手機版舞台橫向拉開時,節點反向縮回去,圖示與文字不變形(見 Stage 的 useFit)
+        style={compact ? { transform: "scaleX(var(--ux, 1))" } : undefined}
         className={`absolute h-0 w-0 transition-opacity duration-300 motion-reduce:transition-none ${faded ? "opacity-[0.35]" : "opacity-100"}`}
         onMouseEnter={() => CAN_HOVER && onHover(node.id)}
         onMouseLeave={() => CAN_HOVER && onHover(null)}
@@ -104,7 +106,7 @@ export const Node = memo(function Node({
           <Platform kind={node.kind} hot={hot} variant={node.icon} down={down} bare={merged} />
           {/* 手機版:資料庫的品牌 logo 放在平台左上角(左側圓柱的左上方,不擋圓柱),名稱旁就不再放 logo */}
           {logoInside && (
-            <img src={node.brand} alt="" className="brand-in absolute h-[64px] w-[104px] max-w-none -translate-x-1/2 -translate-y-1/2 object-contain" style={{ left: -88, top: -80 }} />
+            <img src={node.brand} alt="" className="brand-in absolute h-[76px] w-[124px] max-w-none -translate-x-1/2 -translate-y-1/2 object-contain" style={{ left: -92, top: -86 }} />
           )}
         </div>
 
@@ -178,6 +180,7 @@ export const Node = memo(function Node({
           style={{ transform: hovered ? "translateY(-4px)" : undefined }}
         >
           <div
+            data-node-text
             className={`absolute flex flex-col whitespace-nowrap ${
               side ? "items-start" : above ? "-translate-x-1/2 -translate-y-full items-center text-center" : "-translate-x-1/2 items-center text-center"
             } ${compact ? "rounded-2xl bg-background/90 px-2 py-1" : ""}`}
