@@ -400,19 +400,16 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
   from { transform: translateY(-160px) scale(1.15); opacity: 0; }
   60% { opacity: 1; }
 }
-/* 知識庫從 Plasma 頂面「長」出來(文件都飛進去之後):剛硬的機械推升,不彈跳、不縮放。
-   立方體從 Plasma 裡往上推出,分三段推、段與段之間停頓卡住,最後往下一頓坐實。
-   低於知識庫底邊(等角 V 字)的部分由外層裁掉(Stage 量好寫進 clip-path),看起來像從頂面升上來 */
-.kb-grow > svg { animation: kb-grow 1s linear both; animation-delay: inherit; }
+/* 知識庫在 Plasma 上方慢慢組成一個物件,再往下疊到 Plasma 頂面:
+   先從一個小點在上方淡入、慢慢長到原本大小,接著落下、輕輕一頓坐實。不從 Plasma 裡升上來 */
+.kb-grow > svg { transform-origin: 50% 80%; animation: kb-grow 1.8s linear both; animation-delay: inherit; }
 @keyframes kb-grow {
-  0%   { transform: translateY(100%); animation-timing-function: cubic-bezier(0.6, 0, 0.4, 1); }
-  26%  { transform: translateY(64%);  animation-timing-function: steps(1, end); }
-  36%  { transform: translateY(64%);  animation-timing-function: cubic-bezier(0.6, 0, 0.4, 1); }
-  58%  { transform: translateY(30%);  animation-timing-function: steps(1, end); }
-  68%  { transform: translateY(30%);  animation-timing-function: cubic-bezier(0.6, 0, 0.4, 1); }
-  88%  { transform: translateY(0);    animation-timing-function: cubic-bezier(0.5, 0, 1, 1); }
-  93%  { transform: translateY(3px);  animation-timing-function: linear; }
-  100% { transform: none; }
+  0%   { transform: translateY(-90px) scale(0.15); opacity: 0; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+  15%  { opacity: 1; }
+  60%  { transform: translateY(-90px) scale(1); opacity: 1; animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.45); }
+  86%  { transform: translateY(0) scale(1); animation-timing-function: ease-out; }
+  92%  { transform: translateY(4px) scale(1.02, 0.97); animation-timing-function: ease-in-out; }
+  100% { transform: none; opacity: 1; }
 }
 /* 文件上傳:先在上方淡入排成一列,再一份一份縮小飛進知識庫後消失 */
 .doc-appear { animation: doc-appear 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }

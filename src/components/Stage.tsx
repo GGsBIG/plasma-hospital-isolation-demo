@@ -33,7 +33,7 @@ const DOC_DELAY = 1.0 // 按下 Upload 後,文件一起浮現再一起飛進去
 const DOC_FLY = 1.5 // 與 index.css 的 doc-fly 時長一致
 // 文件飛進 Plasma 之後,知識庫才在 Plasma 上長出來;知識庫長好,大腦才開始長
 const KB_AT = DOC_DELAY + DOC_FLY
-const KB_GROW = 1.0 // 與 index.css 的 kb-grow 時長一致
+const KB_GROW = 1.8 // 與 index.css 的 kb-grow 時長一致
 // 文件在 Plasma 上方排成一直列,由上到下(相對大腦光暈中心的位移,舞台 px)
 const DOC_COL = (top: number, step: number): [number, number][] => [0, 1, 2, 3, 4].map((k) => [0, top + k * step])
 const DOC_FROM = DOC_COL(-450, 62)
@@ -286,25 +286,7 @@ export function Stage() {
     plat.classList.remove("kb-drop")
     plat.style.visibility = uploadDone ? "" : "hidden"
     if (!uploadDone) return
-    // 量出知識庫立方體的底邊(等角 V 字),V 以下裁掉;換算回舞台座標(舞台有縮放)
-    const svg = plat.querySelector("svg")
-    const cube = svg?.querySelector("g")
-    if (svg && cube) {
-      const o = plat.getBoundingClientRect()
-      const k = svg.getBoundingClientRect().width / svg.width.baseVal.value || 1
-      const r = cube.getBoundingClientRect()
-      const bottom = (r.bottom - o.top) / k
-      const hw = r.width / 2 / k
-      const cx = (r.left + r.width / 2 - o.left) / k
-      const far = 5000
-      plat.style.clipPath = `polygon(${-far}px ${-far}px, ${far}px ${-far}px, ${far}px ${bottom - hw / 2}px, ${cx + hw}px ${bottom - hw / 2}px, ${cx}px ${bottom}px, ${cx - hw}px ${bottom - hw / 2}px, ${-far}px ${bottom - hw / 2}px)`
-      const done = (e: AnimationEvent) => {
-        if (e.animationName !== "kb-grow") return
-        plat.style.clipPath = ""
-        plat.removeEventListener("animationend", done)
-      }
-      plat.addEventListener("animationend", done)
-    }
+    // 知識庫不再從 Plasma 裡升上來:在上方慢慢組成,再疊到 Plasma 頂面(動畫見 index.css 的 kb-grow)
     plat.style.animationDelay = `${KB_AT}s`
     void plat.offsetWidth
     plat.classList.add("kb-grow")
