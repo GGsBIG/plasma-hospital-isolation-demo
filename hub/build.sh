@@ -19,6 +19,8 @@ echo "› 醫院版"
 need "$REPO";              (cd "$REPO" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/hospital" --emptyOutDir --logLevel warn)
 echo "› 秀傳醫院(跨院資料整合)"
 need "$REPO/showchwan";    (cd "$REPO/showchwan" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/showchwan" --emptyOutDir --logLevel warn)
+echo "› Plasma 介紹(主管、各產業、醫院)"
+need "$REPO/intro";        (cd "$REPO/intro" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/intro" --emptyOutDir --logLevel warn)
 echo "› 醫院 UI 操作"
 need "$REPO/ui-demo";      (cd "$REPO/ui-demo" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/ui-hospital" --emptyOutDir --logLevel warn)
 echo "› Plasma 操作 demo(官網同一份)"

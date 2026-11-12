@@ -33,6 +33,18 @@ const HEADS: { key: string; tab: string; lines: [string, string]; lead: ReactNod
     key: "tech", tab: "技術人員", lines: ["Plasma 元件", "逐一說明"],
     lead: <>從資料庫連線、View、排程、資料產品到 MCP，說明每個元件的用途、規格與限制。</>,
   },
+  {
+    key: "intro-exec", tab: "主管簡介", lines: ["讓業務部門自己拿資料，", "不再等 IT"],
+    lead: <>給主管的 Plasma 簡介：不用懂技術，十五分鐘看懂它解決什麼、為什麼放心。</>,
+  },
+  {
+    key: "intro-general", tab: "各產業簡介", lines: ["系統之間", "搭一座橋"],
+    lead: <>製造、醫療、零售都適用的 Plasma 簡介，例子和成效依產業切換。</>,
+  },
+  {
+    key: "intro-hospital", tab: "醫院簡介", lines: ["不動 HIS，", "各部門自己拿資料"],
+    lead: <>給醫院主管的 Plasma 簡介：門診、護理、檢驗、健保申報的資料，不用再等資訊室。</>,
+  },
 ]
 const HOLD = 6500
 
@@ -42,6 +54,9 @@ const CARDS = [
   { key: "hospital", href: "hospital/", title: "醫院情境" },
   { key: "showchwan", href: "showchwan/", title: "秀傳醫院" },
   { key: "tech", href: "tech/", title: "元件總覽" },
+  { key: "intro-exec", href: "intro/exec/", title: "Plasma 簡介・主管" },
+  { key: "intro-general", href: "intro/general/", title: "Plasma 簡介・各產業" },
+  { key: "intro-hospital", href: "intro/hospital/", title: "Plasma 簡介・醫院" },
 ]
 
 /** 主標的 text reveal:每一行有遮罩,字一個接一個從遮罩下方升上來 */
