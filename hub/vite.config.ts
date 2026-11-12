@@ -8,6 +8,7 @@ import { extname, join, resolve } from "path"
 const DEMO_DIRS: Record<string, string> = {
   manufacturing: resolve(__dirname, "release/demos/manufacturing"),
   hospital: resolve(__dirname, "release/demos/hospital"),
+  showchwan: resolve(__dirname, "release/demos/showchwan"),
   "ui-hospital": resolve(__dirname, "release/demos/ui-hospital"),
   ops: resolve(__dirname, "release/demos/ops"),
   views: resolve(__dirname, "release/demos/views"),
