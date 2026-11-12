@@ -22,7 +22,7 @@
 /* 節點:原點是平台頂面中心,位置改變時滑過去 */
 .sc-node { position: absolute; width: 0; height: 0; transition: left 0.8s cubic-bezier(0.22, 1, 0.36, 1), top 0.8s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s; animation: sc-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 @keyframes sc-pop { from { opacity: 0; transform: translateY(10px); } }
-.sc-label { position: absolute; left: 0; transform: translateX(-50%); white-space: nowrap; text-align: center; font-size: 15px; line-height: 1.35; }
+.sc-label { position: absolute; z-index: 3; left: 0; transform: translateX(-50%); white-space: nowrap; text-align: center; font-size: 16px; line-height: 1.35; }
 .sc-compact .sc-label { font-size: 34px; }
 /* 文字底下墊一層底色,連線從後面穿過時不會壓到字 */
 .sc-pill { width: fit-content; margin-inline: auto; padding: 0 0.3em; border-radius: 0.3em; background: hsl(var(--card)); }
@@ -99,7 +99,7 @@
   flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; margin-top: 1px;
   font-size: 13px; font-weight: 700; color: #fff; background: hsl(var(--danger)); transition: background 0.3s;
 }
-.sc-num.ok { background: hsl(var(--ok)); animation: sc-check 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.sc-num.ok { background: hsl(var(--ok)); animation: sc-check 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
 .sc-num.small { width: 20px; height: 20px; }
 @keyframes sc-check { from { transform: scale(0.4); } }
 
@@ -114,9 +114,9 @@
 
 /* 成果 */
 .sc-card { border: 1px solid hsl(var(--border)); border-radius: 16px; background: hsl(var(--card)); padding: 18px 20px; }
-.sc-table { display: grid; grid-template-columns: auto 1fr 1fr; font-size: 14px; }
-.sc-table .th { padding: 0 12px 8px; font-size: 12px; font-weight: 600; }
-.sc-table .td { padding: 11px 12px; border-top: 1px solid hsl(var(--border)); line-height: 1.45; }
+.sc-table { display: grid; grid-template-columns: auto 1fr 1fr; font-size: 15px; }
+.sc-table .th { padding: 0 12px 8px; font-size: 13px; font-weight: 600; }
+.sc-table .td { padding: 12px 12px; border-top: 1px solid hsl(var(--border)); line-height: 1.45; }
 .sc-bar { background: hsl(var(--ok)); transform-origin: left; animation: sc-bar 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 @keyframes sc-bar { from { transform: scaleX(0); } }
 
@@ -129,3 +129,21 @@
 @media (prefers-reduced-motion: reduce) {
   .sc-edge.red, .sc-edge.ok-flow, .sc-mark.on .sc-mark-dot::after { animation: none; }
 }
+
+/* 解決步驟列:目前這一步展開說明,上緣進度條標出走到哪 */
+.sc-rail { display: grid; gap: 8px; transition: grid-template-columns 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+.sc-rail-step {
+  display: flex; flex-direction: column; justify-content: flex-start; width: 100%; height: 100%; text-align: left; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground));
+  box-shadow: inset 0 3px 0 hsl(var(--border)); transition: border-color 0.3s, box-shadow 0.3s, color 0.3s;
+}
+.sc-rail-step:hover { color: hsl(var(--foreground)); }
+.sc-rail-step.done { color: hsl(var(--foreground) / 0.8); box-shadow: inset 0 3px 0 hsl(var(--ok) / 0.55); }
+.sc-rail-step.active { color: hsl(var(--foreground)); border-color: hsl(var(--ok) / 0.55); box-shadow: inset 0 3px 0 hsl(var(--ok)), 0 0 0 3px hsl(var(--ok) / 0.1); }
+
+/* 瀏覽器預設的部分也帶上設計:選取文字、鍵盤焦點 */
+::selection { background: hsl(var(--ok) / 0.22); }
+.sc-tab:focus-visible, .sc-play:focus-visible, .sc-pain:focus-visible, .sc-rail-step:focus-visible, .sc-navbtn:focus-visible {
+  outline: 2px solid hsl(var(--foreground)); outline-offset: 2px;
+}
+.sc-pain:hover:not(.active) { border-color: hsl(var(--foreground) / 0.25); }

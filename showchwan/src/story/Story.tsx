@@ -238,13 +238,13 @@ function PainList({ screen, step, onPick }: { screen: number; step: number; onPi
             >
               <span className={`sc-num ${solved ? "ok" : ""}`}>{solved ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}</span>
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-foreground">{p.title}</span>
+                <span className="block text-[16px] font-semibold text-foreground">{p.title}</span>
                 {screen === 0 ? (
-                  <span className="mt-0.5 block text-[13px] leading-relaxed text-muted-foreground">{p.desc}</span>
+                  <span className="mt-1 block text-pretty text-[14px] leading-relaxed text-muted-foreground">{p.desc}</span>
                 ) : solved ? (
-                  <span className="mt-0.5 block text-[13px] text-ok">由步驟 {i + 1}「{STEPS[i].title}」解決</span>
+                  <span className="mt-1 block text-[14px] text-ok">由步驟 {i + 1}「{STEPS[i].title}」解決</span>
                 ) : (
-                  <span className="mt-0.5 flex items-center gap-1 text-[13px] text-muted-foreground">
+                  <span className="mt-1 flex items-center gap-1 text-[14px] text-muted-foreground">
                     {fixing ? "解決中…" : <><X className="h-3 w-3 text-danger" />尚未解決</>}
                   </span>
                 )}
@@ -262,25 +262,31 @@ function StepRail({ step, onPick, compact }: { step: number; onPick: (i: number)
     const s = STEPS[step]
     return (
       <div className="sc-step active">
-        <div className="text-[12px] text-muted-foreground">步驟 {step + 1} / {STEPS.length}</div>
-        <div className="mt-0.5 font-semibold">{s.title}{step < PAINS.length && <span className="sc-solve">解決 {step + 1}</span>}</div>
-        <div className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{s.desc}</div>
+        <div className="text-[13px] text-muted-foreground">步驟 {step + 1} / {STEPS.length}</div>
+        <div className="mt-0.5 text-[16px] font-semibold">{s.title}{step < PAINS.length && <span className="sc-solve">解決 {step + 1}</span>}</div>
+        <div className="mt-1 text-pretty text-[14px] leading-relaxed text-muted-foreground">{s.desc}</div>
       </div>
     )
   }
   return (
-    <div className="grid grid-cols-5 gap-2">
+    <ol className="sc-rail" style={{ gridTemplateColumns: STEPS.map((_, i) => (i === step ? "2.4fr" : "1fr")).join(" ") }}>
       {STEPS.map((s, i) => (
-        <button key={i} onClick={() => onPick(i)} className={`sc-step text-left ${i === step ? "active" : ""} ${i < step ? "done" : ""}`}>
-          <div className="flex items-center gap-2">
-            <span className={`sc-stepnum ${i <= step ? "on" : ""}`}>{i < step ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}</span>
-            <span className="font-semibold">{s.title}</span>
-          </div>
-          <div className="mt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">{s.desc}</div>
-          {i < PAINS.length && <div className="mt-2"><span className="sc-solve">✓ 解決痛點 {i + 1}</span></div>}
-        </button>
+        <li key={i} className="min-w-0">
+          <button onClick={() => onPick(i)} className={`sc-rail-step ${i === step ? "active" : ""} ${i < step ? "done" : ""}`} aria-current={i === step ? "step" : undefined}>
+            <span className="flex items-center gap-2">
+              <span className={`sc-stepnum ${i <= step ? "on" : ""}`}>{i < step ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}</span>
+              <span className="truncate text-[15px] font-semibold">{s.title}</span>
+            </span>
+            {i === step ? (
+              <span className="mt-1.5 block text-pretty text-[15px] leading-relaxed text-muted-foreground">{s.desc}</span>
+            ) : null}
+            <span className={`mt-1.5 block text-[13px] ${i < PAINS.length ? "text-ok" : "text-muted-foreground"}`}>
+              {i < PAINS.length ? `解決痛點 ${i + 1}` : "成果"}
+            </span>
+          </button>
+        </li>
       ))}
-    </div>
+    </ol>
   )
 }
 
@@ -288,14 +294,14 @@ function Results({ compact }: { compact: boolean }) {
   const max = Math.max(...ROSTER.map((r) => r.n))
   const total = ROSTER.reduce((a, r) => a + r.n, 0)
   return (
-    <div className={`mx-auto grid h-full max-w-[1180px] gap-5 ${compact ? "grid-cols-1 content-start" : "grid-cols-[1.45fr_1fr] content-center"}`}>
+    <div className={`grid max-w-[1240px] items-start gap-5 ${compact ? "grid-cols-1" : "grid-cols-[1.45fr_1fr]"}`}>
       <div className="sc-card">
-        <h3 className="mb-3 text-[15px] font-semibold">導入前後對照</h3>
+        <h3 className="mb-3 text-[17px] font-semibold">導入前後對照</h3>
         {compact ? (
           // 手機:三欄太擠,每一項改成上下兩行
           <div className="divide-y divide-border">
             {RESULT_ROWS.map(([k, a, b]) => (
-              <div key={k} className="py-3 text-[14px] leading-relaxed">
+              <div key={k} className="py-3 text-[15px] leading-relaxed">
                 <div className="font-semibold">{k}</div>
                 <div className="mt-1 flex gap-2"><span className="w-12 shrink-0 text-danger">現在</span><span className="text-muted-foreground">{a}</span></div>
                 <div className="flex gap-2"><span className="w-12 shrink-0 text-ok">導入後</span><span className="font-medium">{b}</span></div>
@@ -319,11 +325,11 @@ function Results({ compact }: { compact: boolean }) {
       </div>
       <div className="flex flex-col gap-5">
         <div className="sc-card">
-          <h3 className="text-[15px] font-semibold">總院彙整：各分院護理師人數</h3>
-          <p className="mb-3 text-[12px] text-muted-foreground">來源：資料產品「護理人員名冊」· 示意數字</p>
+          <h3 className="text-[17px] font-semibold">總院彙整：各分院護理師人數</h3>
+          <p className="mb-4 mt-0.5 text-[13px] text-muted-foreground">來源：資料產品「護理人員名冊」· 示意數字</p>
           <div className="space-y-2.5">
             {ROSTER.map((r, i) => (
-              <div key={r.label} className="flex items-center gap-3 text-[13px]">
+              <div key={r.label} className="flex items-center gap-3 text-[14px]">
                 <span className="w-14 shrink-0 text-muted-foreground">{r.label}</span>
                 <div className="h-5 flex-1 overflow-hidden rounded bg-muted">
                   <div className="sc-bar h-full rounded" style={{ width: `${(r.n / max) * 100}%`, animationDelay: `${0.15 * i}s` }} />
@@ -338,8 +344,8 @@ function Results({ compact }: { compact: boolean }) {
           </div>
         </div>
         <div className="sc-card">
-          <h3 className="mb-2 text-[15px] font-semibold">四個痛點都解決了</h3>
-          <ul className="space-y-1.5 text-[13px]">
+          <h3 className="mb-3 text-[17px] font-semibold">四個痛點都解決了</h3>
+          <ul className="space-y-2 text-[15px]">
             {PAINS.map((p, i) => (
               <li key={i} className="flex items-center gap-2">
                 <span className="sc-num ok small"><Check className="h-3 w-3" strokeWidth={3} /></span>
@@ -456,10 +462,10 @@ export function Story() {
       </nav>
 
       <main className="min-h-0 flex-1 overflow-y-auto">
-        <div key={screen} className="sc-screen flex h-full min-h-0 flex-col gap-4 px-6 py-5 pp:h-auto pp:px-4 pp:py-4">
+        <div key={screen} className="sc-screen flex h-full min-h-0 flex-col gap-5 px-6 py-6 pp:h-auto pp:gap-4 pp:px-4 pp:py-4">
           <div className="shrink-0">
-            <h2 className="text-[26px] font-semibold tracking-tight pp:text-[22px]">{head.title}</h2>
-            <p className="mt-1 text-[15px] text-muted-foreground pp:text-[14px]">{head.lead}</p>
+            <h2 className="text-balance text-[30px] font-semibold leading-tight tracking-tight pp:text-[24px]">{head.title}</h2>
+            <p className="mt-1.5 max-w-[70ch] text-pretty text-[16px] leading-relaxed text-muted-foreground pp:text-[15px]">{head.lead}</p>
           </div>
 
           {screen === 2 ? (
@@ -473,9 +479,7 @@ export function Story() {
                 {screen === 1 && <StepRail step={step} compact={compact} onPick={(i) => { setPlaying(false); go(1, i) }} />}
               </div>
               <aside className="w-[340px] shrink-0 pp:w-full">
-                <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {screen === 0 ? "四個痛點" : "痛點解決進度"}
-                </div>
+                <h3 className="mb-3 text-[17px] font-semibold">{screen === 0 ? "四個痛點" : "痛點解決進度"}</h3>
                 <PainList screen={screen} step={step} onPick={(i) => { setPlaying(false); go(screen, i) }} />
               </aside>
             </div>
@@ -489,7 +493,7 @@ export function Story() {
           {Array.from({ length: STEP_COUNT[screen] }, (_, i) => (
             <span key={i} className={`sc-dot ${i === step ? "on" : ""}`} />
           ))}
-          <span className="ml-2 hidden text-xs text-muted-foreground sm:inline">← → 換步驟，空白鍵自動播放</span>
+          <span className="ml-2 hidden text-[13px] text-muted-foreground sm:inline">← → 換步驟，空白鍵自動播放</span>
         </div>
         <button onClick={manual(next)} disabled={isLast} className="sc-navbtn primary">下一步<ChevronRight className="h-4 w-4" /></button>
       </footer>
