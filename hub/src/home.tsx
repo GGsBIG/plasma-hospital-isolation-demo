@@ -26,6 +26,10 @@ const HEADS: { key: string; tab: string; lines: [string, string]; lead: ReactNod
     lead: <>健保申報、FHIR 對外交換和院內 AI 都從 Plasma 取資料，門診、護理系統照常運作。</>,
   },
   {
+    key: "showchwan", tab: "秀傳醫院", lines: ["四家分院", "一份彙整資料"],
+    lead: <>各分院資料庫 schema 不同，經 Plasma 由 AI 整理成資料產品，總院直接取用彙整。</>,
+  },
+  {
     key: "tech", tab: "技術人員", lines: ["Plasma 元件", "逐一說明"],
     lead: <>從資料庫連線、View、排程、資料產品到 MCP，說明每個元件的用途、規格與限制。</>,
   },
@@ -36,6 +40,7 @@ const HOLD = 6500
 const CARDS = [
   { key: "manufacturing", href: "manufacturing/", title: "製造業情境" },
   { key: "hospital", href: "hospital/", title: "醫院情境" },
+  { key: "showchwan", href: "showchwan/", title: "秀傳醫院" },
   { key: "tech", href: "tech/", title: "元件總覽" },
 ]
 
