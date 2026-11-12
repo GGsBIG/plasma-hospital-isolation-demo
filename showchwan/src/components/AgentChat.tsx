@@ -68,7 +68,7 @@ export function AgentChat({ progress }: { progress: number }) {
         <div className="leading-tight">
           <div className="text-sm font-semibold tracking-tight">AI Agent</div>
           <div className="flex items-center gap-1.5 whitespace-nowrap text-[11px] text-muted-foreground">
-            <span className={`h-1.5 w-1.5 rounded-full ${st.busy ? "animate-pulse bg-warn" : "bg-ok"}`} />
+            <span className={`sc-status h-1.5 w-1.5 ${st.busy ? "busy animate-pulse" : ""}`} />
             <span className={st.busy ? "shimmer-text" : ""}>{st.text}</span>
             <span className="text-muted-foreground/70">· 地端部署</span>
           </div>
@@ -128,7 +128,7 @@ function ToolCall({ text, v }: { text: string; v: number }) {
       <div className="min-w-0 max-w-[85%] flex-1 rounded-xl border border-border bg-muted/50 px-3 py-2 font-mono text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
           {done > 0 ? (
-            <Check className="h-3 w-3 shrink-0 text-ok" style={{ opacity: done }} />
+            <Check className="h-3 w-3 shrink-0" style={{ opacity: done }} />
           ) : (
             <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
           )}
@@ -142,7 +142,7 @@ function ToolCall({ text, v }: { text: string; v: number }) {
           </div>
         )}
         {done > 0 && (
-          <div className="mt-1 leading-snug" style={appear(done)}>
+          <div className="sc-tool-result mt-1 leading-snug" style={appear(done)}>
             → {result}
           </div>
         )}
@@ -185,7 +185,7 @@ function Chart({ v }: { v: number }) {
   const max = Math.max(...AGENT_CHART.map((d) => d.amount))
   const grow = clamp01((v - CHART_LOADING) / (1 - CHART_LOADING))
   return (
-    <div className="mt-1 rounded-xl border border-border bg-card p-3" style={appear(clamp01(v * 4))}>
+    <div className="sc-chart mt-1 rounded-xl border border-border bg-card p-3" style={appear(clamp01(v * 4))}>
       <div className="mb-2.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         {grow === 0 && <Loader2 className="h-3 w-3 animate-spin" />}
         <span className={grow === 0 ? "shimmer-text" : ""}>{grow === 0 ? "產生圖表中…" : AGENT_CHART_TITLE}</span>

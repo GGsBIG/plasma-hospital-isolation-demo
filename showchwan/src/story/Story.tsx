@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
-import { Check, ChevronLeft, ChevronRight, FileText, Pause, Play, X } from "lucide-react"
+import { ArrowDown, FileText, Pause, Play } from "lucide-react"
 import { Platform } from "../components/Iso"
 import { AgentChat } from "../components/AgentChat"
-import { ThemeToggle } from "../components/ThemeToggle"
 import { edgePath, sizeOf } from "../geometry"
 import { useLayoutMode } from "../layout"
 import type { NodeKind, Pos } from "../types"
 import logo from "../assets/brobridge-logo.png"
-import logoDark from "../assets/brobridge-logo-dark.png"
 import oracleLogo from "../assets/db/oracle.svg"
 import postgresLogo from "../assets/db/postgresql.svg"
 import mssqlLogo from "../assets/db/mssql.svg"
@@ -15,11 +13,11 @@ import mysqlLogo from "../assets/db/mysql.svg"
 import { BRANCHES, DOCS, PAINS, RESULT_ROWS, ROSTER, STEPS } from "./content"
 import "./story.css"
 
-// 三個畫面:0 現在的問題、1 Plasma 解決流程、2 成果一覽;每個畫面有幾步
-const SCREENS = ["現在的問題", "Plasma 解決流程", "成果一覽"]
-const STEP_COUNT = [PAINS.length, STEPS.length, 1]
-// 自動播放:每一步停留的毫秒數(上傳文件、AI 對話兩步動畫較長)
-const DWELL = [[4200, 4200, 4200, 4200], [4800, 7000, 12500, 4800, 5600], [9000]]
+// 捲動敘事的段落:前四段講痛點(圖上畫面 0),後五段講 Plasma 的步驟(畫面 1),最後是成果
+const BEATS = [...PAINS.map((_, k) => ({ screen: 0, step: k })), ...STEPS.map((_, k) => ({ screen: 1, step: k }))]
+// 自動播放:每一段停留的毫秒數(上傳文件、AI 對話兩段動畫較長),最後停在成果
+const DWELL = [4600, 4600, 4600, 4600, 5000, 7000, 12500, 5000, 5600]
+const CONTACT = "mailto:contact@brobridge.com"
 const AGENT_MS = 10500 // AI 對話動畫播完的時間
 const BRAND: Record<string, string> = { a: oracleLogo, b: postgresLogo, c: mssqlLogo, d: mysqlLogo }
 
@@ -27,29 +25,29 @@ type Compact = boolean
 // 舞台座標系(桌機橫向、手機直向)
 // 手機版的積木會放大(layout.ts 的 iconScale),所以舞台座標系比較大,看板高度跟著比例走
 const STAGE = (c: Compact, screen: number) =>
-  c ? (screen === 0 ? { w: 900, h: 1100 } : { w: 900, h: 1480 }) : screen === 0 ? { w: 1100, h: 680 } : { w: 1100, h: 560 }
+  c ? (screen === 0 ? { w: 900, h: 1100 } : { w: 900, h: 1150 }) : screen === 0 ? { w: 960, h: 680 } : { w: 1000, h: 640 }
 
 // ---- 節點位置 ----
 // 畫面 0 的分院資料庫下方多一行 schema,上下間距拉大;畫面 1 收緊,舞台矮一點、圖可以放大
 function dbPos(i: number, c: Compact, screen: number): Pos {
   if (c) return { x: 112 + i * 225, y: 130 }
-  return screen === 0 ? { x: 150, y: 100 + i * 160 } : { x: 150, y: 70 + i * 135 }
+  return screen === 0 ? { x: 110, y: 100 + i * 160 } : { x: 110, y: 75 + i * 155 }
 }
 const P = (c: Compact) => ({
-  manual: c ? { x: 220, y: 500 } : { x: 560, y: 320 },
-  it: c ? { x: 680, y: 500 } : { x: 560, y: 565 },
-  hqBefore: c ? { x: 450, y: 820 } : { x: 950, y: 320 },
-  plasma: c ? { x: 450, y: 660 } : { x: 500, y: 280 },
+  manual: c ? { x: 220, y: 500 } : { x: 480, y: 320 },
+  it: c ? { x: 680, y: 500 } : { x: 480, y: 565 },
+  hqBefore: c ? { x: 450, y: 820 } : { x: 840, y: 320 },
+  plasma: c ? { x: 300, y: 560 } : { x: 430, y: 310 },
   kbDy: c ? 124 : 86, // 知識庫疊在 Plasma 核心立方體頂面
-  prod1: c ? { x: 220, y: 1040 } : { x: 820, y: 160 },
-  prod2: c ? { x: 680, y: 1040 } : { x: 820, y: 400 },
-  hq: c ? { x: 450, y: 1300 } : { x: 1010, y: 280 },
+  prod1: c ? { x: 740, y: 470 } : { x: 730, y: 185 },
+  prod2: c ? { x: 740, y: 730 } : { x: 730, y: 435 },
+  hq: c ? { x: 300, y: 970 } : { x: 900, y: 310 },
 })
 // 痛點標記的位置(畫面 0)與說明泡泡放哪一側
 const MARK = (c: Compact): { p: Pos; side: "l" | "r" }[] =>
   c
     ? [{ p: { x: 330, y: 400 }, side: "r" }, { p: { x: 40, y: 40 }, side: "r" }, { p: { x: 790, y: 400 }, side: "l" }, { p: { x: 570, y: 720 }, side: "r" }]
-    : [{ p: { x: 615, y: 225 }, side: "r" }, { p: { x: 40, y: 340 }, side: "r" }, { p: { x: 615, y: 475 }, side: "r" }, { p: { x: 1005, y: 225 }, side: "l" }]
+    : [{ p: { x: 535, y: 220 }, side: "r" }, { p: { x: 250, y: 30 }, side: "r" }, { p: { x: 535, y: 470 }, side: "r" }, { p: { x: 895, y: 220 }, side: "l" }]
 
 interface NodeSpec {
   id: string
@@ -151,8 +149,8 @@ function Stage({ screen, step, compact, agent }: { screen: number; step: number;
   const showDocs = screen === 1 && step === 1
   const showAgent = screen === 1 && step === 2
   return (
-    <div ref={ref} className={`relative h-full w-full ${compact ? "sc-compact" : ""}`}>
-      <div className="sc-stage" style={{ width: S.w, height: S.h, transform: `translate(-50%, -50%) scale(${k})` }}>
+    <div ref={ref} className={`relative h-full w-full ${compact ? "sc-compact" : ""} ${screen === 1 ? "sc-s1" : ""} ${showAgent ? "sc-agent-on" : ""}`}>
+      <div className="sc-stage" style={{ width: S.w, height: S.h, transform: `${showAgent && !compact ? "translateX(-100px) " : ""}translate(-50%, -50%) scale(${showAgent && !compact ? k * 0.8 : k})` }}>
         <svg className="absolute inset-0 overflow-visible" width={S.w} height={S.h}>
           <defs>
             <radialGradient id="plasma-glow">
@@ -199,7 +197,7 @@ function Stage({ screen, step, compact, agent }: { screen: number; step: number;
         {/* 步驟 2:文件飛進 Plasma */}
         {showDocs &&
           DOCS.map((name, i) => {
-            const x0 = compact ? -150 : 250
+            const x0 = compact ? 120 : 250
             const y0 = compact ? -285 + i * 60 : -170 + i * 46
             return (
               <div key={name} className="sc-doc-anchor" style={{ left: p.plasma.x, top: p.plasma.y - p.kbDy }}>
@@ -214,7 +212,7 @@ function Stage({ screen, step, compact, agent }: { screen: number; step: number;
 
       {/* 步驟 3:AI Agent 對話 */}
       {showAgent && (
-        <div className={`sc-agent absolute ${compact ? "inset-x-0 bottom-0 top-[8%]" : "bottom-2 right-2 top-2 w-[400px]"}`}>
+        <div className={`sc-agent absolute ${compact ? "inset-0" : "bottom-6 right-0 top-6 w-[420px]"}`}>
           <AgentChat progress={agent} />
         </div>
       )}
@@ -222,181 +220,157 @@ function Stage({ screen, step, compact, agent }: { screen: number; step: number;
   )
 }
 
-// ---- 右側(手機為下方)說明欄 ----
-function PainList({ screen, step, onPick }: { screen: number; step: number; onPick: (i: number) => void }) {
+// ---- 左側敘事段落 ----
+function Beat({ i, active, children }: { i: number; active: boolean; children: ReactNode }) {
   return (
-    <ol className="space-y-2">
-      {PAINS.map((p, i) => {
-        const solved = screen === 2 || (screen === 1 && step > i)
-        const active = screen === 0 && step === i
-        const fixing = screen === 1 && step === i
-        return (
-          <li key={i}>
-            <button
-              onClick={() => onPick(i)}
-              className={`sc-pain w-full text-left ${active ? "active" : ""} ${solved ? "solved" : ""} ${fixing ? "fixing" : ""}`}
-            >
-              <span className={`sc-num ${solved ? "ok" : ""}`}>{solved ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[16px] font-semibold text-foreground">{p.title}</span>
-                {screen === 0 ? (
-                  <span className="mt-1 block text-pretty text-[14px] leading-relaxed text-muted-foreground">{p.desc}</span>
-                ) : solved ? (
-                  <span className="mt-1 block text-[14px] text-ok">由步驟 {i + 1}「{STEPS[i].title}」解決</span>
-                ) : (
-                  <span className="mt-1 flex items-center gap-1 text-[14px] text-muted-foreground">
-                    {fixing ? "解決中…" : <><X className="h-3 w-3 text-danger" />尚未解決</>}
-                  </span>
-                )}
-              </span>
-            </button>
-          </li>
-        )
-      })}
-    </ol>
+    <section data-beat={i} className={`sc-beat ${active ? "on" : ""}`}>
+      <div className="sc-beat-body">{children}</div>
+    </section>
   )
 }
 
-function StepRail({ step, onPick, compact }: { step: number; onPick: (i: number) => void; compact: boolean }) {
-  if (compact) {
-    const s = STEPS[step]
-    return (
-      <div className="sc-step active">
-        <div className="text-[13px] text-muted-foreground">步驟 {step + 1} / {STEPS.length}</div>
-        <div className="mt-0.5 text-[16px] font-semibold">{s.title}{step < PAINS.length && <span className="sc-solve">解決 {step + 1}</span>}</div>
-        <div className="mt-1 text-pretty text-[14px] leading-relaxed text-muted-foreground">{s.desc}</div>
-      </div>
-    )
-  }
+function PainBeat({ k }: { k: number }) {
+  const p = PAINS[k]
   return (
-    <ol className="sc-rail" style={{ gridTemplateColumns: STEPS.map((_, i) => (i === step ? "2.4fr" : "1fr")).join(" ") }}>
-      {STEPS.map((s, i) => (
-        <li key={i} className="min-w-0">
-          <button onClick={() => onPick(i)} className={`sc-rail-step ${i === step ? "active" : ""} ${i < step ? "done" : ""}`} aria-current={i === step ? "step" : undefined}>
-            <span className="flex items-center gap-2">
-              <span className={`sc-stepnum ${i <= step ? "on" : ""}`}>{i < step ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}</span>
-              <span className="truncate text-[15px] font-semibold">{s.title}</span>
-            </span>
-            {i === step ? (
-              <span className="mt-1.5 block text-pretty text-[15px] leading-relaxed text-muted-foreground">{s.desc}</span>
-            ) : null}
-            <span className={`mt-1.5 block text-[13px] ${i < PAINS.length ? "text-ok" : "text-muted-foreground"}`}>
-              {i < PAINS.length ? `解決痛點 ${i + 1}` : "成果"}
-            </span>
-          </button>
-        </li>
-      ))}
-    </ol>
+    <>
+      <div className="sc-num-big">{k + 1}</div>
+      <h3 className="sc-beat-title">{p.title}</h3>
+      <p className="sc-beat-text">{p.desc}</p>
+      {k === 1 && (
+        <dl className="sc-schema">
+          {BRANCHES.map((b) => (
+            <div key={b.id}>
+              <dt>{b.label}</dt>
+              <dd><code>{b.schema}</code></dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </>
   )
 }
 
-function Results({ compact }: { compact: boolean }) {
+function StepBeat({ k }: { k: number }) {
+  const s = STEPS[k]
+  const solves = k < PAINS.length
+  return (
+    <>
+      <div className="sc-num-big ink">{k + 1}</div>
+      <h3 className="sc-beat-title">{s.title}</h3>
+      <p className="sc-beat-text">{s.desc}</p>
+      {k === 1 && (
+        <ul className="sc-docs">
+          {DOCS.map((d) => <li key={d}><FileText className="h-4 w-4" strokeWidth={1.75} />{d}</li>)}
+        </ul>
+      )}
+      {k === 2 && <blockquote className="sc-quote">「把四家分院的護理人員整理成同一張表：員工編號、姓名、職稱、單位、分院。」</blockquote>}
+      {k === 4 && (
+        <p className="sc-total"><span className="t-num">812</span> 人<small>四家分院護理人員合計（示意數字）</small></p>
+      )}
+      {solves && (
+        <p className="sc-solves"><span className="sc-sq">{k + 1}</span>解決：{PAINS[k].title}</p>
+      )}
+    </>
+  )
+}
+
+// ---- 成果:捲到最後的收尾 ----
+function Results() {
   const max = Math.max(...ROSTER.map((r) => r.n))
   const total = ROSTER.reduce((a, r) => a + r.n, 0)
   return (
-    <div className={`grid max-w-[1240px] items-start gap-5 ${compact ? "grid-cols-1" : "grid-cols-[1.45fr_1fr]"}`}>
-      <div className="sc-card">
-        <h3 className="mb-3 text-[17px] font-semibold">導入前後對照</h3>
-        {compact ? (
-          // 手機:三欄太擠,每一項改成上下兩行
-          <div className="divide-y divide-border">
-            {RESULT_ROWS.map(([k, a, b]) => (
-              <div key={k} className="py-3 text-[15px] leading-relaxed">
-                <div className="font-semibold">{k}</div>
-                <div className="mt-1 flex gap-2"><span className="w-12 shrink-0 text-danger">現在</span><span className="text-muted-foreground">{a}</span></div>
-                <div className="flex gap-2"><span className="w-12 shrink-0 text-ok">導入後</span><span className="font-medium">{b}</span></div>
-              </div>
-            ))}
+    <section id="results" className="sc-results">
+      <div className="sc-results-inner">
+        <h2 className="sc-h-chapter sc-results-title"><span>四家分院，一份資料，</span><span>總院隨時彙整。</span></h2>
+        <div className="sc-results-grid">
+          <div>
+            <h3 className="sc-h-block">導入前後對照</h3>
+            <table className="sc-compare">
+              <thead><tr><th scope="col"><span className="sr-only">項目</span></th><th scope="col">現在</th><th scope="col" className="red">導入 Plasma 後</th></tr></thead>
+              <tbody>
+                {RESULT_ROWS.map(([k, a, b]) => (
+                  <tr key={k}><th scope="row">{k}</th><td className="muted" data-label="現在">{a}</td><td data-label="導入後">{b}</td></tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ) : (
-        <div className="sc-table">
-          <div className="th" />
-          <div className="th text-danger">現在</div>
-          <div className="th text-ok">導入 Plasma 後</div>
-          {RESULT_ROWS.map(([k, a, b]) => (
-            <div key={k} className="contents">
-              <div className="td font-medium text-foreground">{k}</div>
-              <div className="td text-muted-foreground">{a}</div>
-              <div className="td font-medium text-foreground">{b}</div>
-            </div>
-          ))}
-        </div>
-        )}
-      </div>
-      <div className="flex flex-col gap-5">
-        <div className="sc-card">
-          <h3 className="text-[17px] font-semibold">總院彙整：各分院護理師人數</h3>
-          <p className="mb-4 mt-0.5 text-[13px] text-muted-foreground">來源：資料產品「護理人員名冊」· 示意數字</p>
-          <div className="space-y-2.5">
-            {ROSTER.map((r, i) => (
-              <div key={r.label} className="flex items-center gap-3 text-[14px]">
-                <span className="w-14 shrink-0 text-muted-foreground">{r.label}</span>
-                <div className="h-5 flex-1 overflow-hidden rounded bg-muted">
-                  <div className="sc-bar h-full rounded" style={{ width: `${(r.n / max) * 100}%`, animationDelay: `${0.15 * i}s` }} />
+          <div>
+            <h3 className="sc-h-block">總院彙整：各分院護理師人數</h3>
+            <div className="sc-roster">
+              {ROSTER.map((r) => (
+                <div key={r.label} className="sc-roster-row">
+                  <span>{r.label}</span>
+                  <span className="bar"><i style={{ width: `${(r.n / max) * 100}%` }} /></span>
+                  <span className="t-num">{r.n}</span>
                 </div>
-                <span className="w-10 text-right font-mono tabular-nums">{r.n}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 flex items-baseline justify-between border-t border-border pt-3">
-            <span className="text-[13px] text-muted-foreground">四家分院合計</span>
-            <span className="text-2xl font-semibold tabular-nums">{total} <span className="text-sm font-normal text-muted-foreground">人</span></span>
+              ))}
+              <div className="sc-roster-total"><span>合計</span><span className="t-num">{total}</span></div>
+            </div>
+            <p className="sc-note">來源：資料產品「護理人員名冊」。人數為示意數字。</p>
           </div>
         </div>
-        <div className="sc-card">
-          <h3 className="mb-3 text-[17px] font-semibold">四個痛點都解決了</h3>
-          <ul className="space-y-2 text-[15px]">
-            {PAINS.map((p, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <span className="sc-num ok small"><Check className="h-3 w-3" strokeWidth={3} /></span>
-                <span className="text-foreground">{p.title}</span>
-                <span className="ml-auto text-muted-foreground">步驟 {i + 1}</span>
-              </li>
-            ))}
-          </ul>
+        <div className="sc-close">
+          <p>想看 Plasma 接上貴院的資料庫會是什麼樣子？</p>
+          <div className="flex flex-wrap gap-3">
+            <a className="btn-bar primary" href={CONTACT}>預約專人諮詢</a>
+            <button className="btn-bar" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>從頭再看一次</button>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   )
 }
 
-const HEAD = [
-  { title: "現在遇到的問題", lead: "四家分院資料庫各自獨立、schema 都不同，總院想統計「各分院的護理師有誰」，做不出來。" },
-  { title: "Plasma 怎麼解決", lead: "四個步驟，把四家分院的資料整理成總院可以直接取用的資料產品。" },
-  { title: "導入 Plasma 之後", lead: "四家分院，一份資料，總院隨時彙整。" },
-]
-
 export function Story() {
   const compact = useLayoutMode() !== "desktop"
-  const [pos, setPos] = useState({ screen: 0, step: 0 })
+  const [beat, setBeat] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [agent, setAgent] = useState(0)
-  const { screen, step } = pos
+  const [inResults, setInResults] = useState(false)
+  const { screen, step } = BEATS[beat]
 
-  const go = useCallback((screen: number, step = 0) => setPos({ screen, step }), [])
-  const next = useCallback(() => {
-    setPos(({ screen, step }) => {
-      if (step + 1 < STEP_COUNT[screen]) return { screen, step: step + 1 }
-      if (screen + 1 < SCREENS.length) return { screen: screen + 1, step: 0 }
-      return { screen, step }
-    })
-  }, [])
-  const prev = useCallback(() => {
-    setPos(({ screen, step }) => {
-      if (step > 0) return { screen, step: step - 1 }
-      if (screen > 0) return { screen: screen - 1, step: STEP_COUNT[screen - 1] - 1 }
-      return { screen, step }
-    })
-  }, [])
-  const isLast = screen === SCREENS.length - 1
+  // 目前的段落:跨過「判定線」的那一段(桌機在畫面中間,手機在釘住的圖下方那塊的中間)
+  useEffect(() => {
+    let raf = 0
+    const measure = () => {
+      raf = 0
+      const els = [...document.querySelectorAll<HTMLElement>("[data-beat]")]
+      const pin = document.querySelector<HTMLElement>(".sc-pin")
+      const top = compact && pin ? pin.getBoundingClientRect().bottom : 71
+      const line = top + (window.innerHeight - top) * 0.45
+      let cur = 0
+      els.forEach((el, i) => { if (el.getBoundingClientRect().top <= line) cur = i })
+      setBeat(cur)
+      const res = document.getElementById("results")
+      setInResults(!!res && res.getBoundingClientRect().top < window.innerHeight * 0.6)
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(measure) }
+    measure()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", onScroll)
+    return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); cancelAnimationFrame(raf) }
+  }, [compact])
 
-  // 自動播放:每一步停留固定時間,播到最後停下
+  const goBeat = useCallback((i: number) => {
+    if (i >= BEATS.length) { document.getElementById("results")?.scrollIntoView({ behavior: "smooth" }); return }
+    const el = document.querySelector<HTMLElement>(`[data-beat="${Math.max(0, i)}"]`)
+    if (!el) return
+    const pin = document.querySelector<HTMLElement>(".sc-pin")
+    const top = compact && pin ? 71 + pin.offsetHeight : 71
+    const y = el.getBoundingClientRect().top + window.scrollY - top - 24
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" })
+  }, [compact])
+  const cur = inResults ? BEATS.length : beat
+  const next = useCallback(() => goBeat(cur + 1), [goBeat, cur])
+  const prev = useCallback(() => goBeat(cur - 1), [goBeat, cur])
+
+  // 自動播放:每段停留固定時間再往下,捲到成果就停
   useEffect(() => {
     if (!playing) return
-    if (isLast) { const t = setTimeout(() => setPlaying(false), DWELL[2][0]); return () => clearTimeout(t) }
-    const t = setTimeout(next, DWELL[screen][step])
+    if (inResults) { setPlaying(false); return }
+    const t = setTimeout(next, DWELL[beat])
     return () => clearTimeout(t)
-  }, [playing, screen, step, isLast, next])
+  }, [playing, beat, inResults, next])
 
   // AI 對話:進到步驟 3 時從頭播
   useEffect(() => {
@@ -415,88 +389,70 @@ export function Story() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === "PageDown") { setPlaying(false); next() }
-      else if (e.key === "ArrowLeft" || e.key === "PageUp") { setPlaying(false); prev() }
+      if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); setPlaying(false); next() }
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); setPlaying(false); prev() }
       else if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p) }
-      else if (/^[123]$/.test(e.key)) { setPlaying(false); go(+e.key - 1) }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [next, prev, go])
+  }, [next, prev])
 
-  const manual = (fn: () => void) => () => { setPlaying(false); fn() }
-  const head = HEAD[screen]
+  const chapter = inResults ? 2 : screen
+  const jump = (c: number) => { setPlaying(false); c === 2 ? goBeat(BEATS.length) : goBeat(c === 0 ? 0 : PAINS.length) }
 
   return (
-    <div className="flex h-[100svh] flex-col overflow-hidden bg-background text-foreground">
-      <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border px-6 pp:h-12 pp:px-4">
+    <div className={`sc-page ${screen === 1 && step === 2 && !inResults ? "agenting" : ""}`}>
+      <h1 className="sr-only">Plasma × 秀傳醫院 跨院資料整合</h1>
+      <header className="sc-header">
         <a href="../#showchwan" target="_top" aria-label="回到 Plasma Demo 首頁" className="shrink-0">
-          <img src={logo} alt="Brobridge" className="h-[22px] w-auto dark:hidden pp:h-[18px]" />
-          <img src={logoDark} alt="Brobridge" className="hidden h-[26px] w-auto dark:block pp:h-[21px]" />
+          <img src={logo} alt="Brobridge" className="h-[16px] w-auto md:h-[18px]" />
         </a>
-        <span className="h-5 w-px bg-border pp:hidden" />
-        <h1 className="text-[15px] text-foreground/85 pp:hidden">Plasma × 秀傳醫院 跨院資料整合</h1>
-        <nav className="mx-auto flex items-center gap-1 pp:hidden" aria-label="段落">
-          {SCREENS.map((s, i) => (
-            <button key={s} onClick={manual(() => go(i))} className={`sc-tab ${i === screen ? "on" : ""}`}>
-              <span className="tabular-nums">{i + 1}</span>{s}
-            </button>
+        <span className="sc-crumb">Plasma × 秀傳醫院</span>
+        <nav className="sc-chapters" aria-label="章節">
+          {["現在的問題", "解決流程", "成果"].map((t, i) => (
+            <button key={t} onClick={() => jump(i)} className={chapter === i ? "on" : ""} aria-current={chapter === i ? "true" : undefined}>{t}</button>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-3">
-          <button onClick={() => setPlaying((p) => !p)} className="sc-play" aria-label={playing ? "暫停" : "自動播放"}>
-            {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            <span className="pp:hidden">{playing ? "暫停" : "自動播放"}</span>
-          </button>
-          <ThemeToggle />
-        </div>
+        <span className="flex-1" />
+        <button onClick={() => setPlaying((p) => !p)} className="btn-bar small" aria-pressed={playing}>
+          {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          <span className="sc-hide-sm">{playing ? "暫停" : "自動播放"}</span>
+        </button>
+        <a className="btn-bar small primary sc-hide-md" href={CONTACT}>預約專人諮詢</a>
       </header>
 
-      {/* 手機:段落切換放在標題列下方 */}
-      <nav className="hidden shrink-0 gap-1 border-b border-border px-3 py-2 pp:flex" aria-label="段落">
-        {SCREENS.map((s, i) => (
-          <button key={s} onClick={manual(() => go(i))} className={`sc-tab flex-1 justify-center ${i === screen ? "on" : ""}`}>
-            <span className="tabular-nums">{i + 1}</span>{s.replace("Plasma ", "")}
-          </button>
-        ))}
-      </nav>
-
-      <main className="min-h-0 flex-1 overflow-y-auto">
-        <div key={screen} className="sc-screen flex h-full min-h-0 flex-col gap-5 px-6 py-6 pp:h-auto pp:gap-4 pp:px-4 pp:py-4">
-          <div className="shrink-0">
-            <h2 className="text-balance text-[30px] font-semibold leading-tight tracking-tight pp:text-[24px]">{head.title}</h2>
-            <p className="mt-1.5 max-w-[70ch] text-pretty text-[16px] leading-relaxed text-muted-foreground pp:text-[15px]">{head.lead}</p>
+      <div className="sc-story">
+        <div className="sc-pin">
+          <div className="sc-pin-inner">
+            <Stage screen={screen} step={step} compact={compact} agent={agent} />
+            <ol className="sc-rail" aria-hidden="true">
+              {BEATS.map((_, i) => <li key={i} className={i === beat && !inResults ? "on" : i < beat || inResults ? "past" : ""} />)}
+            </ol>
           </div>
-
-          {screen === 2 ? (
-            <div className="min-h-0 flex-1"><Results compact={compact} /></div>
-          ) : (
-            <div className="flex min-h-0 flex-1 gap-6 pp:flex-col pp:gap-4">
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-                <div className={`sc-board ${compact ? "w-full flex-none" : "min-h-0 flex-1"}`} style={compact ? { aspectRatio: `${STAGE(true, screen).w} / ${STAGE(true, screen).h}` } : undefined}>
-                  <Stage screen={screen} step={step} compact={compact} agent={agent} />
-                </div>
-                {screen === 1 && <StepRail step={step} compact={compact} onPick={(i) => { setPlaying(false); go(1, i) }} />}
-              </div>
-              <aside className="w-[340px] shrink-0 pp:w-full">
-                <h3 className="mb-3 text-[17px] font-semibold">{screen === 0 ? "四個痛點" : "痛點解決進度"}</h3>
-                <PainList screen={screen} step={step} onPick={(i) => { setPlaying(false); go(screen, i) }} />
-              </aside>
-            </div>
-          )}
         </div>
-      </main>
 
-      <footer className="flex h-14 shrink-0 items-center justify-between gap-3 border-t border-border px-6 pp:px-4">
-        <button onClick={manual(prev)} disabled={screen === 0 && step === 0} className="sc-navbtn"><ChevronLeft className="h-4 w-4" />上一步</button>
-        <div className="flex items-center gap-1.5">
-          {Array.from({ length: STEP_COUNT[screen] }, (_, i) => (
-            <span key={i} className={`sc-dot ${i === step ? "on" : ""}`} />
+        <div className="sc-narr">
+          <header className="sc-chapter-head">
+            <h2 className="sc-h-chapter">總院統計不出來</h2>
+            <p className="sc-lead">秀傳有四家分院，各有一套 HIS 資料庫，資料表與欄位寫法都不同。總院想知道「各分院的護理師有誰」，到現在還兜不起來。</p>
+          </header>
+          {PAINS.map((_, k) => (
+            <Beat key={`p${k}`} i={k} active={beat === k && !inResults}><PainBeat k={k} /></Beat>
           ))}
-          <span className="ml-2 hidden text-[13px] text-muted-foreground sm:inline">← → 換步驟，空白鍵自動播放</span>
+
+          <header className="sc-chapter-head second">
+            <h2 className="sc-h-chapter">Plasma 怎麼解決</h2>
+            <p className="sc-lead">四個步驟，各解決一個痛點，最後總院直接取用整理好的資料。</p>
+          </header>
+          {STEPS.map((_, k) => (
+            <Beat key={`s${k}`} i={PAINS.length + k} active={beat === PAINS.length + k && !inResults}><StepBeat k={k} /></Beat>
+          ))}
+          <p className="sc-more"><ArrowDown className="h-4 w-4" />往下看成果</p>
         </div>
-        <button onClick={manual(next)} disabled={isLast} className="sc-navbtn primary">下一步<ChevronRight className="h-4 w-4" /></button>
-      </footer>
+      </div>
+
+      <Results />
+      <p className="sc-keys">← → 換段落　空白鍵自動播放</p>
     </div>
   )
 }

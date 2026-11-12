@@ -1,0 +1,338 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-12T15:31:53.882714+00:00",
+  "title": "Design System: Plasma Demos (Brobridge)",
+  "extensions": {
+    "colorMeta": {
+      "logo-red": {
+        "role": "primary",
+        "displayName": "Logo Red",
+        "canonical": "#b42622",
+        "tonalRamp": [
+          "oklch(15% 0.068 27)",
+          "oklch(27% 0.17 27)",
+          "oklch(39% 0.17 27)",
+          "oklch(51% 0.17 27)",
+          "oklch(63% 0.17 27)",
+          "oklch(75% 0.17 27)",
+          "oklch(86% 0.17 27)",
+          "oklch(95% 0.068 27)"
+        ]
+      },
+      "red-deep": {
+        "role": "primary",
+        "displayName": "Deep Red",
+        "canonical": "#8f1d1a",
+        "tonalRamp": [
+          "oklch(15% 0.056 27)",
+          "oklch(27% 0.14 27)",
+          "oklch(39% 0.14 27)",
+          "oklch(51% 0.14 27)",
+          "oklch(63% 0.14 27)",
+          "oklch(75% 0.14 27)",
+          "oklch(86% 0.14 27)",
+          "oklch(95% 0.056 27)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#111111",
+        "tonalRamp": [
+          "oklch(15% 0.0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0.0 0)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15% 0.0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0.0 0)"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Sheet",
+        "canonical": "#ece9e2",
+        "tonalRamp": [
+          "oklch(15% 0.005 85)",
+          "oklch(27% 0.012 85)",
+          "oklch(39% 0.012 85)",
+          "oklch(51% 0.012 85)",
+          "oklch(63% 0.012 85)",
+          "oklch(75% 0.012 85)",
+          "oklch(86% 0.012 85)",
+          "oklch(95% 0.005 85)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "rgb(17 17 17 / 0.18)"
+      },
+      "muted-ink": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#4a4a4a",
+        "tonalRamp": [
+          "oklch(15% 0.0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0.0 0)"
+        ]
+      },
+      "iso-left": {
+        "role": "neutral",
+        "displayName": "Iso Left Face",
+        "canonical": "#ecebe8",
+        "tonalRamp": [
+          "oklch(15% 0.002 90)",
+          "oklch(27% 0.004 90)",
+          "oklch(39% 0.004 90)",
+          "oklch(51% 0.004 90)",
+          "oklch(63% 0.004 90)",
+          "oklch(75% 0.004 90)",
+          "oklch(86% 0.004 90)",
+          "oklch(95% 0.002 90)"
+        ]
+      },
+      "iso-right": {
+        "role": "neutral",
+        "displayName": "Iso Right Face",
+        "canonical": "#d9d7d2",
+        "tonalRamp": [
+          "oklch(15% 0.003 85)",
+          "oklch(27% 0.007 85)",
+          "oklch(39% 0.007 85)",
+          "oklch(51% 0.007 85)",
+          "oklch(63% 0.007 85)",
+          "oklch(75% 0.007 85)",
+          "oklch(86% 0.007 85)",
+          "oklch(95% 0.003 85)"
+        ]
+      },
+      "iso-line": {
+        "role": "neutral",
+        "displayName": "Iso Outline",
+        "canonical": "#5c5c5c",
+        "tonalRamp": [
+          "oklch(15% 0.0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0.0 0)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Chapter headings and the results title."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Beat numbers and headline totals; tabular."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Beat titles."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "Chapter intros and beat body text, muted, max 28-30em."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Base text, quotes, comparison table."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Bar buttons, header crumb, schema row heads."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Schema field names, in red."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating-panel",
+        "value": "0 24px 48px -24px rgb(17 17 17 / 0.35)",
+        "purpose": "Only for a panel overlaying the pinned diagram (AI agent)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "All state transitions: buttons 160ms, rail 300ms, markers 300ms, numerals 400ms, node moves 800ms."
+      },
+      {
+        "name": "problem-dash",
+        "value": "stroke-dasharray 7 7; dashoffset -14 over 1s linear infinite",
+        "purpose": "Marching red dashed problem flows."
+      },
+      {
+        "name": "solution-flow",
+        "value": "stroke-dasharray 0.1 26; dashoffset -26.1 over 1.2s linear infinite",
+        "purpose": "Red square dots travelling along solid ink solution lines."
+      },
+      {
+        "name": "bubble-wipe",
+        "value": "clip-path inset(0 100% 0 0) to inset(0) over 0.5s, ease",
+        "purpose": "Pain bubble reveal."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce disables flow, document, node and bubble animations",
+        "purpose": "Required."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "639px"
+      },
+      {
+        "name": "md",
+        "value": "767px"
+      },
+      {
+        "name": "lg",
+        "value": "1023px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bar Button",
+      "kind": "button",
+      "refersTo": "button-bar",
+      "description": "Default action: ink-framed square bar that inverts on hover.",
+      "html": "<button class=\"ds-btn\">從頭再看一次</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 24px;border:2px solid #111;background:transparent;color:#111;font:inherit;font-size:.9375rem;font-weight:700;letter-spacing:.02em;border-radius:0;cursor:pointer;transition:background-color 160ms cubic-bezier(0.16,1,0.3,1),color 160ms cubic-bezier(0.16,1,0.3,1),border-color 160ms}.ds-btn:focus-visible{outline:2px solid #b42622;outline-offset:3px}.ds-btn:hover{background:#111;color:#fff}"
+    },
+    {
+      "name": "Primary Bar Button",
+      "kind": "button",
+      "refersTo": "button-bar-primary",
+      "description": "The one red call to action (contact).",
+      "html": "<a class=\"ds-btn ds-btn-primary\" href=\"#\">預約專人諮詢</a>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 24px;border:2px solid #111;background:transparent;color:#111;font:inherit;font-size:.9375rem;font-weight:700;letter-spacing:.02em;border-radius:0;cursor:pointer;transition:background-color 160ms cubic-bezier(0.16,1,0.3,1),color 160ms cubic-bezier(0.16,1,0.3,1),border-color 160ms}.ds-btn:focus-visible{outline:2px solid #b42622;outline-offset:3px}.ds-btn-primary{background:#b42622;border-color:#b42622;color:#fff;text-decoration:none}.ds-btn-primary:hover{background:#8f1d1a;border-color:#8f1d1a}"
+    },
+    {
+      "name": "Header with Chapters",
+      "kind": "nav",
+      "description": "Sticky header: 6px red top rule, 1px ink base, chapter links with red active underline.",
+      "html": "<header class=\"ds-head\"><b class=\"ds-crumb\">Plasma × 秀傳醫院</b><nav class=\"ds-ch\"><button class=\"on\">現在的問題</button><button>解決流程</button><button>成果</button></nav></header>",
+      "css": ".ds-head{display:flex;align-items:center;gap:16px;height:71px;box-sizing:border-box;padding:0 40px;background:#fff;border-top:6px solid #b42622;border-bottom:1px solid #111;font-family:ui-sans-serif,system-ui,sans-serif}.ds-crumb{padding-left:16px;border-left:1px solid rgb(17 17 17/.18);font-size:.9375rem}.ds-ch{display:flex;gap:4px;margin-left:24px}.ds-ch button{position:relative;height:64px;padding:0 12px;font:inherit;font-size:.9375rem;color:#4a4a4a;background:none;border:0;cursor:pointer}.ds-ch button:hover{color:#111}.ds-ch button:focus-visible{outline:2px solid #b42622;outline-offset:-4px}.ds-ch button.on{color:#111;font-weight:700}.ds-ch button.on::after{content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:3px;background:#b42622}"
+    },
+    {
+      "name": "Document Tag",
+      "kind": "chip",
+      "refersTo": "document-tag",
+      "description": "Square paper tag with 1px ink border and a line icon.",
+      "html": "<span class=\"ds-tag\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/><path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/><path d=\"M10 9H8M16 13H8M16 17H8\"/></svg>資料字典</span>",
+      "css": ".ds-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #111;background:#fff;font-family:ui-sans-serif,system-ui,sans-serif;font-size:.9375rem;color:#111}"
+    },
+    {
+      "name": "Narrative Beat",
+      "kind": "card",
+      "description": "A scroll beat: 2px ink top rule, big numeral, title, muted body, and the pain it solves.",
+      "html": "<section class=\"ds-beat\"><div class=\"ds-num\">1</div><h3>接上 Plasma</h3><p>四家分院資料庫以唯讀方式接上 Plasma，不用再人工匯出。</p><p class=\"ds-solves\"><span class=\"ds-sq\">1</span>解決：跨院資料要人工匯出</p></section>",
+      "css": ".ds-beat{border-top:2px solid #111;padding:40px 0 56px;font-family:ui-sans-serif,system-ui,sans-serif;color:#111}.ds-num{font-size:5rem;font-weight:700;line-height:.9;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:#111}.ds-beat h3{margin:20px 0 0;font-size:1.875rem;line-height:1.25;font-weight:600;letter-spacing:-.01em}.ds-beat p{margin:12px 0 0;font-size:1.1875rem;line-height:1.75;color:#4a4a4a;max-width:28em}.ds-beat .ds-solves{margin-top:24px;display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:1rem;color:#111}.ds-sq{display:inline-grid;place-items:center;width:28px;height:28px;background:#b42622;color:#fff;font-size:.9375rem}"
+    },
+    {
+      "name": "Pain Marker",
+      "kind": "custom",
+      "refersTo": "pain-marker",
+      "description": "Red square marker on the diagram; fills red with a wiping bubble when its beat is active.",
+      "html": "<div class=\"ds-mark\"><span class=\"ds-dot\">1</span><span class=\"ds-dot on\">2</span><span class=\"ds-bubble\">匯出、合併、核對，一次一週以上</span></div>",
+      "css": ".ds-mark{display:flex;align-items:center;gap:12px;font-family:ui-sans-serif,system-ui,sans-serif}.ds-dot{display:grid;place-items:center;width:32px;height:32px;font-weight:700;font-size:16px;color:#b42622;background:#fff;border:2px solid #b42622;transition:transform 300ms cubic-bezier(0.16,1,0.3,1),background-color 300ms,color 300ms}.ds-dot.on,.ds-dot:hover{color:#fff;background:#b42622;transform:scale(1.15)}.ds-bubble{padding:6px 14px;font-size:16px;font-weight:700;color:#fff;background:#b42622;white-space:nowrap}"
+    },
+    {
+      "name": "Quote Sheet",
+      "kind": "card",
+      "refersTo": "quote-sheet",
+      "description": "A prompt or quotation on the sheet tone.",
+      "html": "<blockquote class=\"ds-quote\">「把四家分院的護理人員整理成同一張表。」</blockquote>",
+      "css": ".ds-quote{margin:0;padding:16px 20px;background:#ece9e2;font-family:ui-sans-serif,system-ui,sans-serif;font-size:1.0625rem;line-height:1.7;color:#111}"
+    },
+    {
+      "name": "Roster Row",
+      "kind": "custom",
+      "description": "Ink bar on a sheet track with a tabular count, hairline divider.",
+      "html": "<div class=\"ds-row\"><span>A 分院</span><span class=\"ds-bar\"><i style=\"width:100%\"></i></span><span class=\"ds-n\">248</span></div><div class=\"ds-row\"><span>B 分院</span><span class=\"ds-bar\"><i style=\"width:75%\"></i></span><span class=\"ds-n\">186</span></div>",
+      "css": ".ds-row{display:grid;grid-template-columns:5em 1fr 3em;gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid rgb(17 17 17/.18);font-family:ui-sans-serif,system-ui,sans-serif;color:#111}.ds-bar{height:14px;background:#ece9e2}.ds-bar i{display:block;height:100%;background:#111}.ds-n{text-align:right;font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Ruled Ledger",
+    "overview": "The demos live on Brobridge's paper: white ground, ink text, and one logo red. Structure comes from ink rules, not boxes. A 6px red rule caps the header, 2px ink rules separate narrative beats, a 6px ink rule opens a new chapter, and hairlines divide rows inside a block. Corners are square everywhere, including inside reused components that would otherwise round.\n\nRed marks problems and the active state, never decoration. A pain is a red dashed flow and a red square marker. A solution is a solid ink line with red dots moving downstream. Large tabular numerals carry the count of each beat and the headline figure. The isometric diagram is drawn in warm paper greys so it reads as part of the page, not as an illustration placed on top of it.\n\nDensity is presentation-scale. Body copy sits at 17px with generous 1.75 leading, diagram labels never drop below about 17px on screen, and the same content must read from the back of a meeting room and on a 390px phone.",
+    "keyCharacteristics": [
+      "Paper white, ink #111, logo red as the only accent; no other hues in the UI layer.",
+      "Square corners throughout (0px), enforced even on embedded components.",
+      "Rules as structure: 6px red header rule, 6px ink chapter rule, 2px ink beat rule, 1px hairline row rule.",
+      "Big tabular numerals as the voice of each beat.",
+      "Problem = red dashed; solution = solid ink with moving red dots.",
+      "One easing curve, cubic-bezier(0.16, 1, 0.3, 1), for every state change."
+    ],
+    "rules": [
+      {
+        "name": "The One Red Rule",
+        "body": "Red is reserved for problems, the active state, and the primary call to action. If a red element is neither a pain, the current position, nor \"contact us\", it should be ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The No-Green Rule",
+        "body": "Success is shown in ink, not green. Solved states use ink weight (`tone-ok` is ink at 600), never a status hue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Numeral Voice Rule",
+        "body": "Each narrative beat opens with its number set large; the number, not a label above the heading, identifies the beat.",
+        "section": "typography"
+      },
+      {
+        "name": "The Ruled Not Raised Rule",
+        "body": "Separate content with ink rules and hairlines. Do not lift cards with shadows; the panel shadow is the single exception for an overlay.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** cap every page header with the 6px logo-red rule and close it with a 1px ink rule.",
+      "**Do** separate narrative beats with 2px ink rules and open a chapter with a 6px ink rule.",
+      "**Do** keep every corner square (0px), including inside reused third-party or legacy components.",
+      "**Do** draw problems in red dashed lines with red square markers, and solutions in solid ink with moving red dots.",
+      "**Do** use cubic-bezier(0.16, 1, 0.3, 1) for state transitions and stop looping flows under prefers-reduced-motion.",
+      "**Do** label illustrative figures as demo data in muted footnote text."
+    ],
+    "donts": [
+      "**Don't** introduce green, blue, or any second accent hue into the UI layer. Third-party database logos keep their own brand colors as identifiers, at label size.",
+      "**Don't** round corners or use glass or blurred translucent panels.",
+      "**Don't** add shadows to cards or buttons; only an overlay panel above the diagram may carry the soft panel shadow.",
+      "**Don't** set any red element that is not a problem, the current position, or the contact action."
+    ]
+  }
+}
