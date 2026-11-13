@@ -36,22 +36,7 @@ export function buildScenes(): SceneRun[] {
       await a.sleep(4500)
     },
 
-    /* 2 · 登入 Plasma */
-    async (a) => {
-      a.update({ screen: "login", loginUser: "", loginPass: "" })
-      await a.focus("login-user", "輸入帳號")
-      await a.type((v) => ({ loginUser: v }), "a-admin")
-      await a.moveTo("login-pass")
-      await a.type((v) => ({ loginPass: v }), "••••••••", 70)
-      a.update({ spot: null })
-      await press(a, "login-submit", "登入")
-      a.update({ loggingIn: true })
-      await a.sleep(800)
-      a.update({ loggingIn: false, ...nav("/database", "list"), ws: WS_A })
-      await a.sleep(1200)
-    },
-
-    /* 3 · 接上三套資料庫 */
+    /* 2 · 接上三套資料庫 */
     async (a) => {
       a.update({ ...nav("/database", "list"), ws: WS_A, connections: [] })
       await a.sleep(600)
@@ -79,7 +64,7 @@ export function buildScenes(): SceneRun[] {
       await a.sleep(800)
     },
 
-    /* 4 · AI 看懂欄位(Plasma 長出大腦) */
+    /* 3 · AI 看懂欄位(Plasma 長出大腦) */
     async (a) => {
       a.update({ ...nav("/knowledge", "knowledge"), ws: WS_A, kbDocs: [], columns: [] })
       await a.sleep(500)
@@ -108,7 +93,7 @@ export function buildScenes(): SceneRun[] {
       a.update({ spot: null })
     },
 
-    /* 5 · 一種 SQL 查三套資料庫 */
+    /* 4 · 一種 SQL 查三套資料庫 */
     async (a) => {
       a.update({ ...nav("/sql-playground", "sql"), ws: WS_A, sqlMode: "cross", sqlText: "", sqlRan: false, dialects: true })
       await a.sleep(500)
@@ -125,7 +110,7 @@ export function buildScenes(): SceneRun[] {
       a.update({ spot: null })
     },
 
-    /* 6 · 用問的整理資料 */
+    /* 5 · 用問的整理資料 */
     async (a) => {
       const q = "整理 A 分院的護理人員名冊。"
       a.update({ screen: "agent", agentMsgs: [], agentInput: "", ws: WS_A })
@@ -145,7 +130,7 @@ export function buildScenes(): SceneRun[] {
       a.update({ spot: null })
     },
 
-    /* 7 · 上架資料產品 */
+    /* 6 · 上架資料產品 */
     async (a) => {
       a.update({ ...nav("/data-product", "product"), ws: WS_A, form: { ...emptyForm }, products: [] })
       await a.sleep(600)

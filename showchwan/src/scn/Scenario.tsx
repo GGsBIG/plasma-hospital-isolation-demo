@@ -121,14 +121,15 @@ export function Scenario({ step, epoch }: { step: number; epoch: number }) {
       n++
       setT(n)
       if (n >= total) clearInterval(id)
-    }, step === 3 ? 2400 : TICK) // 上傳文件那一步:文件飛進去要久一點
+    }, step === 2 ? 2400 : TICK) // 上傳文件那一步:文件飛進去要久一點
     return () => clearInterval(id)
   }, [step, epoch, total])
 
   const tt = Math.min(t, total)
-  const { nodes, edges, note } = scene(step, tt)
+  const dk = step === 0 ? 0 : step + 1 // 圖的狀態編號:登入那張(1)已拿掉
+  const { nodes, edges, note } = scene(dk, tt)
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]))
-  const brain = step > 3 || (step === 3 && tt >= 1)
+  const brain = dk > 3 || (dk === 3 && tt >= 1)
   brainVisibility.shown = brain
   const st = STEPS[step]
   return (
@@ -147,7 +148,7 @@ export function Scenario({ step, epoch }: { step: number; epoch: number }) {
           {brain && (
             <div key={`brain-${step}-${epoch}`} className="absolute" style={{ left: PLASMA.x, top: PLASMA.y - 40 }}>
               <div className="brain-aura absolute rounded-full" style={{ width: 620, height: 500, left: -310, top: -250 }} />
-              <BrainNet width={640} delay={step === 3 ? 0.3 : 0} mode={step === 3 ? "full" : "idle"} />
+              <BrainNet width={640} delay={dk === 3 ? 0.3 : 0} mode={dk === 3 ? "full" : "idle"} />
             </div>
           )}
           <svg className="absolute inset-0 overflow-visible" width={W} height={H}>
@@ -170,7 +171,7 @@ export function Scenario({ step, epoch }: { step: number; epoch: number }) {
           </svg>
           {nodes.map((n) => <IsoNode key={`${n.id}-${n.grow ? `grow-${epoch}` : ""}`} n={n} />)}
           {note && <div key={`${step}-${epoch}-${note.text}`} className={`scn-note ${note.tone}`} style={{ left: note.at.x, top: note.at.y }}>{note.text}</div>}
-          {step === 3 && tt === 0 && KB_FILES.map((name, i) => (
+          {dk === 3 && tt === 0 && KB_FILES.map((name, i) => (
             <div key={`${name}-${epoch}`} className="scn-doc-anchor" style={{ left: PLASMA.x, top: PLASMA.y - KB_DY }}>
               <div className="scn-doc" style={{ "--x0": "260px", "--y0": `${-170 + i * 46}px`, animationDelay: `${0.12 * i}s` } as CSSProperties}>
                 <FileText className="h-4 w-4" />{name}

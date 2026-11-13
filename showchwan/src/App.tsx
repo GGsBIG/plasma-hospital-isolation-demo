@@ -81,8 +81,8 @@ export function App() {
   const swap = () => setMain((m) => (m === "plasma" ? "scn" : "plasma"))
   // 每個情境開始時,換成這個情境預設的主畫面(之後一樣可以自己對調)
   useEffect(() => { setMain(STEPS[cur].main) }, [cur])
-  // 前兩個情境(現況、登入)只看一個畫面,右下角小畫面先不出現
-  const solo = cur <= 1
+  // 第一個情境(現況)只看情境圖,右下角小畫面先不出現
+  const solo = cur === 0
   const pane = (which: "plasma" | "scn") => (main === which ? "sc-pane main" : `sc-pane pip${solo ? " off" : ""}`)
   const label = (which: "plasma" | "scn") => (which === "plasma" ? "Plasma" : "情境圖")
 
