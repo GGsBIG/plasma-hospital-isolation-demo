@@ -66,19 +66,30 @@ export function buildScenes(): SceneRun[] {
 
     /* 3 · AI 看懂欄位(Plasma 長出大腦) */
     async (a) => {
-      a.update({ ...nav("/knowledge", "knowledge"), ws: WS_A, kbDocs: [], kbDone: false, columns: A_COLUMNS.map((c) => ({ ...c, desc: "？" })), why: false })
-      await a.sleep(600)
-      await a.focus("col-panel", "這些代碼是什麼意思？", 1800)
+      const conns = A_DBS.map((d) => ({ name: d.conn, type: d.type, status: "ready" }))
+      a.update({ ...nav("/database", "list"), ws: WS_A, connections: conns, kbDocs: [], kbDone: false, columns: A_COLUMNS.map((c) => ({ ...c, desc: "" })), schemaOpen: false, why: false })
+      await a.sleep(500)
+      // 先看資料庫裡有什麼:點進 HIS 門診 → 資料表 → 欄位
+      await press(a, "row-detail", "點進 HIS 門診")
+      a.update({ page: "dbdetail" })
+      await a.sleep(500)
+      await press(a, "btn-view-schema", "看欄位")
+      a.update({ schemaOpen: true })
+      await a.focus("schema-table", "這些代碼是什麼意思？", 2200)
       a.update({ spot: null, why: true })
       await a.sleep(6500) // 說明卡:為什麼要上傳文件
-      a.update({ why: false })
+      a.update({ why: false, schemaOpen: false })
       await a.sleep(300)
+      // 上傳系統文件
+      await press(a, "nav-knowledge", "知識庫")
+      a.update(nav("/knowledge", "knowledge"))
+      await a.sleep(400)
       await press(a, "btn-kb-upload", "上傳文件")
       a.update({ uploadOpen: true, files: [] })
       await a.focus("dropzone", "系統文件", 400)
       for (const f of KB_FILES) {
         a.update((s) => ({ files: [...s.files, f] }))
-        await a.sleep(280)
+        await a.sleep(260)
       }
       a.update({ spot: null })
       await press(a, "btn-upload", "上傳")
@@ -86,15 +97,19 @@ export function buildScenes(): SceneRun[] {
       await a.sleep(1800)
       for (let i = 0; i < KB_FILES.length; i++) {
         a.update((s) => ({ kbDocs: s.kbDocs.map((d, k) => (k === i ? { ...d, status: "ready" } : d)) }))
-        await a.sleep(300)
+        await a.sleep(280)
       }
-      a.update({ columns: A_COLUMNS.map((c) => ({ ...c, desc: "" })), kbDone: true })
-      await a.sleep(700)
+      a.update({ kbDone: true })
+      await a.sleep(600)
+      // 回到同一個資料表:欄位都有了說明
+      await press(a, "nav-database", "回到 HIS 門診的欄位")
+      a.update({ page: "dbdetail", navActive: "/database", schemaOpen: true })
+      await a.sleep(500)
       for (let i = 0; i < A_COLUMNS.length; i++) {
-        await a.type((v) => ({ columns: A_COLUMNS.map((c, k) => ({ ...c, desc: k < i ? c.desc : k === i ? v : "" })) }), A_COLUMNS[i].desc, 40)
-        await a.sleep(200)
+        await a.type((v) => ({ columns: A_COLUMNS.map((c, k) => ({ ...c, desc: k < i ? c.desc : k === i ? v : "" })) }), A_COLUMNS[i].desc, 38)
+        await a.sleep(160)
       }
-      await a.focus("col-panel", "N02 = 護理師", 2400)
+      await a.focus("schema-table", "N02 = 護理師", 2400)
       a.update({ spot: null })
     },
 

@@ -27,7 +27,6 @@ const HOT = 80
 const mergedIds = new Set(SCENES.flatMap((s) => [...(s.merged ?? []), ...(s.plasma?.merged ?? [])]))
 const SAFE = 40 // 桌機舞台四周的安全邊距(螢幕 px)
 const REVEAL_MS = 900 // 連線逐步畫出的時間
-const DOT_PAD = (compact: boolean) => (compact ? 700 : 80) // 光點 canvas 超出舞台的邊(手機版連線會延伸到舞台外)
 // 文件上傳:第一份開始飛的時間、每份間隔(秒),各份的起點(相對大腦中心,舞台 px)
 const DOC_DELAY = 1.0 // 按下 Upload 後,文件一起浮現再一起飛進去
 const DOC_FLY = 1.5 // 與 index.css 的 doc-fly 時長一致
@@ -670,25 +669,54 @@ export function Stage() {
     const canvas = canvasRef.current
     const ctx = canvas?.getContext("2d")
     if (!canvas || !ctx) return
-    const pad = DOT_PAD(compact)
     let raf = 0
     let last = 0
+    let box = ""
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame)
       if (now - last < 33) return
       last = now
-      // 解析度 = 縮放倍率 × 螢幕密度(以 0.25 為一級,避免每格重設畫布大小)
-      // 光點很小,畫布解析度最多 1.5 倍就夠清楚;原本到 2.5 倍,每格要重畫、上傳的像素多出近三倍
+      // 畫布只蓋住「連線實際經過的範圍」:手機版原本為了延伸到舞台外的連線,四周各多留 700,
+      // 整張畫布上千萬像素、每格清除重畫,手機會卡。範圍以 64 為一格取整,過場中不必每格重設畫布大小
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+      for (const e of edgeEls.current.values()) {
+        const l = e.lut
+        if (!l || e.opacity < 0.01) continue
+        for (let i = 0; i < l.xs.length; i++) {
+          const x = l.xs[i], y = l.ys[i]
+          if (x < x0) x0 = x
+          if (x > x1) x1 = x
+          if (y < y0) y0 = y
+          if (y > y1) y1 = y
+        }
+      }
+      if (x0 === Infinity) {
+        if (canvas.width) { canvas.width = 0; canvas.height = 0; box = "" }
+        return
+      }
+      const Q = 64
+      const M = 40 // 光點半徑、終點轉圈與打勾的邊界
+      x0 = Math.floor((x0 - M) / Q) * Q
+      y0 = Math.floor((y0 - M) / Q) * Q
+      x1 = Math.ceil((x1 + M) / Q) * Q
+      y1 = Math.ceil((y1 + M) / Q) * Q
+      // 解析度 = 縮放倍率 × 螢幕密度(以 0.25 為一級,避免每格重設畫布大小),最多 1.5 倍
       const k = Math.min(1.5, Math.max(0.5, Math.ceil(scale.current * (window.devicePixelRatio || 1) * 4) / 4))
-      const cw = Math.round((w + 2 * pad) * k)
-      const ch = Math.round((h + 2 * pad) * k)
-      if (canvas.width !== cw || canvas.height !== ch) {
+      const cw = Math.round((x1 - x0) * k)
+      const ch = Math.round((y1 - y0) * k)
+      const nb = `${x0},${y0},${x1},${y1},${k}`
+      if (nb !== box) {
+        box = nb
         canvas.width = cw
         canvas.height = ch
+        canvas.style.left = `${x0}px`
+        canvas.style.top = `${y0}px`
+        canvas.style.width = `${x1 - x0}px`
+        canvas.style.height = `${y1 - y0}px`
       }
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.clearRect(0, 0, cw, ch)
-      ctx.setTransform(k, 0, 0, k, pad * k, pad * k)
+      ctx.setTransform(k, 0, 0, k, -x0 * k, -y0 * k)
       const hv = hoverRef.current
       for (const e of edgeEls.current.values()) e.faded = hv !== null && e.from !== hv && e.to !== hv
       drawDots(ctx, edgeEls.current.values(), now, dotScale(), compact)
@@ -741,8 +769,7 @@ export function Stage() {
         <canvas
           ref={canvasRef}
           aria-hidden
-          className="pointer-events-none absolute"
-          style={{ left: -DOT_PAD(compact), top: -DOT_PAD(compact), width: w + 2 * DOT_PAD(compact), height: h + 2 * DOT_PAD(compact) }}
+          className="pointer-events-none absolute left-0 top-0"
         />
 
         {/* 資料大腦光暈:在連線之上、節點之下 */}

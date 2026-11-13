@@ -1,8 +1,8 @@
 // 秀傳 demo 用到、原本操作 demo 沒有的 Plasma 畫面:工作區、知識庫、AI Agent、資料產品、SQL Playground。
 // 版型沿用 Shell.tsx 的 ListPage(與真正 Plasma 前端相同)
-import { Plus, BookOpenText, Upload, Package, Bot, User, Wrench, CheckCircle2, Play, FileText, Loader2 } from "lucide-react"
+import { Plus, BookOpenText, ArrowLeft, Upload, Package, Bot, User, Wrench, CheckCircle2, Play, FileText, Loader2 } from "lucide-react"
 import {
-  Button, Input, Textarea, Label, StatusBadge, Card,
+  Button, IconButton, Input, Textarea, Label, StatusBadge, Card,
   DataTable, DTHeadRow, DTHead, DTRow, DTCell, DTEmpty,
   DialogShell, DialogHeaderRow, DialogFooter,
 } from "@/components/ui"
@@ -36,7 +36,7 @@ export function KnowledgePage({ s }: { s: DemoState }) {
           </tbody>
         )}
       </DataTable>
-      {s.columns.length > 0 && (
+      {false && s.columns.length > 0 && (
         <div data-t="col-panel" className="border-t bg-background px-4 py-4 fadeup on">
           <div className="text-sm font-medium mb-2">{s.kbDone ? "AI 看懂的欄位" : "A 分院的欄位代碼（還看不懂）"}</div>
           <div className="grid grid-cols-[160px_1fr] gap-x-4 gap-y-1.5 text-sm">
@@ -50,6 +50,57 @@ export function KnowledgePage({ s }: { s: DemoState }) {
         </div>
       )}
     </ListPage>
+  )
+}
+
+/* ---------- Data Access 詳情:A 分院 HIS 門診的資料表與欄位 ---------- */
+const A_TABLES: [string, number][] = [["NURSE_MST", 5], ["DEPT_M", 6], ["OPD_REG", 12]]
+export function DbDetailPage({ s }: { s: DemoState }) {
+  return (
+    <div className="flex flex-col h-full mx-8 py-4">
+      <Button variant="ghost" size="iconText" className="h-9 w-fit -ml-2 text-muted-foreground gap-2"><ArrowLeft /> Back</Button>
+      <div className="flex items-center gap-4"><span className="font-medium text-2xl">a_his</span><StatusBadge status="ready" /><span className="text-sm text-muted-foreground">Oracle · HIS 門診</span></div>
+      <div className="flex items-end border-b gap-8 mt-3">
+        {["General", "Tables"].map((t) => (
+          <div key={t} data-t={`tab-${t.toLowerCase()}`} className={`py-2 text-sm font-medium border-b-2 -mb-px ${t === "Tables" ? "text-sidebar-ring border-sidebar-ring" : "text-muted-foreground border-transparent"}`}>{t}</div>
+        ))}
+      </div>
+      <div className="my-4">
+        <DataTable>
+          <DTHeadRow><DTHead>Table Name</DTHead><DTHead>Columns</DTHead><DTHead>Last Synced Time</DTHead><DTHead>Actions</DTHead></DTHeadRow>
+          <tbody className="[&_tr:last-child]:border-0">
+            {A_TABLES.map(([t, n], i) => (
+              <DTRow key={t}>
+                <DTCell className="font-mono text-[13px]">{t}</DTCell><DTCell>{n}</DTCell><DTCell>2026/11/13 09:10:00</DTCell>
+                <DTCell><IconButton data-t={i === 0 ? "btn-view-schema" : undefined}><FileText /></IconButton></DTCell>
+              </DTRow>
+            ))}
+          </tbody>
+        </DataTable>
+      </div>
+    </div>
+  )
+}
+
+export function ColumnsDialog({ s }: { s: DemoState }) {
+  return (
+    <DialogShell open={s.schemaOpen} className="max-w-[640px] px-6 pb-6 pt-4">
+      <DialogHeaderRow title="Table Schema - NURSE_MST" icon={FileText} />
+      <div data-t="schema-table" className="rounded-md border overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-sidebar text-muted-foreground"><tr><th className="px-3 py-2 text-left font-medium">Column Name</th><th className="px-3 py-2 text-left font-medium">Data Type</th><th className="px-3 py-2 text-left font-medium">Description</th></tr></thead>
+          <tbody>
+            {s.columns.map((c) => (
+              <tr key={c.name} className="border-t">
+                <td className="px-3 py-2 font-mono text-[13px]">{c.name}</td>
+                <td className="px-3 py-2 text-muted-foreground font-mono text-[12px]">{c.type}</td>
+                <td className={`px-3 py-2 ${c.desc ? "text-foreground" : "text-[#b42622] font-medium"}`}>{c.desc || "？"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </DialogShell>
   )
 }
 
