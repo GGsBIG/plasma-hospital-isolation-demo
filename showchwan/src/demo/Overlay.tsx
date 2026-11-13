@@ -59,7 +59,7 @@ export function TitleCard({ s }: { s: DemoState }) {
   return (
     <div className="title-card" role="status">
       <div className="title-card-box">
-        <p className="title-card-n">情境 {s.scn + 1}／{STEPS.length}</p>
+        <p className="title-card-n">{s.scn + 1}／{STEPS.length}</p>
         <h2>{st.title}</h2>
         <p className="title-card-goal">{st.goal}</p>
       </div>
@@ -73,11 +73,10 @@ export function DoneCard({ s, onReplay, onNext }: { s: DemoState; onReplay: () =
   const last = s.scn === STEPS.length - 1
   return (
     <div className="done-card" role="status">
-      <p className="done-card-k">情境 {s.scn + 1} 完成</p>
       <p className="done-card-text">{STEPS[s.scn].done}</p>
       <div className="done-card-actions">
-        <button className="sc-bar-btn" onClick={onReplay}><RotateCcw className="h-4 w-4" />重播這個情境</button>
-        {!last && <button className="sc-bar-btn primary" onClick={onNext}>下一個情境<ArrowRight className="h-4 w-4" /></button>}
+        <button className="sc-bar-btn" onClick={onReplay}><RotateCcw className="h-4 w-4" />重播</button>
+        {!last && <button className="sc-bar-btn primary" onClick={onNext}>下一步<ArrowRight className="h-4 w-4" /></button>}
       </div>
     </div>
   )
@@ -87,11 +86,6 @@ export function DoneCard({ s, onReplay, onNext }: { s: DemoState; onReplay: () =
 export function ChapterBar({ cur, paused, done, onPlay, onToggle }: { cur: number; paused: boolean; done: boolean; onPlay: (i: number) => void; onToggle: () => void }) {
   return (
     <div className="sc-bar">
-      <div className="sc-bar-caption">
-        <span className="sc-bar-n">情境 {cur + 1}／{STEPS.length}</span>
-        <b>{STEPS[cur].title}</b>
-        <span className="sc-bar-line">{STEPS[cur].goal}</span>
-      </div>
       <div className="sc-bar-row">
         <button className="sc-bar-btn" onClick={() => onPlay(cur)}><RotateCcw className="h-4 w-4" /><span>重播</span></button>
         <button className="sc-bar-btn" onClick={onToggle} disabled={done} aria-label={paused ? "繼續" : "暫停"}>
@@ -101,7 +95,7 @@ export function ChapterBar({ cur, paused, done, onPlay, onToggle }: { cur: numbe
         <div className="sc-bar-steps">
           {STEPS.map((st, i) => (
             <button key={i} onClick={() => onPlay(i)} className={i === cur ? "on" : ""} aria-current={i === cur ? "step" : undefined}>
-              <span className="tabular-nums">{i + 1}</span>{st.title}
+              <span className="tabular-nums">{i + 1}</span>{st.short}
             </button>
           ))}
         </div>

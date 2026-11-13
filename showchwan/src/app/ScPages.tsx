@@ -38,7 +38,7 @@ export function KnowledgePage({ s }: { s: DemoState }) {
       </DataTable>
       {s.columns.length > 0 && (
         <div data-t="col-panel" className="border-t bg-background px-4 py-4 fadeup on">
-          <div className="text-sm font-medium mb-2">AI 讀完文件後看懂的欄位 · NURSE_MST（A 分院護理人員主檔）</div>
+          <div className="text-sm font-medium mb-2">AI 看懂的欄位</div>
           <div className="grid grid-cols-[160px_1fr] gap-x-4 gap-y-1.5 text-sm">
             {s.columns.map((c) => (
               <div key={c.name} className="contents">
@@ -61,7 +61,7 @@ export function AgentScreen({ s }: { s: DemoState }) {
         <span className="h-8 w-8 rounded-md bg-foreground text-background grid place-items-center"><Bot className="h-4 w-4" /></span>
         <span className="font-medium">AI Agent</span>
         <span className="ml-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--sidebar-ring))]" />已透過 Plasma MCP 連線 · A 分院
+          <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--sidebar-ring))]" />Plasma MCP
         </span>
       </div>
       <div className="flex-1 min-h-0 overflow-hidden bg-sidebar">
@@ -155,7 +155,7 @@ export function SqlPage({ s }: { s: DemoState }) {
         </Card>
         {s.sqlRan && (
           <Card data-t="sql-result" className="p-0 overflow-hidden fadeup on">
-            <div className="px-4 py-2.5 border-b text-xs text-muted-foreground">4 rows · 來源：四家分院分享的資料產品（示意數字）</div>
+            <div className="px-4 py-2.5 border-b text-xs text-muted-foreground">示意數字</div>
             <table className="w-full text-sm">
               <thead className="bg-sidebar text-muted-foreground"><tr><th className="px-4 py-2 text-left font-medium">branch</th><th className="px-4 py-2 text-left font-medium">nurses</th></tr></thead>
               <tbody>
