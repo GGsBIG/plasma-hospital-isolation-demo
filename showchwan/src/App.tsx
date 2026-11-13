@@ -81,7 +81,9 @@ export function App() {
   const swap = () => setMain((m) => (m === "plasma" ? "scn" : "plasma"))
   // 每個情境開始時,換成這個情境預設的主畫面(之後一樣可以自己對調)
   useEffect(() => { setMain(STEPS[cur].main) }, [cur])
-  const pane = (which: "plasma" | "scn") => (main === which ? "sc-pane main" : "sc-pane pip")
+  // 前兩個情境(現況、登入)只看一個畫面,右下角小畫面先不出現
+  const solo = cur <= 1
+  const pane = (which: "plasma" | "scn") => (main === which ? "sc-pane main" : `sc-pane pip${solo ? " off" : ""}`)
   const label = (which: "plasma" | "scn") => (which === "plasma" ? "Plasma" : "情境圖")
 
   return (
@@ -89,10 +91,10 @@ export function App() {
       <header className="sc-top">
         <a href="../#showchwan" target="_top" aria-label="回到 Plasma Demo 首頁"><img src={logo} alt="Brobridge" className="h-[18px] w-auto" /></a>
         <span className="flex-1" />
-        <button className="sc-swap" onClick={swap} aria-label={`主畫面改看${label(main === "plasma" ? "scn" : "plasma")}`}>
+        {!solo && <button className="sc-swap" onClick={swap} aria-label={`主畫面改看${label(main === "plasma" ? "scn" : "plasma")}`}>
           <ArrowLeftRight className="h-4 w-4" />
           對調畫面
-        </button>
+        </button>}
       </header>
 
       <main className={`sc-stage-area ${main === "scn" ? "scn-main" : ""}`}>
