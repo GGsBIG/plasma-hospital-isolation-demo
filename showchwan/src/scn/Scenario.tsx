@@ -16,51 +16,66 @@ const W = 1000
 const H = 680
 const BRAND = [oracleLogo, postgresLogo, mssqlLogo, mysqlLogo]
 
-interface N { id: string; kind: NodeKind; variant?: string; pos: Pos; label?: string; sub?: ReactNode; tone?: "ok" | "danger"; brand?: string; grow?: boolean; bare?: boolean }
+interface N { id: string; kind: NodeKind; variant?: string; pos: Pos; label?: string; sub?: ReactNode; tone?: "ok" | "danger"; brand?: string; grow?: boolean; bare?: boolean; dim?: boolean; hot?: boolean }
 interface E { from: string; to: string; tone: "red" | "ok" }
 
 const PLASMA = { x: 430, y: 335 }
 const KB_DY = 86
 
-function scene(k: number) {
-  const nodes: N[] = BRANCHES.map((b, i) => ({
-    id: `db${i}`, kind: "db", pos: { x: 110, y: 85 + i * 160 }, label: b.ws, brand: BRAND[i],
-    sub: k <= 1 ? <code className="scn-code">{b.schema}</code> : k >= 2 ? "唯讀接上" : undefined, tone: k >= 2 ? "ok" : undefined,
-  }))
+// 情境 k、子步驟 sub、正在發生的 hot,決定圖上有哪些節點與連線
+function scene(k: number, sub: number, hot: string | null) {
+  const allIn = k >= 5 // 情境 6 才四家都接上
+  const nodes: N[] = BRANCHES.map((b, i) => {
+    const off = k >= 1 && i > 0 && !allIn
+    const linked = (k === 1 && i === 0 && sub >= 4) || (k >= 2 && i === 0) || allIn
+    return {
+      id: `db${i}`, kind: "db" as const, pos: { x: 110, y: 85 + i * 160 }, label: b.ws, brand: BRAND[i], dim: off,
+      hot: (k === 0 && (hot === "dbs" || hot === "schema")) || (k === 5 && sub === 0 && i > 0),
+      sub: k === 0 ? <code className="scn-code">{b.schema}</code> : off ? "尚未導入" : linked ? "唯讀接上" : undefined,
+      tone: linked ? ("ok" as const) : undefined,
+    }
+  })
   const edges: E[] = []
-  const db = BRANCHES.map((_, i) => `db${i}`)
   if (k === 0) {
-    nodes.push({ id: "hq", kind: "app", variant: "receipt", pos: { x: 780, y: 335 }, label: "總院", sub: "統計不出來", tone: "danger" })
-    db.forEach((id) => edges.push({ from: id, to: "hq", tone: "red" }))
+    nodes.push({ id: "hq", kind: "app", variant: "receipt", pos: { x: 780, y: 335 }, label: "總院", sub: "統計不出來", tone: "danger", hot: hot === "hq" })
+    BRANCHES.forEach((_, i) => edges.push({ from: `db${i}`, to: "hq", tone: "red" }))
     return { nodes, edges }
   }
-  const sub = k === 1 ? "A～D 分院各一個工作區" : k === 2 ? "唯讀接上四家資料庫" : "已讀懂四家欄位"
-  nodes.push({ id: "plasma", kind: "plasma", pos: PLASMA, sub, tone: "ok" })
-  if (k >= 3) nodes.push({ id: "kb", kind: "kb", pos: { x: PLASMA.x, y: PLASMA.y - KB_DY }, bare: true, grow: k === 3 })
-  if (k >= 2) db.forEach((id) => edges.push({ from: id, to: "plasma", tone: "ok" }))
-  if (k === 4) {
-    nodes.push({ id: "ai", kind: "app", pos: { x: 780, y: 335 }, label: "AI Agent", sub: "透過 MCP 問答整理", tone: "ok" })
+  if (k >= 2 || sub >= 2) {
+    const ps = k === 1 ? "A 分院工作區" : k === 2 && sub < 4 ? "AI 讀文件中" : allIn ? "四家分院各自的工作區" : "已讀懂 A 分院欄位"
+    nodes.push({ id: "plasma", kind: "plasma", pos: PLASMA, sub: ps, tone: "ok", hot: hot === "plasma" })
+  }
+  if ((k === 2 && sub >= 3) || k >= 3) nodes.push({ id: "kb", kind: "kb", pos: { x: PLASMA.x, y: PLASMA.y - KB_DY }, bare: true, grow: k === 2, hot: hot === "kb" })
+  if ((k === 1 && sub >= 4) || k >= 2) edges.push({ from: "db0", to: "plasma", tone: "ok" })
+  if (allIn) BRANCHES.slice(1).forEach((_, i) => edges.push({ from: `db${i + 1}`, to: "plasma", tone: "ok" }))
+  if (k === 3) {
+    nodes.push({ id: "ai", kind: "app", pos: { x: 780, y: 335 }, label: "AI Agent", sub: sub >= 3 ? "整理好名冊" : "問答整理中", tone: "ok", hot: hot === "ai" })
     edges.push({ from: "plasma", to: "ai", tone: "ok" })
   }
-  if (k >= 5) {
-    nodes.push({ id: "prod", kind: "app", variant: "package", pos: { x: 730, y: 335 }, label: "護理人員名冊", sub: "資料產品", tone: "ok" })
+  if (k === 4 && sub >= 1) {
+    nodes.push({ id: "prod", kind: "app", variant: "package", pos: { x: 730, y: 335 }, label: "A 分院護理人員名冊", sub: sub >= 3 ? "分享給總院" : "資料產品", tone: "ok", hot: hot === "prod" })
     edges.push({ from: "plasma", to: "prod", tone: "ok" })
   }
-  if (k >= 6) {
-    nodes.push({ id: "hq", kind: "app", variant: "receipt", pos: { x: 900, y: 335 }, label: "總院", sub: "四家合計 812 人", tone: "ok" })
-    edges.push({ from: "prod", to: "hq", tone: "ok" })
+  if (k === 5) {
+    nodes.push({ id: "prod", kind: "app", variant: "package", pos: { x: 700, y: 335 }, label: "四家護理人員名冊", sub: "各分院分享", tone: "ok" })
+    edges.push({ from: "plasma", to: "prod", tone: "ok" })
+    if (sub >= 1) {
+      nodes.push({ id: "hq", kind: "app", variant: "receipt", pos: { x: 900, y: 335 }, label: "總院工作區", sub: sub >= 4 ? "合計 812 人" : "取用資料產品", tone: "ok", hot: hot === "hq" })
+      edges.push({ from: "prod", to: "hq", tone: "ok" })
+    }
   }
   return { nodes, edges }
 }
 
-// 圖上的說明條:問題是紅底,解決是墨底
-const NOTE: Record<number, { at: Pos; text: string; tone: "red" | "ink" }> = {
-  0: { at: { x: 560, y: 170 }, text: "四家寫法都不同，對不起來", tone: "red" },
-  1: { at: { x: 430, y: 150 }, text: "每家分院一個工作區", tone: "ink" },
-  2: { at: { x: 430, y: 150 }, text: "不搬資料、不動原系統", tone: "ink" },
-  4: { at: { x: 780, y: 225 }, text: "四種寫法 → 同一張名冊", tone: "ink" },
-  5: { at: { x: 730, y: 225 }, text: "來源更新，名冊跟著更新", tone: "ink" },
-  6: { at: { x: 880, y: 225 }, text: "隨時看得到最新人數", tone: "ink" },
+// 圖上的說明條(紅底是問題,墨底是解決);依情境與子步驟出現
+function noteOf(k: number, sub: number): { at: Pos; text: string; tone: "red" | "ink" } | null {
+  if (k === 0) return sub >= 3 ? { at: { x: 780, y: 225 }, text: "總院統計不出來", tone: "red" } : sub >= 1 ? { at: { x: 470, y: 150 }, text: "同樣是護理師，四家寫法都不同", tone: "red" } : null
+  if (k === 1) return sub >= 4 ? { at: { x: 430, y: 175 }, text: "唯讀接上，不搬資料、不動原系統", tone: "ink" } : sub >= 2 ? { at: { x: 430, y: 175 }, text: "A 分院自己的工作區", tone: "ink" } : null
+  if (k === 2) return sub >= 4 ? { at: { x: 700, y: 150 }, text: "NRS_NAME → 護理師姓名　TITLE_CD N02 → 護理師", tone: "ink" } : null
+  if (k === 3) return sub >= 3 ? { at: { x: 780, y: 225 }, text: "問一句 → A 分院 248 位護理師名冊", tone: "ink" } : null
+  if (k === 4) return sub >= 4 ? { at: { x: 730, y: 225 }, text: "已上架，分享給總院", tone: "ink" } : null
+  if (k === 5) return sub === 0 ? { at: { x: 430, y: 150 }, text: "B、C、D 分院照同樣步驟完成", tone: "ink" } : sub >= 4 ? { at: { x: 880, y: 225 }, text: "四家同一格式，合計 812 人", tone: "ink" } : null
+  return null
 }
 
 function useFit() {
@@ -79,7 +94,8 @@ function useFit() {
 function IsoNode({ n }: { n: N }) {
   const { a, t } = sizeOf(n.kind)
   return (
-    <div className="scn-node" style={{ left: n.pos.x, top: n.pos.y }}>
+    <div className={`scn-node ${n.dim ? "dim" : ""} ${n.hot ? "hot" : ""}`} style={{ left: n.pos.x, top: n.pos.y }}>
+      {n.hot && <span className="scn-pulse" aria-hidden="true" />}
       <div className={n.grow ? "kb-grow absolute" : "absolute"} style={n.grow ? { animationDelay: "2.3s" } : undefined}>
         <Platform kind={n.kind} variant={n.variant} bare={n.bare} />
       </div>
@@ -93,11 +109,11 @@ function IsoNode({ n }: { n: N }) {
   )
 }
 
-export function Scenario({ step }: { step: number }) {
+export function Scenario({ step, sub, hot }: { step: number; sub: number; hot: string | null }) {
   const { ref, k } = useFit()
-  const { nodes, edges } = scene(step)
+  const { nodes, edges } = scene(step, sub, hot)
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]))
-  const note = NOTE[step]
+  const note = noteOf(step, sub)
   const st = STEPS[step]
   return (
     <div className="scn">
@@ -105,7 +121,9 @@ export function Scenario({ step }: { step: number }) {
         <span className="scn-step">{step + 1}</span>
         <div>
           <p className="scn-title">{st.title}</p>
-          <p className="scn-line">{st.line}</p>
+          <ol className="scn-checks">
+            {st.subs.map((t, i) => <li key={i} className={i < sub ? "ok" : i === sub ? "now" : ""}>{t}</li>)}
+          </ol>
         </div>
       </div>
       <div ref={ref} className="scn-board">
@@ -129,8 +147,8 @@ export function Scenario({ step }: { step: number }) {
             })}
           </svg>
           {nodes.map((n) => <IsoNode key={n.id + (n.grow ? "-grow" : "")} n={n} />)}
-          {note && <div key={step} className={`scn-note ${note.tone}`} style={{ left: note.at.x, top: note.at.y }}>{note.text}</div>}
-          {step === 3 && KB_FILES.map((name, i) => (
+          {note && <div key={`${step}-${note.text}`} className={`scn-note ${note.tone}`} style={{ left: note.at.x, top: note.at.y }}>{note.text}</div>}
+          {step === 2 && hot === "docs" && KB_FILES.map((name, i) => (
             <div key={name} className="scn-doc-anchor" style={{ left: PLASMA.x, top: PLASMA.y - KB_DY }}>
               <div className="scn-doc" style={{ "--x0": "260px", "--y0": `${-170 + i * 46}px`, animationDelay: `${0.15 * i}s` } as CSSProperties}>
                 <FileText className="h-4 w-4" />{name}

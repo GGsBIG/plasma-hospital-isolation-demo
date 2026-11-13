@@ -134,3 +134,30 @@ body { overflow: hidden; }
 
 /* 情境圖當主畫面時,右下角留給小畫面,圖不被蓋住 */
 .sc-pane.main .scn-board { margin-right: calc(var(--pip-w) + 24px); }
+
+/* 聚光燈:圈住要操作的地方,其他地方變暗 */
+.spot-layer { position: absolute; inset: 0; z-index: 55; pointer-events: none; }
+.spot-ring { position: absolute; border: 3px solid var(--sc-red); box-shadow: 0 0 0 9999px rgb(17 17 17 / 0.38); transition: left 0.45s var(--sc-ease), top 0.45s var(--sc-ease), width 0.45s var(--sc-ease), height 0.45s var(--sc-ease); animation: spot-in 0.35s var(--sc-ease); }
+@keyframes spot-in { from { opacity: 0; transform: scale(1.08); } }
+.spot-tip { position: absolute; transform: translateX(-50%); white-space: nowrap; padding: 10px 18px; background: var(--sc-red); color: #fff; font-size: 18px; font-weight: 700; animation: spot-in 0.35s var(--sc-ease); }
+.spot-tip.above { transform: translate(-50%, -100%); }
+.demo-cursor { z-index: 60; }
+
+/* 情境開場標題卡 */
+.title-card { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; background: rgb(255 255 255 / 0.86); backdrop-filter: blur(2px); animation: tc-in 0.45s var(--sc-ease); }
+@keyframes tc-in { from { opacity: 0; } }
+.title-card-box { max-width: 760px; padding: 40px 48px; background: #fff; border: 2px solid var(--sc-ink); border-top: 8px solid var(--sc-red); box-shadow: 0 24px 60px -24px rgb(17 17 17 / 0.4); animation: tc-up 0.6s var(--sc-ease); }
+@keyframes tc-up { from { transform: translateY(16px); opacity: 0; } }
+.title-card-n { font-size: 15px; font-weight: 700; color: var(--sc-red); }
+.title-card h2 { margin-top: 8px; font-size: 40px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
+.title-card-goal { margin-top: 14px; font-size: 19px; line-height: 1.7; color: var(--sc-muted); }
+
+/* 情境播完的總結卡 */
+.done-card { position: absolute; left: 24px; bottom: 20px; z-index: 35; max-width: min(560px, calc(100% - var(--pip-w) - 80px)); padding: 18px 22px; background: #fff; border: 2px solid var(--sc-ink); border-left: 8px solid var(--sc-red); box-shadow: 0 18px 40px -16px rgb(17 17 17 / 0.4); animation: tc-up 0.5s var(--sc-ease); }
+.done-card-k { font-size: 13px; font-weight: 700; color: var(--sc-red); }
+.done-card-text { margin-top: 6px; font-size: 17px; line-height: 1.6; font-weight: 600; }
+.done-card-actions { margin-top: 14px; display: flex; gap: 8px; }
+.sc-bar-btn.primary { background: var(--sc-red); border-color: var(--sc-red); color: #fff; }
+
+/* 情境圖當主畫面時,總結卡放右上角,不蓋到圖 */
+.sc-stage-area.scn-main .done-card { left: auto; right: 24px; top: 16px; bottom: auto; max-width: 460px; }

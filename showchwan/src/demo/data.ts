@@ -123,7 +123,16 @@ export const ROSTER_SAMPLE = [
   ["D0321", "張○○", "護理師", "門診", "D 分院"],
 ]
 export const ROSTER_COUNTS: [string, number][] = [["A 分院", 248], ["B 分院", 186], ["C 分院", 214], ["D 分院", 164]]
-export const HQ_SQL = `SELECT branch, COUNT(*) AS nurses
-FROM ${"data_product.default.nurse_roster"}
-GROUP BY branch
-ORDER BY branch`
+export const HQ_SQL = `SELECT 'A 分院' AS branch, COUNT(*) AS nurses FROM data_product.a.nurse_roster
+UNION ALL SELECT 'B 分院', COUNT(*) FROM data_product.b.nurse_roster
+UNION ALL SELECT 'C 分院', COUNT(*) FROM data_product.c.nurse_roster
+UNION ALL SELECT 'D 分院', COUNT(*) FROM data_product.d.nurse_roster`
+
+// A 分院 NURSE_MST:AI 讀完文件後補上的欄位說明
+export const A_COLUMNS: Column[] = [
+  { name: "NRS_NO", type: "VARCHAR2(8)", desc: "護理人員編號" },
+  { name: "NRS_NAME", type: "NVARCHAR2(20)", desc: "護理師姓名" },
+  { name: "TITLE_CD", type: "CHAR(3)", desc: "職稱代碼（N02 = 護理師、N05 = 護理長）" },
+  { name: "DEPT_C", type: "CHAR(4)", desc: "所屬單位代碼（對照單位主檔）" },
+  { name: "HIRE_DT", type: "DATE", desc: "到職日期" },
+]

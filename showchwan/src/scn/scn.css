@@ -69,3 +69,17 @@
 @media (prefers-reduced-motion: reduce) {
   .scn-edge.red, .scn-edge.flow, .scn-doc, .scn-node, .scn-note, .scn .spin, .scn .kb-grow > svg { animation: none !important; }
 }
+
+/* 子步驟清單:做完的打勾,正在做的標紅 */
+.scn-checks { margin-top: 1cqh; display: flex; flex-wrap: wrap; gap: 0.4cqh 1.6cqw; font-size: clamp(9px, 1.5cqw, 16px); color: var(--muted); }
+.scn-checks li { display: inline-flex; align-items: center; gap: 0.5em; }
+.scn-checks li::before { content: ""; width: 0.9em; height: 0.9em; border: 2px solid currentColor; flex: none; }
+.scn-checks li.ok { color: var(--ink); }
+.scn-checks li.ok::before { background: var(--ink); border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--paper); }
+.scn-checks li.now { color: var(--red); font-weight: 700; }
+.scn-checks li.now::before { border-color: var(--red); }
+/* 沒輪到的分院淡掉;正在發生的節點底下有紅色脈動 */
+.scn-node.dim { opacity: 0.28; }
+.scn-node { transition: left 0.8s var(--ease), top 0.8s var(--ease), opacity 0.6s var(--ease); }
+.scn-pulse { position: absolute; left: -95px; top: -48px; width: 190px; height: 96px; border-radius: 50%; border: 3px solid var(--red); animation: scn-pulse 1.4s ease-out infinite; pointer-events: none; }
+@keyframes scn-pulse { from { transform: scale(0.7); opacity: 0.9; } to { transform: scale(1.25); opacity: 0; } }

@@ -1,11 +1,12 @@
-import { useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { ArrowLeftRight, Loader2, Maximize2, Sparkles } from "lucide-react"
 import { useDemo } from "@/demo/engine"
 import { Sidebar, TopBar, DatabaseListPage } from "@/app/Shell"
 import { LoginPage } from "@/app/Login"
 import { AddDatabaseDialog, UploadDocDialog } from "@/dialogs/Dialogs"
 import { AgentScreen, KnowledgePage, NewProductDialog, NewWorkspaceDialog, ProductPage, SqlPage, WorkspacePage } from "@/app/ScPages"
-import { Cursor, ChapterBar } from "@/demo/Overlay"
+import { Cursor, ChapterBar, Spotlight, TitleCard, DoneCard } from "@/demo/Overlay"
+import { STEPS } from "@/sc/steps"
 import { Scenario } from "@/scn/Scenario"
 import type { DemoState } from "@/demo/store"
 import logo from "@/assets/brobridge-logo.png"
@@ -68,6 +69,7 @@ function PlasmaFrame({ s }: { s: DemoState }) {
         style={{ width: FRAME_W, height: FRAME_H, transform: `translate(-50%, -50%) scale(${k})`, transformOrigin: "50% 50%" }}
       >
         <PlasmaApp s={s} />
+        <Spotlight s={s} />
         <Cursor s={s} />
       </div>
     </div>
@@ -75,10 +77,12 @@ function PlasmaFrame({ s }: { s: DemoState }) {
 }
 
 export function App() {
-  const { s, paused, jump, togglePause } = useDemo()
+  const { s, cur, paused, play, togglePause } = useDemo()
   // 主畫面:"plasma" = Plasma 操作在大畫面、情境圖在右下角;"scn" 反過來
   const [main, setMain] = useState<"plasma" | "scn">("plasma")
   const swap = () => setMain((m) => (m === "plasma" ? "scn" : "plasma"))
+  // 每個情境開始時,換成這個情境預設的主畫面(之後一樣可以自己對調)
+  useEffect(() => { setMain(STEPS[cur].main) }, [cur])
   const pane = (which: "plasma" | "scn") => (main === which ? "sc-pane main" : "sc-pane pip")
   const label = (which: "plasma" | "scn") => (which === "plasma" ? "Plasma 實際操作" : "秀傳情境圖")
 
@@ -94,18 +98,20 @@ export function App() {
         </button>
       </header>
 
-      <main className="sc-stage-area">
+      <main className={`sc-stage-area ${main === "scn" ? "scn-main" : ""}`}>
         <section className={pane("plasma")} aria-label={label("plasma")}>
           <PlasmaFrame s={s} />
           {main !== "plasma" && <PipCover text={label("plasma")} onClick={swap} />}
         </section>
         <section className={pane("scn")} aria-label={label("scn")}>
-          <Scenario step={s.scn} />
+          <Scenario step={s.scn} sub={s.sub} hot={s.hot} />
           {main !== "scn" && <PipCover text={label("scn")} onClick={swap} />}
         </section>
+        <TitleCard s={s} />
+        <DoneCard s={s} onReplay={() => play(cur)} onNext={() => play(cur + 1)} />
       </main>
 
-      <ChapterBar step={s.scn} paused={paused} onJump={jump} onToggle={togglePause} />
+      <ChapterBar cur={cur} paused={paused} done={s.done} onPlay={play} onToggle={togglePause} />
     </div>
   )
 }

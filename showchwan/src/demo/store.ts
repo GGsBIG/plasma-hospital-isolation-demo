@@ -78,7 +78,12 @@ export interface DemoState {
   products: string[]
   sqlText: string
   sqlRan: boolean
-  scn: number // 情境圖目前是第幾步(0~6)
+  scn: number // 目前的情境(0~5)
+  sub: number // 這個情境完成了幾個子步驟
+  hot: string | null // 情境圖上正在發生事情的節點
+  spot: { sel: string; text: string } | null // Plasma 畫面上的聚光燈提示
+  titleCard: boolean // 情境開場標題卡
+  done: boolean // 這個情境播完了
 
   // presentation fx
   cursor: { x: number; y: number; clicking: boolean }
@@ -143,6 +148,11 @@ export const initialState: DemoState = {
   sqlText: "",
   sqlRan: false,
   scn: 0,
+  sub: 0,
+  hot: null,
+  spot: null,
+  titleCard: false,
+  done: false,
   cursor: { x: 640, y: 400, clicking: false },
   subtitle: "",
   chapter: "",

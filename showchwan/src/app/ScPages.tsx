@@ -8,7 +8,7 @@ import {
 } from "@/components/ui"
 import { ListPage, Pagination, SortIcon } from "@/app/Shell"
 import type { DemoState } from "@/demo/store"
-import { HQ_SQL, PRODUCT_KEY, ROSTER_COUNTS, ROSTER_SAMPLE, ROSTER_VIEW } from "@/demo/data"
+import { HQ_SQL, ROSTER_COUNTS, ROSTER_SAMPLE } from "@/demo/data"
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return <div className="space-y-1"><Label required={required}>{label}</Label>{children}</div>
@@ -74,6 +74,19 @@ export function KnowledgePage({ s }: { s: DemoState }) {
           </tbody>
         )}
       </DataTable>
+      {s.columns.length > 0 && (
+        <div data-t="col-panel" className="border-t bg-background px-4 py-4 fadeup on">
+          <div className="text-sm font-medium mb-2">AI 讀完文件後看懂的欄位 · NURSE_MST（A 分院護理人員主檔）</div>
+          <div className="grid grid-cols-[160px_1fr] gap-x-4 gap-y-1.5 text-sm">
+            {s.columns.map((c) => (
+              <div key={c.name} className="contents">
+                <span className="font-mono text-[13px] text-muted-foreground">{c.name}</span>
+                <span className={c.desc ? "text-foreground" : "text-muted-foreground"}>{c.desc || "…"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </ListPage>
   )
 }
@@ -106,13 +119,13 @@ export function AgentScreen({ s }: { s: DemoState }) {
           ) : (
             <div key={i} className="flex gap-2 fadeup on">
               <span className="h-7 w-7 rounded-md bg-foreground text-background grid place-items-center"><Bot className="h-4 w-4" /></span>
-              <div className="flex-1 rounded-lg border bg-background px-4 py-3 text-sm leading-relaxed">
+              <div data-t={m.table ? "agent-answer" : undefined} className="flex-1 rounded-lg border bg-background px-4 py-3 text-sm leading-relaxed">
                 <p>{m.text}</p>
                 {m.table && (
                   <div className="mt-3 overflow-hidden rounded-md border">
                     <table className="w-full text-xs">
-                      <thead className="bg-sidebar text-muted-foreground"><tr>{["員工編號", "姓名", "職稱", "單位", "分院"].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr></thead>
-                      <tbody>{ROSTER_SAMPLE.map((r) => <tr key={r[0]} className="border-t">{r.map((c, j) => <td key={j} className="px-3 py-1.5">{c}</td>)}</tr>)}</tbody>
+                      <thead className="bg-sidebar text-muted-foreground"><tr>{["員工編號", "姓名", "職稱", "單位"].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr></thead>
+                      <tbody>{ROSTER_SAMPLE.map((r, i) => <tr key={r[0]} className="border-t">{["A0" + (123 + i * 111), r[1], r[2], r[3]].map((c, j) => <td key={j} className="px-3 py-1.5">{c}</td>)}</tr>)}</tbody>
                     </table>
                   </div>
                 )}
@@ -135,14 +148,14 @@ export function ProductPage({ s }: { s: DemoState }) {
     <ListPage title="Data Product" action={<Button data-t="btn-add-product" variant="brand" size="iconText"><Plus /> New Data Product</Button>}
       footer={s.products.length > 0 ? <Pagination total={s.products.length} /> : null}>
       <DataTable className="rounded-none border-0">
-        <DTHeadRow><DTHead>Name</DTHead><DTHead>Key</DTHead><DTHead>Source</DTHead><DTHead>Status</DTHead></DTHeadRow>
+        <DTHeadRow><DTHead>Name</DTHead><DTHead>Key</DTHead><DTHead>{s.ws === "總院" ? "Shared from" : "Shared with"}</DTHead><DTHead>Status</DTHead></DTHeadRow>
         {s.products.length === 0 ? <DTEmpty cols={4} /> : (
-          <tbody className="[&_tr:last-child]:border-0">
+          <tbody data-t="product-table" className="[&_tr:last-child]:border-0">
             {s.products.map((p) => (
               <DTRow key={p} className="fadeup on">
                 <DTCell><span className="inline-flex items-center gap-2"><Package className="h-4 w-4 text-muted-foreground" />{p}</span></DTCell>
-                <DTCell><span className="font-mono text-[13px]">{PRODUCT_KEY}</span></DTCell>
-                <DTCell>View · {ROSTER_VIEW}</DTCell>
+                <DTCell><span className="font-mono text-[13px]">data_product.{p[0].toLowerCase()}.nurse_roster</span></DTCell>
+                <DTCell>{s.ws === "總院" ? `${p[0]} 分院工作區` : "總院工作區"}</DTCell>
                 <DTCell><StatusBadge status="active" /></DTCell>
               </DTRow>
             ))}
@@ -158,8 +171,9 @@ export function NewProductDialog({ s }: { s: DemoState }) {
     <DialogShell open={s.productOpen} className="sm:max-w-[520px] px-6 pb-6 pt-4">
       <DialogHeaderRow title="New Data Product" icon={Package} />
       <Field label="Name" required><Input data-t="f-product-name" value={s.form.display_name} readOnly /></Field>
-      <Field label="Key" required><Input value={s.form.display_name ? "nurse_roster" : ""} readOnly className="font-mono" /></Field>
-      <Field label="Source"><Input value={s.form.display_name ? `View · ${ROSTER_VIEW}` : ""} readOnly /></Field>
+      <Field label="Key" required><Input value={s.form.display_name ? "data_product.a.nurse_roster" : ""} readOnly className="font-mono" /></Field>
+      <Field label="Source"><Input value={s.form.display_name ? "View · a_nurse_roster" : ""} readOnly /></Field>
+      <Field label="Share with workspace"><Input data-t="f-product-share" value={s.form.display_name.length >= 9 ? "總院" : ""} readOnly /></Field>
       <DialogFooter><Button variant="outline">Cancel</Button><Button data-t="btn-product-save" variant="brand" disabled={!s.form.display_name}>Publish</Button></DialogFooter>
     </DialogShell>
   )
@@ -179,8 +193,8 @@ export function SqlPage({ s }: { s: DemoState }) {
           <pre data-t="sql-editor" className="min-h-[120px] p-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap">{s.sqlText}<span className="inline-block w-[7px] h-4 align-middle bg-foreground/60 animate-pulse" /></pre>
         </Card>
         {s.sqlRan && (
-          <Card className="p-0 overflow-hidden fadeup on">
-            <div className="px-4 py-2.5 border-b text-xs text-muted-foreground">4 rows · 來源 {PRODUCT_KEY}（示意數字）</div>
+          <Card data-t="sql-result" className="p-0 overflow-hidden fadeup on">
+            <div className="px-4 py-2.5 border-b text-xs text-muted-foreground">4 rows · 來源：四家分院分享的資料產品（示意數字）</div>
             <table className="w-full text-sm">
               <thead className="bg-sidebar text-muted-foreground"><tr><th className="px-4 py-2 text-left font-medium">branch</th><th className="px-4 py-2 text-left font-medium">nurses</th></tr></thead>
               <tbody>
