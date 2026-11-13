@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client"
 import "./index.css"
-import { Story } from "./story/Story"
+import { App } from "./App"
 
-createRoot(document.getElementById("root")!).render(<Story />)
+// 不用 StrictMode:這是動畫 demo,命令式時間軸不需要開發期雙掛載
+createRoot(document.getElementById("root")!).render(<App />)

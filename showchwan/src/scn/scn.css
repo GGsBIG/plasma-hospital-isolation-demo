@@ -1,0 +1,71 @@
+/* 情境圖:Brobridge 官網的白紙、墨黑、logo 紅;立體積木用同一系灰階 */
+.scn {
+  --paper: #ffffff; --ink: #111111; --red: #b42622; --muted: #4a4a4a; --sheet: #ece9e2;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --iso-top: #ffffff; --iso-left: #ecebe8; --iso-right: #d9d7d2; --iso-line: #5c5c5c; --iso-hot: #b42622;
+  --iso-raised: #f6f5f2; --iso-pad: #ecebe8; --iso-glow: #b42622; --iso-glow-opacity: 0.08;
+  --iso-ring: #111111; --iso-ring-track: #d9d7d2; --iso-cyl-top: #ffffff; --iso-cyl-top-hot: #f3d3d1;
+  --dot-overload: #b42622; --dot-isolated: #111111;
+  position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--paper); color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  container-type: size;
+}
+/* 上方說明:這一步在做什麼(字級跟著畫面大小,縮在右下角時也一起縮小) */
+.scn-caption { display: flex; gap: 2.2cqw; align-items: flex-start; padding: 3cqh 3cqw 0; }
+.scn-step { flex: none; display: grid; place-items: center; width: 6cqw; height: 6cqw; max-width: 56px; max-height: 56px; background: var(--red); color: var(--paper); font-weight: 700; font-size: clamp(10px, 3cqw, 28px); }
+.scn-title { font-size: clamp(11px, 2.6cqw, 30px); font-weight: 700; line-height: 1.25; }
+.scn-line { margin-top: 0.6cqh; font-size: clamp(9px, 1.6cqw, 18px); line-height: 1.6; color: var(--muted); max-width: 46em; }
+.scn-board { position: relative; flex: 1; min-height: 0; }
+.scn-stage { position: absolute; left: 50%; top: 50%; transform-origin: 50% 50%; }
+
+.scn-node { position: absolute; width: 0; height: 0; transition: left 0.8s var(--ease), top 0.8s var(--ease); animation: scn-pop 0.6s var(--ease) backwards; }
+@keyframes scn-pop { from { opacity: 0; transform: translateY(10px); } }
+.scn-label { position: absolute; z-index: 3; left: 0; transform: translateX(-50%); white-space: nowrap; text-align: center; font-size: 19px; line-height: 1.35; }
+.scn-pill { width: fit-content; margin-inline: auto; padding: 0 0.3em; background: var(--paper); }
+.scn-name { display: flex; align-items: center; gap: 0.35em; font-weight: 700; }
+.scn-name img { height: 1.1em; width: auto; }
+.scn-sub { margin-top: 3px; font-size: 15px; color: var(--muted); }
+.scn-sub.tone-danger { color: var(--red); font-weight: 700; }
+.scn-sub.tone-ok { color: var(--ink); font-weight: 700; }
+.scn-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; color: var(--red); }
+
+.scn-fade { animation: scn-fade 0.6s ease backwards; animation-delay: 0.2s; }
+@keyframes scn-fade { from { opacity: 0; } }
+.scn-edge { fill: none; stroke-width: 2; }
+.scn-edge.red { stroke: var(--red); stroke-dasharray: 7 7; animation: scn-dash 1s linear infinite; }
+.scn-edge.base { stroke: var(--ink); stroke-width: 1.5; }
+.scn-edge.flow { stroke: var(--red); stroke-width: 5; stroke-linecap: square; stroke-dasharray: 0.1 26; animation: scn-flow 1.2s linear infinite; }
+@keyframes scn-dash { to { stroke-dashoffset: -14; } }
+@keyframes scn-flow { to { stroke-dashoffset: -26.1; } }
+
+.scn-note { position: absolute; z-index: 6; transform: translate(-50%, -100%); white-space: nowrap; padding: 7px 14px; font-size: 17px; font-weight: 700; color: var(--paper); animation: scn-wipe 0.5s var(--ease) both; }
+.scn-note.red { background: var(--red); }
+.scn-note.ink { background: var(--ink); }
+@keyframes scn-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+.scn-doc-anchor { position: absolute; width: 0; height: 0; z-index: 6; }
+.scn-doc { position: absolute; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; transform-origin: 0 0; padding: 6px 12px; font-size: 15px; background: var(--paper); border: 1px solid var(--ink); animation: scn-doc 2.3s cubic-bezier(0.55, 0, 0.3, 1) both; }
+@keyframes scn-doc {
+  0% { opacity: 0; transform: translate(var(--x0), calc(var(--y0) - 14px)); }
+  18% { opacity: 1; transform: translate(var(--x0), var(--y0)); }
+  45% { opacity: 1; transform: translate(var(--x0), var(--y0)) scale(1); }
+  90% { opacity: 1; }
+  100% { opacity: 0; transform: translate(0, 0) scale(0.15); }
+}
+
+/* Iso.tsx 用到的動畫 */
+.scn .spin { position: absolute; animation: scn-spin linear infinite; will-change: transform; }
+@keyframes scn-spin { to { transform: rotate(360deg); } }
+.scn .kb-grow > svg { transform-origin: 50% 80%; animation: scn-kb-grow 1.8s linear both; animation-delay: inherit; }
+@keyframes scn-kb-grow {
+  0% { transform: translateY(-90px) scale(0.15); opacity: 0; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+  15% { opacity: 1; }
+  60% { transform: translateY(-90px) scale(1); opacity: 1; animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.45); }
+  86% { transform: translateY(0) scale(1); animation-timing-function: ease-out; }
+  92% { transform: translateY(4px) scale(1.02, 0.97); }
+  100% { transform: none; opacity: 1; }
+}
+.scn .dark\:block { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .scn-edge.red, .scn-edge.flow, .scn-doc, .scn-node, .scn-note, .scn .spin, .scn .kb-grow > svg { animation: none !important; }
+}
