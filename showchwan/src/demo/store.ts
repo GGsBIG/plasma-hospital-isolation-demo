@@ -81,6 +81,8 @@ export interface DemoState {
   sqlMode: "cross" | "hq"
   dialects: boolean // SQL Playground 上方「以前:三種語法」對照
   epoch: number // 重播次數(情境圖用來從頭播)
+  why: boolean // 情境 3:為什麼要上傳文件
+  kbDone: boolean // 知識庫文件讀完了
   scn: number // 目前的情境(0~5)
   sub: number // 這個情境完成了幾個子步驟
   hot: string | null // 情境圖上正在發生事情的節點
@@ -153,6 +155,8 @@ export const initialState: DemoState = {
   sqlMode: "cross",
   dialects: false,
   epoch: 0,
+  why: false,
+  kbDone: false,
   scn: 0,
   sub: 0,
   hot: null,

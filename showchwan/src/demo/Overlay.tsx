@@ -52,6 +52,22 @@ export function Spotlight({ s }: { s: DemoState }) {
   )
 }
 
+/** 情境 3 開頭:為什麼要上傳文件 */
+export function WhyCard({ s }: { s: DemoState }) {
+  if (!s.why) return null
+  return (
+    <div className="why-card" role="status">
+      <h2>為什麼要上傳文件？</h2>
+      <ol>
+        <li><span>1</span><p>資料庫的欄位都是代碼<small>NRS_NAME、TITLE_CD = N02</small></p></li>
+        <li><span>2</span><p>代碼的意思，只寫在系統文件裡<small>規格書、資料字典、職稱代碼表</small></p></li>
+        <li><span>3</span><p>交給 Plasma 的 AI 讀<small>每個欄位自動補上說明</small></p></li>
+      </ol>
+      <p className="why-card-end">之後跨庫查詢、AI 問答，才查得對。</p>
+    </div>
+  )
+}
+
 /** 情境播完:這一步完成了什麼,以及重播／下一個情境 */
 export function DoneCard({ s, onReplay, onNext }: { s: DemoState; onReplay: () => void; onNext: () => void }) {
   if (!s.done) return null

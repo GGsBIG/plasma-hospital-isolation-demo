@@ -38,12 +38,12 @@ export function KnowledgePage({ s }: { s: DemoState }) {
       </DataTable>
       {s.columns.length > 0 && (
         <div data-t="col-panel" className="border-t bg-background px-4 py-4 fadeup on">
-          <div className="text-sm font-medium mb-2">AI 看懂的欄位</div>
+          <div className="text-sm font-medium mb-2">{s.kbDone ? "AI 看懂的欄位" : "A 分院的欄位代碼（還看不懂）"}</div>
           <div className="grid grid-cols-[160px_1fr] gap-x-4 gap-y-1.5 text-sm">
             {s.columns.map((c) => (
               <div key={c.name} className="contents">
                 <span className="font-mono text-[13px] text-muted-foreground">{c.name}</span>
-                <span className={c.desc ? "text-foreground" : "text-muted-foreground"}>{c.desc || "…"}</span>
+                <span className={c.desc && c.desc !== "？" ? "text-foreground" : "text-[#b42622] font-medium"}>{c.desc || "…"}</span>
               </div>
             ))}
           </div>

@@ -5,7 +5,7 @@ import { Sidebar, TopBar, DatabaseListPage } from "@/app/Shell"
 import { LoginPage } from "@/app/Login"
 import { AddDatabaseDialog, UploadDocDialog } from "@/dialogs/Dialogs"
 import { AgentScreen, KnowledgePage, NewProductDialog, ProductPage, SqlPage } from "@/app/ScPages"
-import { Cursor, ChapterBar, Spotlight, DoneCard } from "@/demo/Overlay"
+import { Cursor, ChapterBar, Spotlight, DoneCard, WhyCard } from "@/demo/Overlay"
 import { STEPS } from "@/sc/steps"
 import { Scenario } from "@/scn/Scenario"
 import type { DemoState } from "@/demo/store"
@@ -113,6 +113,7 @@ export function App() {
             <ul>{STEPS[cur].pains.map((x) => <li key={x}>{x}</li>)}</ul>
           </div>
         )}
+        <WhyCard s={s} />
         <DoneCard s={s} onReplay={() => play(cur)} onNext={() => play(cur + 1)} />
       </main>
 

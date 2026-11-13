@@ -66,8 +66,13 @@ export function buildScenes(): SceneRun[] {
 
     /* 3 · AI 看懂欄位(Plasma 長出大腦) */
     async (a) => {
-      a.update({ ...nav("/knowledge", "knowledge"), ws: WS_A, kbDocs: [], columns: [] })
-      await a.sleep(500)
+      a.update({ ...nav("/knowledge", "knowledge"), ws: WS_A, kbDocs: [], kbDone: false, columns: A_COLUMNS.map((c) => ({ ...c, desc: "？" })), why: false })
+      await a.sleep(600)
+      await a.focus("col-panel", "這些代碼是什麼意思？", 1800)
+      a.update({ spot: null, why: true })
+      await a.sleep(6500) // 說明卡:為什麼要上傳文件
+      a.update({ why: false })
+      await a.sleep(300)
       await press(a, "btn-kb-upload", "上傳文件")
       a.update({ uploadOpen: true, files: [] })
       await a.focus("dropzone", "系統文件", 400)
@@ -83,7 +88,7 @@ export function buildScenes(): SceneRun[] {
         a.update((s) => ({ kbDocs: s.kbDocs.map((d, k) => (k === i ? { ...d, status: "ready" } : d)) }))
         await a.sleep(300)
       }
-      a.update({ columns: A_COLUMNS.map((c) => ({ ...c, desc: "" })) })
+      a.update({ columns: A_COLUMNS.map((c) => ({ ...c, desc: "" })), kbDone: true })
       await a.sleep(700)
       for (let i = 0; i < A_COLUMNS.length; i++) {
         await a.type((v) => ({ columns: A_COLUMNS.map((c, k) => ({ ...c, desc: k < i ? c.desc : k === i ? v : "" })) }), A_COLUMNS[i].desc, 40)

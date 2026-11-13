@@ -174,3 +174,16 @@ body { overflow: hidden; }
 
 /* 現況(只有一個畫面):情境圖不用讓位給小畫面 */
 .sc-stage-area.solo .scn-board { margin-right: 0; }
+
+/* 情境 3:為什麼要上傳文件 */
+.why-card { position: absolute; left: 50%; top: 46%; z-index: 38; transform: translate(-50%, -50%); width: min(620px, calc(100% - 48px)); padding: 28px 32px; background: #fff; border: 2px solid var(--sc-ink); border-top: 8px solid var(--sc-red); box-shadow: 0 30px 70px -24px rgb(17 17 17 / 0.5); animation: why-in 0.5s var(--sc-ease); }
+@keyframes why-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 14px)); } }
+.why-card h2 { font-size: 30px; font-weight: 700; line-height: 1.2; }
+.why-card ol { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+.why-card li { display: flex; gap: 14px; align-items: flex-start; opacity: 0; animation: why-li 0.5s var(--sc-ease) forwards; }
+.why-card li:nth-child(1) { animation-delay: 0.4s; } .why-card li:nth-child(2) { animation-delay: 1.6s; } .why-card li:nth-child(3) { animation-delay: 2.8s; }
+@keyframes why-li { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.why-card li span { flex: none; display: grid; place-items: center; width: 30px; height: 30px; background: var(--sc-red); color: #fff; font-weight: 700; }
+.why-card li p { font-size: 19px; font-weight: 700; line-height: 1.35; }
+.why-card li small { display: block; margin-top: 3px; font-size: 15px; font-weight: 500; color: var(--sc-muted); font-family: ui-monospace, Menlo, monospace, "PingFang TC"; }
+.why-card-end { margin-top: 20px; padding-top: 14px; border-top: 2px solid var(--sc-ink); font-size: 18px; font-weight: 700; opacity: 0; animation: why-li 0.5s var(--sc-ease) 4s forwards; }
