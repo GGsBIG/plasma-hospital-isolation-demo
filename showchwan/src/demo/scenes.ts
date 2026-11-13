@@ -115,7 +115,7 @@ export function buildScenes(): SceneRun[] {
 
     /* 4 · 一種 SQL 查三套資料庫 */
     async (a) => {
-      a.update({ ...nav("/sql-playground", "sql"), ws: WS_A, sqlMode: "cross", sqlText: "", sqlRan: false, dialects: true })
+      a.update({ ...nav("/sql-playground", "sql"), ws: WS_A, sqlMode: "cross", sqlText: "", sqlRan: false, dialects: true, schemaOpen: false })
       await a.sleep(500)
       await a.focus("dialects", "以前：三套資料庫，三種語法", 2600)
       a.update({ spot: null })
@@ -133,7 +133,7 @@ export function buildScenes(): SceneRun[] {
     /* 5 · 用問的整理資料 */
     async (a) => {
       const q = "整理 A 分院的護理人員名冊。"
-      a.update({ screen: "agent", agentMsgs: [], agentInput: "", ws: WS_A })
+      a.update({ screen: "agent", agentMsgs: [], agentInput: "", ws: WS_A, schemaOpen: false })
       await a.sleep(600)
       await a.focus("agent-input", "直接問", 500)
       await a.type((v) => ({ agentInput: v }), q, 60)
@@ -152,7 +152,7 @@ export function buildScenes(): SceneRun[] {
 
     /* 6 · 上架資料產品 */
     async (a) => {
-      a.update({ ...nav("/data-product", "product"), ws: WS_A, form: { ...emptyForm }, products: [] })
+      a.update({ ...nav("/data-product", "product"), ws: WS_A, form: { ...emptyForm }, products: [], schemaOpen: false })
       await a.sleep(600)
       await press(a, "btn-add-product", "新增資料產品")
       a.update({ productOpen: true })

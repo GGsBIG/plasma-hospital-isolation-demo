@@ -22,7 +22,11 @@ export function Spotlight({ s }: { s: DemoState }) {
   const [box, setBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   useEffect(() => {
     if (!s.spot) { setBox(null); return }
+    // 剛出現的 0.8 秒逐格追蹤(對話框還在進場動畫),之後每 0.25 秒量一次就好:
+    // 每格都量會一直強迫瀏覽器重算版面,手機會卡
     let raf = 0
+    let to = 0
+    const t0 = performance.now()
     const tick = () => {
       const el = document.querySelector<HTMLElement>(`[data-t="${s.spot!.sel}"]`)
       const frame = document.querySelector<HTMLElement>("[data-plasma-frame]")
@@ -33,10 +37,11 @@ export function Spotlight({ s }: { s: DemoState }) {
         const next = { x: (r.left - fr.left) / k, y: (r.top - fr.top) / k, w: r.width / k, h: r.height / k }
         setBox((b) => (b && Math.abs(b.x - next.x) < 0.5 && Math.abs(b.y - next.y) < 0.5 && Math.abs(b.w - next.w) < 0.5 ? b : next))
       }
-      raf = requestAnimationFrame(tick)
+      if (performance.now() - t0 < 800) raf = requestAnimationFrame(tick)
+      else to = window.setTimeout(() => (raf = requestAnimationFrame(tick)), 250)
     }
     tick()
-    return () => cancelAnimationFrame(raf)
+    return () => { cancelAnimationFrame(raf); window.clearTimeout(to) }
   }, [s.spot])
   if (!s.spot || !box) return null
   const pad = 8

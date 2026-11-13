@@ -37,6 +37,10 @@
 .scn-edge.flow { stroke: var(--red); stroke-width: 5; stroke-linecap: square; stroke-dasharray: 0.1 26; animation: scn-flow 1.2s linear infinite; }
 @keyframes scn-dash { to { stroke-dashoffset: -14; } }
 @keyframes scn-flow { to { stroke-dashoffset: -26.1; } }
+.scn-ride { position: absolute; left: 0; top: 0; offset-rotate: auto; offset-anchor: center; background: var(--red); animation: scn-ride linear infinite; will-change: transform; }
+.scn-ride.dot { width: 5.1px; height: 5px; }
+.scn-ride.dash { width: 7px; height: 2px; }
+@keyframes scn-ride { from { offset-distance: 0%; } to { offset-distance: 100%; } }
 
 .scn-note { position: absolute; z-index: 6; transform: translate(-50%, -100%); white-space: nowrap; padding: 7px 14px; font-size: 17px; font-weight: 700; color: var(--paper); animation: scn-wipe 0.5s var(--ease) both; }
 .scn-note.red { background: var(--red); }
@@ -68,6 +72,7 @@
 .scn .dark\:block { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .scn-edge.red, .scn-edge.flow, .scn-doc, .scn-node, .scn-note, .scn .spin, .scn .kb-grow > svg { animation: none !important; }
+  .scn-ride { animation-play-state: paused; } /* 停在各自的位置,看起來是靜止的虛線 */
 }
 
 /* 子步驟清單:做完的打勾,正在做的標紅 */

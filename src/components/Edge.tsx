@@ -58,12 +58,15 @@ export const Edge = memo(function Edge({ id, reveal, gRef, state, highlight, fad
             pathLength={1}
             strokeDasharray="1 1"
             strokeDashoffset={1}
-            filter={`url(#${id}-soft)`}
+            // 手機版不做柔邊:模糊遮罩每格都要重算,手機會卡;手機上柔邊只有幾個像素寬,看不出差別
+            filter={lw > 1 ? undefined : `url(#${id}-soft)`}
           />
           {/* 每條線自己的柔邊濾鏡:範圍由 Stage 設成這條線的外框(不是整個舞台),模糊只算線附近那一小塊 */}
-          <filter id={`${id}-soft`} filterUnits="userSpaceOnUse" x={-4000} y={-4000} width={12000} height={12000}>
-            <feGaussianBlur stdDeviation={14 * (lw > 1 ? 1.6 : 1)} />
-          </filter>
+          {lw === 1 && (
+            <filter id={`${id}-soft`} filterUnits="userSpaceOnUse" x={-4000} y={-4000} width={12000} height={12000}>
+              <feGaussianBlur stdDeviation={14} />
+            </filter>
+          )}
         </mask>
       )}
       <g className={`transition-opacity duration-300 ${faded ? "opacity-20" : state === "dead" ? "opacity-60" : "opacity-100"}`}>

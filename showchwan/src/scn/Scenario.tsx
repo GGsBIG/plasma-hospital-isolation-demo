@@ -78,6 +78,35 @@ function scene(k: number, t: number) {
   return { nodes, edges, note }
 }
 
+// 三次貝茲曲線長度(edgePath 產生的 "M x y C ...")
+function bezLen(d: string) {
+  const v = d.match(/-?\d+(\.\d+)?/g)!.map(Number)
+  const [x0, y0, x1, y1, x2, y2, x3, y3] = v
+  let len = 0, px = x0, py = y0
+  for (let i = 1; i <= 40; i++) {
+    const t = i / 40, u = 1 - t
+    const x = u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3
+    const y = u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3
+    len += Math.hypot(x - px, y - py); px = x; py = y
+  }
+  return len
+}
+
+// 連線上流動的點/虛線:每一段是一個沿路徑移動的小方塊(offset-path),只改位置不重畫;
+// 原本用 SVG stroke-dashoffset 動畫,整張情境圖每格都要重畫,手機會卡
+function Ride({ d, gap, speed, cls }: { d: string; gap: number; speed: number; cls: string }) {
+  const len = bezLen(d)
+  const n = Math.max(1, Math.round(len / gap))
+  const dur = len / speed
+  return (
+    <>
+      {Array.from({ length: n }, (_, i) => (
+        <span key={i} className={`scn-ride ${cls}`} style={{ offsetPath: `path("${d}")`, animationDuration: `${dur}s`, animationDelay: `${(-i * dur) / n}s` }} />
+      ))}
+    </>
+  )
+}
+
 function useFit() {
   const ref = useRef<HTMLDivElement>(null)
   const [k, setK] = useState(1)
@@ -172,11 +201,21 @@ export function Scenario({ step, epoch, isMain }: { step: number; epoch: number;
               const d = edgePath(f.pos, f.kind, to.pos, to.kind)
               return (
                 <g key={`${step}-${epoch}-${e.from}-${e.to}`} className="scn-fade">
-                  {e.tone === "red" ? <path d={d} className="scn-edge red" /> : <><path d={d} className="scn-edge base" /><path d={d} className="scn-edge flow" /></>}
+                  {e.tone !== "red" && <path d={d} className="scn-edge base" />}
                 </g>
               )
             })}
           </svg>
+          {edges.map((e) => {
+            const f = byId[e.from]
+            const to = byId[e.to]
+            const d = edgePath(f.pos, f.kind, to.pos, to.kind)
+            return (
+              <div key={`ride-${step}-${epoch}-${e.from}-${e.to}`} className="scn-fade absolute left-0 top-0">
+                {e.tone === "red" ? <Ride d={d} gap={14} speed={14} cls="dash" /> : <Ride d={d} gap={26} speed={26 / 1.2} cls="dot" />}
+              </div>
+            )
+          })}
           {nodes.map((n) => <IsoNode key={`${n.id}-${n.grow ? `grow-${epoch}` : ""}`} n={n} />)}
           {note && <div key={`${step}-${epoch}-${note.text}`} className={`scn-note ${note.tone}`} style={{ left: note.at.x, top: note.at.y }}>{note.text}</div>}
           {dk === 3 && ts === 0 && KB_FILES.map((name, i) => (

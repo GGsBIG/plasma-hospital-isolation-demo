@@ -498,7 +498,7 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 .plasma-toggle [data-fbg-item][aria-label="導入前"][aria-pressed="true"] { background: hsl(var(--tg-before) / 0.12); color: hsl(var(--tg-before)); }
 .plasma-toggle [data-fbg-item][aria-label="導入 Plasma 後"][aria-pressed="true"] { background: hsl(var(--tg-after) / 0.14); color: hsl(var(--tg-after)); }
 /* 第一次引導:「導入 Plasma 後」外圈脈動,下方提示輕輕上下浮動 */
-.plasma-toggle.hint [data-fbg-item][aria-label="導入 Plasma 後"] { color: hsl(var(--tg-after)); animation: tg-pulse 1.8s ease-out infinite; }
+.plasma-toggle.hint [data-fbg-item][aria-label="導入 Plasma 後"] { color: hsl(var(--tg-after)); animation: tg-pulse 1.8s ease-out infinite; will-change: transform; } /* 獨立圖層:外圈脈動每格只重畫這顆按鈕 */
 @keyframes tg-pulse {
   0% { box-shadow: 0 0 0 0 hsl(var(--tg-after) / 0.45); }
   70% { box-shadow: 0 0 0 12px hsl(var(--tg-after) / 0); }
@@ -520,7 +520,7 @@ html::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 }
 
 /* 上傳視窗的 Upload 鈕:外圈脈動 + 光澤掃過 + 圖示上下彈跳,滑鼠移上去放大一點,讓人知道要按 */
-.upload-cta { animation: upload-pulse 1.6s ease-out infinite; transition: transform 160ms ease, box-shadow 160ms ease; }
+.upload-cta { will-change: transform; animation: upload-pulse 1.6s ease-out infinite; transition: transform 160ms ease, box-shadow 160ms ease; }
 .upload-cta:hover { transform: translateY(-1px) scale(1.02); }
 .upload-cta:active { transform: scale(0.98); }
 @keyframes upload-pulse {
