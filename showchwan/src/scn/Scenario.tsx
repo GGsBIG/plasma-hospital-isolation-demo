@@ -27,7 +27,7 @@ function scene(k: number, sub: number, hot: string | null) {
   const allIn = k >= 5 // 情境 6 才四家都接上
   const nodes: N[] = BRANCHES.map((b, i) => {
     const off = k >= 1 && i > 0 && !allIn
-    const linked = (k === 1 && i === 0 && sub >= 4) || (k >= 2 && i === 0) || allIn
+    const linked = (k === 1 && i === 0 && sub >= 3) || (k >= 2 && i === 0) || allIn
     return {
       id: `db${i}`, kind: "db" as const, pos: { x: 110, y: 85 + i * 160 }, label: b.ws, brand: BRAND[i], dim: off,
       hot: (k === 0 && (hot === "dbs" || hot === "schema")) || (k === 5 && sub === 0 && i > 0),
@@ -41,26 +41,26 @@ function scene(k: number, sub: number, hot: string | null) {
     BRANCHES.forEach((_, i) => edges.push({ from: `db${i}`, to: "hq", tone: "red" }))
     return { nodes, edges }
   }
-  if (k >= 2 || sub >= 2) {
-    const ps = k === 1 ? "A 分院工作區" : k === 2 && sub < 4 ? "AI 讀文件中" : allIn ? "四家分院各自的工作區" : "已讀懂 A 分院欄位"
+  if (k >= 2 || sub >= 1) {
+    const ps = k === 1 ? (sub >= 3 ? "已接上 A 分院" : "等待接上") : k === 2 && sub < 4 ? "AI 讀文件中" : allIn ? "四家分院資料已整理" : "已讀懂 A 分院欄位"
     nodes.push({ id: "plasma", kind: "plasma", pos: PLASMA, sub: ps, tone: "ok", hot: hot === "plasma" })
   }
   if ((k === 2 && sub >= 3) || k >= 3) nodes.push({ id: "kb", kind: "kb", pos: { x: PLASMA.x, y: PLASMA.y - KB_DY }, bare: true, grow: k === 2, hot: hot === "kb" })
-  if ((k === 1 && sub >= 4) || k >= 2) edges.push({ from: "db0", to: "plasma", tone: "ok" })
+  if ((k === 1 && sub >= 3) || k >= 2) edges.push({ from: "db0", to: "plasma", tone: "ok" })
   if (allIn) BRANCHES.slice(1).forEach((_, i) => edges.push({ from: `db${i + 1}`, to: "plasma", tone: "ok" }))
   if (k === 3) {
     nodes.push({ id: "ai", kind: "app", pos: { x: 780, y: 335 }, label: "AI Agent", sub: sub >= 3 ? "整理好名冊" : "問答整理中", tone: "ok", hot: hot === "ai" })
     edges.push({ from: "plasma", to: "ai", tone: "ok" })
   }
   if (k === 4 && sub >= 1) {
-    nodes.push({ id: "prod", kind: "app", variant: "package", pos: { x: 730, y: 335 }, label: "A 分院護理人員名冊", sub: sub >= 3 ? "分享給總院" : "資料產品", tone: "ok", hot: hot === "prod" })
+    nodes.push({ id: "prod", kind: "app", variant: "package", pos: { x: 730, y: 335 }, label: "A 分院護理人員名冊", sub: sub >= 3 ? "已上架" : "資料產品", tone: "ok", hot: hot === "prod" })
     edges.push({ from: "plasma", to: "prod", tone: "ok" })
   }
   if (k === 5) {
-    nodes.push({ id: "prod", kind: "app", variant: "package", pos: { x: 700, y: 335 }, label: "四家護理人員名冊", sub: "各分院分享", tone: "ok" })
+    nodes.push({ id: "prod", kind: "app", variant: "package", pos: { x: 700, y: 335 }, label: "四家護理人員名冊", sub: "資料產品", tone: "ok" })
     edges.push({ from: "plasma", to: "prod", tone: "ok" })
     if (sub >= 1) {
-      nodes.push({ id: "hq", kind: "app", variant: "receipt", pos: { x: 900, y: 335 }, label: "總院工作區", sub: sub >= 4 ? "合計 812 人" : "取用資料產品", tone: "ok", hot: hot === "hq" })
+      nodes.push({ id: "hq", kind: "app", variant: "receipt", pos: { x: 900, y: 335 }, label: "總院", sub: sub >= 4 ? "合計 812 人" : "取用資料產品", tone: "ok", hot: hot === "hq" })
       edges.push({ from: "prod", to: "hq", tone: "ok" })
     }
   }
@@ -70,11 +70,11 @@ function scene(k: number, sub: number, hot: string | null) {
 // 圖上的說明條(紅底是問題,墨底是解決);依情境與子步驟出現
 function noteOf(k: number, sub: number): { at: Pos; text: string; tone: "red" | "ink" } | null {
   if (k === 0) return sub >= 3 ? { at: { x: 780, y: 225 }, text: "總院統計不出來", tone: "red" } : sub >= 1 ? { at: { x: 470, y: 150 }, text: "同樣是護理師，四家寫法都不同", tone: "red" } : null
-  if (k === 1) return sub >= 4 ? { at: { x: 430, y: 175 }, text: "唯讀接上，不搬資料、不動原系統", tone: "ink" } : sub >= 2 ? { at: { x: 430, y: 175 }, text: "A 分院自己的工作區", tone: "ink" } : null
+  if (k === 1) return sub >= 3 ? { at: { x: 430, y: 175 }, text: "唯讀接上，不搬資料、不動原系統", tone: "ink" } : null
   if (k === 2) return sub >= 4 ? { at: { x: 700, y: 150 }, text: "NRS_NAME → 護理師姓名　TITLE_CD N02 → 護理師", tone: "ink" } : null
   if (k === 3) return sub >= 3 ? { at: { x: 780, y: 225 }, text: "問一句 → A 分院 248 位護理師名冊", tone: "ink" } : null
-  if (k === 4) return sub >= 4 ? { at: { x: 730, y: 225 }, text: "已上架，分享給總院", tone: "ink" } : null
-  if (k === 5) return sub === 0 ? { at: { x: 430, y: 150 }, text: "B、C、D 分院照同樣步驟完成", tone: "ink" } : sub >= 4 ? { at: { x: 880, y: 225 }, text: "四家同一格式，合計 812 人", tone: "ink" } : null
+  if (k === 4) return sub >= 3 ? { at: { x: 730, y: 225 }, text: "已上架成資料產品", tone: "ink" } : null
+  if (k === 5) return sub === 0 ? { at: { x: 430, y: 150 }, text: "B、C、D 分院照同樣步驟完成", tone: "ink" } : sub >= 4 ? { at: { x: 880, y: 225 }, text: "跨院交換：四家同一格式，合計 812 人", tone: "ink" } : null
   return null
 }
 

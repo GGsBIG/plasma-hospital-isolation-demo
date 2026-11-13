@@ -1,6 +1,6 @@
 // 秀傳 demo 用到、原本操作 demo 沒有的 Plasma 畫面:工作區、知識庫、AI Agent、資料產品、SQL Playground。
 // 版型沿用 Shell.tsx 的 ListPage(與真正 Plasma 前端相同)
-import { Plus, Users, BookOpenText, Upload, Package, Bot, User, Wrench, CheckCircle2, Play, FileText, Loader2 } from "lucide-react"
+import { Plus, BookOpenText, Upload, Package, Bot, User, Wrench, CheckCircle2, Play, FileText, Loader2 } from "lucide-react"
 import {
   Button, Input, Textarea, Label, StatusBadge, Card,
   DataTable, DTHeadRow, DTHead, DTRow, DTCell, DTEmpty,
@@ -12,44 +12,6 @@ import { HQ_SQL, ROSTER_COUNTS, ROSTER_SAMPLE } from "@/demo/data"
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return <div className="space-y-1"><Label required={required}>{label}</Label>{children}</div>
-}
-
-/* ---------- Workspace ---------- */
-export function WorkspacePage({ s }: { s: DemoState }) {
-  return (
-    <ListPage title="Workspace" action={<Button data-t="btn-add-ws" variant="brand" size="iconText"><Plus /> New Workspace</Button>}
-      footer={s.workspaces.length > 0 ? <Pagination total={s.workspaces.length} /> : null}>
-      <DataTable className="rounded-none border-0">
-        <DTHeadRow>
-          <DTHead><div className="flex items-center gap-1">Name <SortIcon asc /></div></DTHead>
-          <DTHead>Description</DTHead><DTHead>Members</DTHead><DTHead>Created</DTHead>
-        </DTHeadRow>
-        {s.workspaces.length === 0 ? <DTEmpty cols={4} /> : (
-          <tbody className="[&_tr:last-child]:border-0">
-            {s.workspaces.map((w) => (
-              <DTRow key={w} className="fadeup on">
-                <DTCell><span className="inline-flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" />{w}</span></DTCell>
-                <DTCell><span className="text-muted-foreground">{w === "總院" ? "跨院彙整" : `${w}自己的連線、知識與資料產品`}</span></DTCell>
-                <DTCell>3</DTCell>
-                <DTCell className="whitespace-nowrap">2026/11/13 09:00:00</DTCell>
-              </DTRow>
-            ))}
-          </tbody>
-        )}
-      </DataTable>
-    </ListPage>
-  )
-}
-
-export function NewWorkspaceDialog({ s }: { s: DemoState }) {
-  return (
-    <DialogShell open={s.wsOpen} className="sm:max-w-[480px] px-6 pb-6 pt-4">
-      <DialogHeaderRow title="New Workspace" icon={Users} />
-      <Field label="Name" required><Input data-t="f-ws-name" value={s.wsName} readOnly /></Field>
-      <Field label="Description"><Textarea className="resize-none" value={s.wsName ? `${s.wsName}自己的連線、知識與資料產品` : ""} readOnly /></Field>
-      <DialogFooter><Button variant="outline">Cancel</Button><Button data-t="btn-ws-save" variant="brand" disabled={!s.wsName}>Create</Button></DialogFooter>
-    </DialogShell>
-  )
 }
 
 /* ---------- Knowledge(AI 知識庫) ---------- */
@@ -99,7 +61,7 @@ export function AgentScreen({ s }: { s: DemoState }) {
         <span className="h-8 w-8 rounded-md bg-foreground text-background grid place-items-center"><Bot className="h-4 w-4" /></span>
         <span className="font-medium">AI Agent</span>
         <span className="ml-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--sidebar-ring))]" />已透過 Plasma MCP 連線 · {s.ws}
+          <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--sidebar-ring))]" />已透過 Plasma MCP 連線 · A 分院
         </span>
       </div>
       <div className="flex-1 min-h-0 overflow-hidden bg-sidebar">
@@ -148,14 +110,14 @@ export function ProductPage({ s }: { s: DemoState }) {
     <ListPage title="Data Product" action={<Button data-t="btn-add-product" variant="brand" size="iconText"><Plus /> New Data Product</Button>}
       footer={s.products.length > 0 ? <Pagination total={s.products.length} /> : null}>
       <DataTable className="rounded-none border-0">
-        <DTHeadRow><DTHead>Name</DTHead><DTHead>Key</DTHead><DTHead>{s.ws === "總院" ? "Shared from" : "Shared with"}</DTHead><DTHead>Status</DTHead></DTHeadRow>
+        <DTHeadRow><DTHead>Name</DTHead><DTHead>Key</DTHead><DTHead>Branch</DTHead><DTHead>Status</DTHead></DTHeadRow>
         {s.products.length === 0 ? <DTEmpty cols={4} /> : (
           <tbody data-t="product-table" className="[&_tr:last-child]:border-0">
             {s.products.map((p) => (
               <DTRow key={p} className="fadeup on">
                 <DTCell><span className="inline-flex items-center gap-2"><Package className="h-4 w-4 text-muted-foreground" />{p}</span></DTCell>
                 <DTCell><span className="font-mono text-[13px]">data_product.{p[0].toLowerCase()}.nurse_roster</span></DTCell>
-                <DTCell>{s.ws === "總院" ? `${p[0]} 分院工作區` : "總院工作區"}</DTCell>
+                <DTCell>{p[0]} 分院</DTCell>
                 <DTCell><StatusBadge status="active" /></DTCell>
               </DTRow>
             ))}
@@ -173,7 +135,6 @@ export function NewProductDialog({ s }: { s: DemoState }) {
       <Field label="Name" required><Input data-t="f-product-name" value={s.form.display_name} readOnly /></Field>
       <Field label="Key" required><Input value={s.form.display_name ? "data_product.a.nurse_roster" : ""} readOnly className="font-mono" /></Field>
       <Field label="Source"><Input value={s.form.display_name ? "View · a_nurse_roster" : ""} readOnly /></Field>
-      <Field label="Share with workspace"><Input data-t="f-product-share" value={s.form.display_name.length >= 9 ? "總院" : ""} readOnly /></Field>
       <DialogFooter><Button variant="outline">Cancel</Button><Button data-t="btn-product-save" variant="brand" disabled={!s.form.display_name}>Publish</Button></DialogFooter>
     </DialogShell>
   )

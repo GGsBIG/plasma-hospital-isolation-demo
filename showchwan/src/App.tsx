@@ -4,7 +4,7 @@ import { useDemo } from "@/demo/engine"
 import { Sidebar, TopBar, DatabaseListPage } from "@/app/Shell"
 import { LoginPage } from "@/app/Login"
 import { AddDatabaseDialog, UploadDocDialog } from "@/dialogs/Dialogs"
-import { AgentScreen, KnowledgePage, NewProductDialog, NewWorkspaceDialog, ProductPage, SqlPage, WorkspacePage } from "@/app/ScPages"
+import { AgentScreen, KnowledgePage, NewProductDialog, ProductPage, SqlPage } from "@/app/ScPages"
 import { Cursor, ChapterBar, Spotlight, TitleCard, DoneCard } from "@/demo/Overlay"
 import { STEPS } from "@/sc/steps"
 import { Scenario } from "@/scn/Scenario"
@@ -22,8 +22,7 @@ const CRUMBS: Record<DemoState["page"], string[]> = {
 
 function PlasmaApp({ s }: { s: DemoState }) {
   const page =
-    s.page === "workspace" ? <WorkspacePage s={s} />
-    : s.page === "knowledge" ? <KnowledgePage s={s} />
+    s.page === "knowledge" ? <KnowledgePage s={s} />
     : s.page === "product" ? <ProductPage s={s} />
     : s.page === "sql" ? <SqlPage s={s} />
     : <DatabaseListPage s={s} />
@@ -35,7 +34,6 @@ function PlasmaApp({ s }: { s: DemoState }) {
         <TopBar crumbs={CRUMBS[s.page]} ws={s.ws} />
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">{page}</div>
       </div>
-      <NewWorkspaceDialog s={s} />
       <AddDatabaseDialog s={s} />
       <UploadDocDialog s={s} />
       <NewProductDialog s={s} />
