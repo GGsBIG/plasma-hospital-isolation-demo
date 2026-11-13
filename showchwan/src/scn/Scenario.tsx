@@ -11,7 +11,7 @@ import { A_DBS, KB_FILES } from "@/demo/data"
 import { STEPS } from "@/sc/steps"
 import "./scn.css"
 
-// 情境圖:A 分院的三套資料庫 → Plasma → 名冊／資料產品 → 總院。
+// 情境圖:A 分院的三套資料庫 → Plasma → 名冊／資料產品。
 // 每個情境的圖自己依時間播放(不等左邊的操作),換情境或按重播就從頭播
 const W = 1000
 const H = 680
@@ -42,10 +42,10 @@ function scene(k: number, t: number) {
 
   if (k === 0) {
     nodes.push({ id: "it", kind: "person", variant: "person-clock", pos: PLASMA, label: "IT", sub: t >= 1 ? "寫三種語法" : undefined, tone: "danger", hot: t === 1 })
-    nodes.push({ id: "hq", kind: "app", variant: "receipt", pos: RIGHT, label: "總院", sub: t >= 2 ? "拿不到" : undefined, tone: "danger", hot: t >= 2 })
+    nodes.push({ id: "out", kind: "app", variant: "receipt", pos: RIGHT, label: "護理人員名冊", sub: t >= 2 ? "整理不出來" : undefined, tone: "danger", hot: t >= 2 })
     A_DBS.forEach((_, i) => edges.push({ from: db(i), to: "it", tone: "red" }))
-    if (t >= 2) edges.push({ from: "it", to: "hq", tone: "red" })
-    note = t >= 1 ? { at: { x: 430, y: 170 }, text: "三套資料庫，三種語法", tone: "red" } : null
+    if (t >= 2) edges.push({ from: "it", to: "out", tone: "red" })
+    note = t >= 2 ? { at: { x: 430, y: 170 }, text: "TITLE_CD、NRS_NAME 是什麼？", tone: "red" } : t >= 1 ? { at: { x: 430, y: 170 }, text: "三套資料庫，三種語法", tone: "red" } : null
     return { nodes, edges, note }
   }
 
@@ -74,12 +74,6 @@ function scene(k: number, t: number) {
     nodes.push({ id: "prod", kind: "app", variant: "package", pos: RIGHT, label: "護理人員名冊", sub: "資料產品", tone: "ok", hot: t === 0 })
     edges.push({ from: "plasma", to: "prod", tone: "ok" })
     if (t >= 1) note = { at: { x: 800, y: 250 }, text: "來源更新，自動更新", tone: "ink" }
-  }
-  if (k === 7) {
-    nodes.push({ id: "prod", kind: "app", variant: "package", pos: { x: 700, y: 360 }, label: "護理人員名冊", sub: "資料產品", tone: "ok" })
-    nodes.push({ id: "hq", kind: "app", variant: "receipt", pos: { x: 900, y: 360 }, label: "總院", sub: t >= 1 ? "248 人" : "取用", tone: "ok", hot: true })
-    edges.push({ from: "plasma", to: "prod", tone: "ok" }, { from: "prod", to: "hq", tone: "ok" })
-    note = { at: { x: 820, y: 250 }, text: "跨院交換", tone: "ink" }
   }
   return { nodes, edges, note }
 }

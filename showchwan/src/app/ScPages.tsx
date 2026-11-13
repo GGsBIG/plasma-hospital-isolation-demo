@@ -140,7 +140,7 @@ export function NewProductDialog({ s }: { s: DemoState }) {
   )
 }
 
-/* ---------- SQL Playground(總院查詢資料產品) ---------- */
+/* ---------- SQL Playground(跨資料庫查詢) ---------- */
 export function SqlPage({ s }: { s: DemoState }) {
   const hq = s.sqlMode === "hq"
   const total = UNIT_COUNTS.reduce((a, [, n]) => a + n, 0)

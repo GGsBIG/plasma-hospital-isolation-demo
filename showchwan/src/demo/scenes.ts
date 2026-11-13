@@ -1,5 +1,5 @@
 import type { DemoState } from "./store"
-import { A_COLUMNS, A_DBS, HQ_WS, KB_FILES, CROSS_SQL, HQ_UNIT_SQL } from "./data"
+import { A_COLUMNS, A_DBS, KB_FILES, CROSS_SQL } from "./data"
 
 export interface Api {
   fast: boolean
@@ -158,26 +158,6 @@ export function buildScenes(): SceneRun[] {
       await press(a, "btn-product-save", "發布")
       a.update({ productOpen: false, products: ["A 分院護理人員名冊"] })
       await a.sleep(1800)
-    },
-
-    /* 8 · 跨院交換:總院取用 */
-    async (a) => {
-      a.update({ ...nav("/data-product", "product"), ws: WS_A, products: ["A 分院護理人員名冊"], sqlText: "", sqlRan: false, dialects: false, sqlMode: "hq" })
-      await a.sleep(600)
-      await press(a, "ws-switch", "切到總院")
-      a.update({ ws: HQ_WS })
-      await a.sleep(600)
-      await a.focus("product-table", "取用 A 分院名冊", 1800)
-      a.update({ spot: null })
-      await press(a, "nav-sql-playground", "彙整")
-      a.update(nav("/sql-playground", "sql"))
-      await a.moveTo("sql-editor")
-      await a.type((v) => ({ sqlText: v }), HQ_UNIT_SQL, 16)
-      await press(a, "btn-run-sql", "執行")
-      await a.sleep(600)
-      a.update({ sqlRan: true })
-      await a.focus("sql-result", "248 人", 2400)
-      a.update({ spot: null })
     },
   ]
 }
