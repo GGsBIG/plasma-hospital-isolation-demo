@@ -99,3 +99,24 @@
 .scn .brain-dot { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; will-change: transform; }
 .scn .brain-dot.strong { left: -4.5px; top: -4.5px; width: 9px; height: 9px; background: var(--red); }
 .scn .brain-ring { fill: none; stroke: currentColor; stroke-width: 0.3; transform-box: fill-box; transform-origin: center; }
+
+/* 痛點條列 */
+.scn-pains { display: flex; flex-direction: column; gap: 0.9cqh; }
+.scn-pains li { display: flex; align-items: center; gap: 0.6em; font-size: clamp(10px, 1.7cqw, 19px); font-weight: 700; color: var(--ink); opacity: 0.25; transition: opacity 0.5s var(--ease); }
+.scn-pains li::before { content: ""; width: 0.55em; height: 0.55em; background: var(--red); flex: none; }
+.scn-pains li.on { opacity: 1; }
+.scn-pains.inline { flex-direction: row; flex-wrap: wrap; gap: 0.6cqh 2.4cqw; padding: 1.2cqh 3cqw 0 calc(3cqw + min(6cqw, 56px) + 2.2cqw); }
+.scn-pains.inline li { opacity: 1; font-size: clamp(9px, 1.4cqw, 16px); color: var(--red); }
+/* 現況頁:左圖右欄 */
+.scn-row { flex: 1; min-height: 0; display: flex; }
+.scn-row .scn-board { flex: 1; }
+.scn-side { width: 36%; flex: none; padding: 2cqh 3cqw 2cqh 1cqw; display: flex; flex-direction: column; justify-content: center; gap: 1.4cqh; }
+.scn-side-h { font-size: clamp(10px, 1.5cqw, 16px); font-weight: 700; padding-bottom: 0.6cqh; border-bottom: 2px solid var(--ink); }
+.scn-side-h.red { color: var(--red); border-color: var(--red); }
+.scn-side-h + .scn-pains, .scn-side-h + .scn-road { margin-bottom: 2cqh; }
+.scn-road { display: flex; flex-direction: column; gap: 1cqh; }
+.scn-road li { display: flex; align-items: flex-start; gap: 0.8em; opacity: 0.2; transform: translateX(8px); transition: opacity 0.5s var(--ease), transform 0.5s var(--ease); }
+.scn-road li.on { opacity: 1; transform: none; }
+.scn-road .n { flex: none; display: grid; place-items: center; width: 1.7em; height: 1.7em; background: var(--ink); color: var(--paper); font-weight: 700; font-size: clamp(10px, 1.4cqw, 15px); }
+.scn-road b { display: block; font-size: clamp(10px, 1.6cqw, 18px); }
+.scn-road small { display: block; font-size: clamp(9px, 1.25cqw, 14px); color: var(--muted); margin-top: 0.2em; }

@@ -33,7 +33,7 @@ export function buildScenes(): SceneRun[] {
     /* 1 · 現況:只看情境圖 */
     async (a) => {
       a.update({ screen: "login" })
-      await a.sleep(4500)
+      await a.sleep(10500) // 等情境圖列完痛點與「在 Plasma 裡這樣做」再出總結卡
     },
 
     /* 2 · 接上三套資料庫 */

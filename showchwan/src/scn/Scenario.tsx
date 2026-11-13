@@ -110,10 +110,12 @@ function IsoNode({ n }: { n: N }) {
 }
 
 /** 情境圖:step 換了或 epoch(重播)變了,就從第 0 個子步驟開始,依時間自己往下播 */
-export function Scenario({ step, epoch }: { step: number; epoch: number }) {
+export function Scenario({ step, epoch, isMain }: { step: number; epoch: number; isMain: boolean }) {
   const { ref, k } = useFit()
   const [t, setT] = useState(0)
-  const total = STEPS[step].subs.length
+  const intro = step === 0 // 現況:右側列出痛點,再一步步帶出「在 Plasma 裡怎麼做」
+  const ROAD = STEPS.slice(1)
+  const total = STEPS[step].subs.length + (intro ? ROAD.length : 0)
   useEffect(() => {
     setT(0)
     let n = 0
@@ -126,10 +128,11 @@ export function Scenario({ step, epoch }: { step: number; epoch: number }) {
   }, [step, epoch, total])
 
   const tt = Math.min(t, total)
+  const ts = Math.min(tt, STEPS[step].subs.length) // 圖與子步驟用
   const dk = step === 0 ? 0 : step + 1 // 圖的狀態編號:登入那張(1)已拿掉
-  const { nodes, edges, note } = scene(dk, tt)
+  const { nodes, edges, note } = scene(dk, ts)
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]))
-  const brain = dk > 3 || (dk === 3 && tt >= 1)
+  const brain = dk > 3 || (dk === 3 && ts >= 1)
   brainVisibility.shown = brain
   const st = STEPS[step]
   return (
@@ -139,10 +142,15 @@ export function Scenario({ step, epoch }: { step: number; epoch: number }) {
         <div>
           <p className="scn-title">{st.title}</p>
           <ol className="scn-checks">
-            {st.subs.map((s, i) => <li key={i} className={i < tt ? "ok" : i === tt ? "now" : ""}>{s}</li>)}
+            {st.subs.map((s, i) => <li key={i} className={i < ts ? "ok" : i === ts ? "now" : ""}>{s}</li>)}
           </ol>
         </div>
       </div>
+      {/* 情境 2 起:情境圖放大時,痛點列在標題下 */}
+      {!intro && isMain && (
+        <ul className="scn-pains inline">{st.pains.map((p) => <li key={p}>{p}</li>)}</ul>
+      )}
+      <div className={intro ? "scn-row" : "contents"}>
       <div ref={ref} className="scn-board">
         <div className="scn-stage" style={{ width: W, height: H, transform: `translate(-50%, -50%) scale(${k})` }}>
           {brain && (
@@ -171,7 +179,7 @@ export function Scenario({ step, epoch }: { step: number; epoch: number }) {
           </svg>
           {nodes.map((n) => <IsoNode key={`${n.id}-${n.grow ? `grow-${epoch}` : ""}`} n={n} />)}
           {note && <div key={`${step}-${epoch}-${note.text}`} className={`scn-note ${note.tone}`} style={{ left: note.at.x, top: note.at.y }}>{note.text}</div>}
-          {dk === 3 && tt === 0 && KB_FILES.map((name, i) => (
+          {dk === 3 && ts === 0 && KB_FILES.map((name, i) => (
             <div key={`${name}-${epoch}`} className="scn-doc-anchor" style={{ left: PLASMA.x, top: PLASMA.y - KB_DY }}>
               <div className="scn-doc" style={{ "--x0": "260px", "--y0": `${-170 + i * 46}px`, animationDelay: `${0.12 * i}s` } as CSSProperties}>
                 <FileText className="h-4 w-4" />{name}
@@ -179,6 +187,25 @@ export function Scenario({ step, epoch }: { step: number; epoch: number }) {
             </div>
           ))}
         </div>
+      </div>
+      {intro && (
+        <aside className="scn-side">
+          <p className="scn-side-h red">痛點</p>
+          <ul className="scn-pains">{st.pains.map((p, i) => <li key={p} className={ts > i ? "on" : ""}>{p}</li>)}</ul>
+          <p className="scn-side-h">在 Plasma 裡這樣做</p>
+          <ol className="scn-road">
+            {ROAD.map((r, i) => {
+              const on = tt >= st.subs.length + i + 1
+              return (
+                <li key={r.title} className={on ? "on" : ""}>
+                  <span className="n">{i + 2}</span>
+                  <span><b>{r.title}</b><small>{r.how}</small></span>
+                </li>
+              )
+            })}
+          </ol>
+        </aside>
+      )}
       </div>
     </div>
   )

@@ -97,15 +97,22 @@ export function App() {
         </button>}
       </header>
 
-      <main className={`sc-stage-area ${main === "scn" ? "scn-main" : ""}`}>
+      <main className={`sc-stage-area ${main === "scn" ? "scn-main" : ""} ${solo ? "solo" : ""}`}>
         <section className={pane("plasma")} aria-label={label("plasma")}>
           <PlasmaFrame s={s} />
           {main !== "plasma" && <PipCover text={label("plasma")} onClick={swap} />}
         </section>
         <section className={pane("scn")} aria-label={label("scn")}>
-          <Scenario step={s.scn} epoch={s.epoch} />
+          <Scenario step={s.scn} epoch={s.epoch} isMain={main === "scn"} />
           {main !== "scn" && <PipCover text={label("scn")} onClick={swap} />}
         </section>
+        {/* Plasma 操作放大時,左下角列出這個情境要解決的痛點 */}
+        {main === "plasma" && cur > 0 && (
+          <div key={cur} className="pain-card" aria-label="痛點">
+            <p>痛點</p>
+            <ul>{STEPS[cur].pains.map((x) => <li key={x}>{x}</li>)}</ul>
+          </div>
+        )}
         <DoneCard s={s} onReplay={() => play(cur)} onNext={() => play(cur + 1)} />
       </main>
 

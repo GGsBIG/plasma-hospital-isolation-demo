@@ -164,3 +164,13 @@ body { overflow: hidden; }
 /* 前兩個情境:右下角小畫面先藏起來 */
 .sc-pane.pip.off { opacity: 0; visibility: hidden; pointer-events: none; }
 .sc-pane.pip { transition: left 0.55s var(--sc-ease), top 0.55s var(--sc-ease), width 0.55s var(--sc-ease), height 0.55s var(--sc-ease), opacity 0.4s, visibility 0.4s; }
+
+/* 痛點卡:Plasma 操作放大時,左下角(蓋在側欄下半部,不擋操作) */
+.pain-card { position: absolute; left: 20px; bottom: 20px; z-index: 34; width: 280px; padding: 14px 16px; background: #fff; border: 2px solid var(--sc-ink); border-top: 6px solid var(--sc-red); box-shadow: 0 14px 30px -14px rgb(17 17 17 / 0.4); animation: tc-up 0.5s var(--sc-ease); }
+.pain-card p { font-size: 13px; font-weight: 700; color: var(--sc-red); }
+.pain-card ul { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.pain-card li { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; line-height: 1.4; }
+.pain-card li::before { content: ""; width: 8px; height: 8px; background: var(--sc-red); flex: none; }
+
+/* 現況(只有一個畫面):情境圖不用讓位給小畫面 */
+.sc-stage-area.solo .scn-board { margin-right: 0; }
