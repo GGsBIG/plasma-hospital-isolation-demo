@@ -5,7 +5,7 @@ import { Sidebar, TopBar, DatabaseListPage } from "@/app/Shell"
 import { LoginPage } from "@/app/Login"
 import { AddDatabaseDialog, UploadDocDialog } from "@/dialogs/Dialogs"
 import { AgentScreen, KnowledgePage, NewProductDialog, ProductPage, SqlPage } from "@/app/ScPages"
-import { Cursor, ChapterBar, Spotlight, TitleCard, DoneCard } from "@/demo/Overlay"
+import { Cursor, ChapterBar, Spotlight, DoneCard } from "@/demo/Overlay"
 import { STEPS } from "@/sc/steps"
 import { Scenario } from "@/scn/Scenario"
 import type { DemoState } from "@/demo/store"
@@ -101,10 +101,9 @@ export function App() {
           {main !== "plasma" && <PipCover text={label("plasma")} onClick={swap} />}
         </section>
         <section className={pane("scn")} aria-label={label("scn")}>
-          <Scenario step={s.scn} sub={s.sub} hot={s.hot} />
+          <Scenario step={s.scn} epoch={s.epoch} />
           {main !== "scn" && <PipCover text={label("scn")} onClick={swap} />}
         </section>
-        <TitleCard s={s} />
         <DoneCard s={s} onReplay={() => play(cur)} onNext={() => play(cur + 1)} />
       </main>
 

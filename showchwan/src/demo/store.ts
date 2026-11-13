@@ -78,6 +78,9 @@ export interface DemoState {
   products: string[]
   sqlText: string
   sqlRan: boolean
+  sqlMode: "cross" | "hq"
+  dialects: boolean // SQL Playground 上方「以前:三種語法」對照
+  epoch: number // 重播次數(情境圖用來從頭播)
   scn: number // 目前的情境(0~5)
   sub: number // 這個情境完成了幾個子步驟
   hot: string | null // 情境圖上正在發生事情的節點
@@ -147,6 +150,9 @@ export const initialState: DemoState = {
   products: [],
   sqlText: "",
   sqlRan: false,
+  sqlMode: "cross",
+  dialects: false,
+  epoch: 0,
   scn: 0,
   sub: 0,
   hot: null,

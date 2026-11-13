@@ -136,3 +136,20 @@ export const A_COLUMNS: Column[] = [
   { name: "DEPT_C", type: "CHAR(4)", desc: "所屬單位代碼（對照單位主檔）" },
   { name: "HIRE_DT", type: "DATE", desc: "到職日期" },
 ]
+
+/* ================= A 分院的三套資料庫(跨資料庫查詢示範) ================= */
+export const A_DBS = [
+  { conn: "a_his", name: "HIS 門診", type: "Oracle", desc: "A 分院 HIS（門診）", host: "his-a.showchwan.local", port: "1521", db: "HISA", dialect: "SELECT * FROM NURSE_MST WHERE ROWNUM <= 10" },
+  { conn: "a_nursing", name: "護理系統", type: "PostgreSQL", desc: "A 分院護理系統", host: "nis-a.showchwan.local", port: "5432", db: "nis", dialect: "SELECT * FROM shift LIMIT 10" },
+  { conn: "a_hr", name: "人事系統", type: "MS SQL", desc: "A 分院人事系統", host: "hr-a.showchwan.local", port: "1433", db: "HR", dialect: "SELECT TOP 10 * FROM HR_DEPT" },
+]
+export const CROSS_SQL = `SELECT n.NRS_NAME, d.DEPT_NAME, s.shift
+FROM a_his.NURSE_MST n
+JOIN a_nursing.shift s ON s.nurse_no = n.NRS_NO
+JOIN a_hr.HR_DEPT d ON d.DEPT_C = n.DEPT_C
+LIMIT 10`
+export const CROSS_ROWS: [string, string, string][] = [["林○○", "內科病房", "白班"], ["陳○○", "急診", "小夜"], ["王○○", "外科病房", "大夜"], ["張○○", "門診", "白班"]]
+export const HQ_UNIT_SQL = `SELECT unit, COUNT(*) AS nurses
+FROM data_product.a.nurse_roster
+GROUP BY unit`
+export const UNIT_COUNTS: [string, number][] = [["內科病房", 62], ["外科病房", 55], ["急診", 41], ["門診", 48], ["加護病房", 42]]

@@ -83,3 +83,19 @@
 .scn-node { transition: left 0.8s var(--ease), top 0.8s var(--ease), opacity 0.6s var(--ease); }
 .scn-pulse { position: absolute; left: -95px; top: -48px; width: 190px; height: 96px; border-radius: 50%; border: 3px solid var(--red); animation: scn-pulse 1.4s ease-out infinite; pointer-events: none; }
 @keyframes scn-pulse { from { transform: scale(0.7); opacity: 0.9; } to { transform: scale(1.25); opacity: 0; } }
+
+/* Plasma 長出的「資料大腦」:光暈 + 神經網路(Plasma 藍) */
+.scn .brain-aura { background: radial-gradient(closest-side, rgb(37 132 235 / 0.14), rgb(37 132 235 / 0.05) 55%, rgb(37 132 235 / 0) 100%); animation: scn-breathe 4s ease-in-out infinite; }
+@keyframes scn-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.scn .brain-net { color: rgb(37 132 235); }
+.scn .brain-line { stroke: currentColor; stroke-opacity: 0.45; stroke-width: 0.16; stroke-dasharray: 1; transition: opacity 0.25s; }
+.scn .brain-node { fill: currentColor; fill-opacity: 0.7; transform-box: fill-box; transform-origin: center; }
+.scn .brain-node-wrap { transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s; }
+.scn .brain-net.grow .brain-line { animation: scn-brain-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.scn .brain-net.grow .brain-node { animation: scn-brain-pop 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.scn .brain-net.idle { animation: scn-fade 0.8s ease backwards; }
+@keyframes scn-brain-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes scn-brain-pop { from { transform: scale(0); } }
+.scn .brain-dot { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; will-change: transform; }
+.scn .brain-dot.strong { left: -4.5px; top: -4.5px; width: 9px; height: 9px; background: var(--red); }
+.scn .brain-ring { fill: none; stroke: currentColor; stroke-width: 0.3; transform-box: fill-box; transform-origin: center; }

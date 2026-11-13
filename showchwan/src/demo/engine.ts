@@ -96,11 +96,8 @@ export function useDemo() {
     const fastApi = makeApi(true)
     for (let k = 0; k < n; k++) await scenes[k](fastApi)
     if (gen !== genRef.current) return
-    apply({ scn: n, sub: 0, hot: null, spot: null, done: false, titleCard: true })
+    apply((st) => ({ scn: n, sub: 0, hot: null, spot: null, done: false, titleCard: false, epoch: st.epoch + 1 }))
     const api = makeApi(false)
-    await api.sleep(2400) // 開場標題卡
-    if (gen !== genRef.current) return
-    apply({ titleCard: false })
     await scenes[n](api)
     if (gen !== genRef.current) return
     apply({ done: true, spot: null, sub: STEPS[n].subs.length })

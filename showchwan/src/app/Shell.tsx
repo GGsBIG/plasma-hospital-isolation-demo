@@ -12,7 +12,7 @@ import {
   DataTable, DTHeadRow, DTHead, DTRow, DTCell, DTEmpty,
 } from "@/components/ui"
 import type { DemoState } from "@/demo/store"
-import { TABLE_NAME, MVIEW_NAME, API_URL, BRANCHES } from "@/demo/data"
+import { TABLE_NAME, MVIEW_NAME, API_URL, BRANCHES, A_DBS } from "@/demo/data"
 
 /* 側欄：與真正 Plasma 前端的路由清單、圖示、樣式相同（app-sidebar.tsx + ui/sidebar.tsx） */
 const NAV: { group: string; sep?: boolean; items: { label: string; path: string; icon: any }[] }[] = [
@@ -256,7 +256,7 @@ export function Pagination({ total }: { total: number }) {
 
 /* ---------- Data Access 列表頁 ---------- */
 const DA_ROWS: Record<string, { desc: string; host: string; port: string }> = Object.fromEntries(
-  BRANCHES.map((b) => [b.conn, { desc: b.desc, host: b.host, port: b.port }]),
+  [...BRANCHES, ...A_DBS].map((b) => [b.conn, { desc: b.desc, host: b.host, port: b.port }]),
 )
 
 export function DatabaseListPage({ s }: { s: DemoState }) {

@@ -8,7 +8,7 @@ import {
 } from "@/components/ui"
 import { ListPage, Pagination, SortIcon } from "@/app/Shell"
 import type { DemoState } from "@/demo/store"
-import { HQ_SQL, ROSTER_COUNTS, ROSTER_SAMPLE } from "@/demo/data"
+import { HQ_SQL, ROSTER_SAMPLE, A_DBS, CROSS_ROWS, UNIT_COUNTS } from "@/demo/data"
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return <div className="space-y-1"><Label required={required}>{label}</Label>{children}</div>
@@ -142,7 +142,8 @@ export function NewProductDialog({ s }: { s: DemoState }) {
 
 /* ---------- SQL Playground(總院查詢資料產品) ---------- */
 export function SqlPage({ s }: { s: DemoState }) {
-  const total = ROSTER_COUNTS.reduce((a, [, n]) => a + n, 0)
+  const hq = s.sqlMode === "hq"
+  const total = UNIT_COUNTS.reduce((a, [, n]) => a + n, 0)
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center border-b pl-8 pr-6 pt-6 pb-4 bg-background">
@@ -150,19 +151,41 @@ export function SqlPage({ s }: { s: DemoState }) {
         <div className="ml-auto"><Button data-t="btn-run-sql" variant="brand" size="iconText"><Play /> Run</Button></div>
       </div>
       <div className="flex-1 min-h-0 bg-sidebar p-6 flex flex-col gap-4">
+        {/* 沒有 Plasma 之前:三套資料庫,各寫一種語法 */}
+        {s.dialects && (
+          <div data-t="dialects" className="grid grid-cols-3 gap-3 fadeup on">
+            {A_DBS.map((d) => (
+              <div key={d.conn} className="rounded-lg border bg-background p-3 opacity-80">
+                <div className="text-xs font-medium text-muted-foreground">{d.name} · {d.type}</div>
+                <code className="mt-1.5 block font-mono text-[12px] text-[#b42622]">{d.dialect}</code>
+              </div>
+            ))}
+          </div>
+        )}
         <Card className="p-0 overflow-hidden">
           <pre data-t="sql-editor" className="min-h-[120px] p-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap">{s.sqlText}<span className="inline-block w-[7px] h-4 align-middle bg-foreground/60 animate-pulse" /></pre>
         </Card>
         {s.sqlRan && (
-          <Card data-t="sql-result" className="p-0 overflow-hidden fadeup on">
-            <div className="px-4 py-2.5 border-b text-xs text-muted-foreground">示意數字</div>
-            <table className="w-full text-sm">
-              <thead className="bg-sidebar text-muted-foreground"><tr><th className="px-4 py-2 text-left font-medium">branch</th><th className="px-4 py-2 text-left font-medium">nurses</th></tr></thead>
-              <tbody>
-                {ROSTER_COUNTS.map(([b, n]) => <tr key={b} className="border-t"><td className="px-4 py-2">{b}</td><td className="px-4 py-2 tabular-nums">{n}</td></tr>)}
-                <tr className="border-t bg-sidebar font-medium"><td className="px-4 py-2">合計</td><td className="px-4 py-2 tabular-nums">{total}</td></tr>
-              </tbody>
-            </table>
+          <Card data-t="sql-result" className="p-0 overflow-hidden fadeup on max-w-[720px]">
+            <div className="px-4 py-2.5 border-b text-xs text-muted-foreground">示意資料</div>
+            {hq ? (
+              <table className="w-full text-sm">
+                <thead className="bg-sidebar text-muted-foreground"><tr><th className="px-4 py-2 text-left font-medium">unit</th><th className="px-4 py-2 text-left font-medium">nurses</th></tr></thead>
+                <tbody>
+                  {UNIT_COUNTS.map(([u, n]) => <tr key={u} className="border-t"><td className="px-4 py-2">{u}</td><td className="px-4 py-2 tabular-nums">{n}</td></tr>)}
+                  <tr className="border-t bg-sidebar font-medium"><td className="px-4 py-2">合計</td><td className="px-4 py-2 tabular-nums">{total}</td></tr>
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-sidebar text-muted-foreground"><tr>
+                  {[["NRS_NAME", "HIS 門診"], ["DEPT_NAME", "人事系統"], ["shift", "護理系統"]].map(([c, src]) => (
+                    <th key={c} className="px-4 py-2 text-left font-medium">{c} <span className="ml-1 rounded bg-background px-1.5 py-0.5 text-[11px] font-normal">{src}</span></th>
+                  ))}
+                </tr></thead>
+                <tbody>{CROSS_ROWS.map((r) => <tr key={r[0]} className="border-t">{r.map((c, i) => <td key={i} className="px-4 py-2">{c}</td>)}</tr>)}</tbody>
+              </table>
+            )}
           </Card>
         )}
       </div>

@@ -52,21 +52,6 @@ export function Spotlight({ s }: { s: DemoState }) {
   )
 }
 
-/** 情境開場標題卡:蓋在兩個畫面上 2 秒多 */
-export function TitleCard({ s }: { s: DemoState }) {
-  if (!s.titleCard) return null
-  const st = STEPS[s.scn]
-  return (
-    <div className="title-card" role="status">
-      <div className="title-card-box">
-        <p className="title-card-n">{s.scn + 1}／{STEPS.length}</p>
-        <h2>{st.title}</h2>
-        <p className="title-card-goal">{st.goal}</p>
-      </div>
-    </div>
-  )
-}
-
 /** 情境播完:這一步完成了什麼,以及重播／下一個情境 */
 export function DoneCard({ s, onReplay, onNext }: { s: DemoState; onReplay: () => void; onNext: () => void }) {
   if (!s.done) return null

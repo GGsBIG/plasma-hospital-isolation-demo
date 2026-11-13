@@ -1,5 +1,5 @@
 import type { DemoState } from "./store"
-import { A_COLUMNS, BRANCHES, HQ_WS, KB_FILES, HQ_SQL } from "./data"
+import { A_COLUMNS, A_DBS, HQ_WS, KB_FILES, CROSS_SQL, HQ_UNIT_SQL } from "./data"
 
 export interface Api {
   fast: boolean
@@ -15,7 +15,8 @@ export interface Api {
 
 export type SceneRun = (a: Api) => Promise<void>
 
-const A = BRANCHES[0]
+const A = A_DBS[0]
+const WS_A = "A 分院"
 const emptyForm = { display_name: "", db_type: "", description: "", host: "", port: "", db_name: "", username: "", password: "" }
 const nav = (path: string, page: DemoState["page"]) => ({ navActive: path, page, screen: "app" as const })
 const sub = (n: number, hot: string | null = null) => ({ sub: n, hot })
@@ -31,150 +32,151 @@ export function buildScenes(): SceneRun[] {
   return [
     /* 1 · 現況:只看情境圖 */
     async (a) => {
-      a.update({ screen: "login", ...sub(0, "dbs") })
-      await a.sleep(2600)
-      a.update(sub(1, "schema"))
-      await a.sleep(3200)
-      a.update(sub(3, "hq"))
-      await a.sleep(2600)
+      a.update({ screen: "login" })
+      await a.sleep(4500)
     },
 
     /* 2 · 登入 Plasma */
     async (a) => {
-      a.update({ screen: "login", loginUser: "", loginPass: "", ...sub(0) })
+      a.update({ screen: "login", loginUser: "", loginPass: "" })
       await a.focus("login-user", "輸入帳號")
       await a.type((v) => ({ loginUser: v }), "a-admin")
       await a.moveTo("login-pass")
       await a.type((v) => ({ loginPass: v }), "••••••••", 70)
-      a.update({ spot: null, ...sub(1) })
+      a.update({ spot: null })
       await press(a, "login-submit", "登入")
       a.update({ loggingIn: true })
       await a.sleep(800)
-      a.update({ loggingIn: false, ...nav("/database", "list"), ws: A.ws, ...sub(1, "plasma") })
-      await a.sleep(1400)
+      a.update({ loggingIn: false, ...nav("/database", "list"), ws: WS_A })
+      await a.sleep(1200)
     },
 
-    /* 3 · A 分院接上 Plasma */
+    /* 3 · 接上三套資料庫 */
     async (a) => {
-      a.update({ ...nav("/database", "list"), ws: A.ws, connections: [], ...sub(0, "plasma") })
-      await a.sleep(700)
-
-      await press(a, "nav-database", "Data Access")
-      a.update({ ...nav("/database", "list"), connections: [] })
-      await a.sleep(500)
+      a.update({ ...nav("/database", "list"), ws: WS_A, connections: [] })
+      await a.sleep(600)
       await press(a, "btn-add-db", "新增資料庫")
       a.update({ addOpen: true, form: { ...emptyForm }, connStatus: "void" })
-      await a.focus("f-name", "連線資訊", 500)
+      await a.focus("f-name", "HIS 門診", 400)
       await a.type((v) => ({ form: { ...emptyForm, display_name: v } }), A.conn)
-      a.update((s) => ({ form: { ...s.form, db_type: A.type, description: A.desc } }))
-      await a.sleep(500)
-      await a.moveTo("f-host")
-      await a.type((v) => ({ form: { ...emptyForm, display_name: A.conn, db_type: A.type, description: A.desc, host: v } }), A.host, 24)
-      a.update((s) => ({ spot: null, form: { ...s.form, port: A.port, db_name: A.db, username: "readonly", password: "readonly" } }))
-      await a.sleep(600)
-      await press(a, "btn-verify", "唯讀驗證")
-      a.update({ connStatus: "preparing", ...sub(1) })
-      await a.sleep(1300)
-      a.update({ connStatus: "ready" })
+      a.update((s) => ({ spot: null, form: { ...s.form, db_type: A.type, description: A.desc, host: A.host, port: A.port, db_name: A.db, username: "readonly", password: "readonly" } }))
       await a.sleep(700)
+      await press(a, "btn-verify", "唯讀驗證")
+      a.update({ connStatus: "preparing" })
+      await a.sleep(1100)
+      a.update({ connStatus: "ready" })
+      await a.sleep(500)
       await press(a, "btn-save", "儲存")
-      a.update({ addOpen: false, connections: [{ name: A.conn, type: A.type, status: "ready" }], ...sub(2, "edgeA") })
-      await a.sleep(1600)
+      a.update({ addOpen: false, connections: [{ name: A.conn, type: A.type, status: "ready" }] })
+      await a.sleep(900)
+      // 護理系統、人事系統照樣接上
+      await a.focus("btn-add-db", "護理系統、人事系統", 700)
+      a.update({ spot: null })
+      for (const d of A_DBS.slice(1)) {
+        a.update((s) => ({ connections: [...s.connections, { name: d.conn, type: d.type, status: "ready" }] }))
+        await a.sleep(800)
+      }
+      await a.sleep(800)
     },
 
-    /* 4 · 讓 AI 看懂 A 分院的欄位 */
+    /* 4 · AI 看懂欄位(Plasma 長出大腦) */
     async (a) => {
-      a.update({ ...nav("/database", "list"), ws: A.ws, ...sub(0) })
-      await a.sleep(500)
-      await press(a, "nav-knowledge", "知識庫")
-      a.update({ ...nav("/knowledge", "knowledge"), ...sub(1) })
+      a.update({ ...nav("/knowledge", "knowledge"), ws: WS_A, kbDocs: [], columns: [] })
       await a.sleep(500)
       await press(a, "btn-kb-upload", "上傳文件")
       a.update({ uploadOpen: true, files: [] })
-      await a.focus("dropzone", "系統文件", 500)
+      await a.focus("dropzone", "系統文件", 400)
       for (const f of KB_FILES) {
         a.update((s) => ({ files: [...s.files, f] }))
-        await a.sleep(300)
+        await a.sleep(280)
       }
       a.update({ spot: null })
-      await a.sleep(500)
       await press(a, "btn-upload", "上傳")
-      a.update({ uploadOpen: false, kbDocs: KB_FILES.map((name) => ({ name, status: "processing" })), ...sub(2, "docs") })
-      await a.sleep(2000)
+      a.update({ uploadOpen: false, kbDocs: KB_FILES.map((name) => ({ name, status: "processing" })) })
+      await a.sleep(1800)
       for (let i = 0; i < KB_FILES.length; i++) {
         a.update((s) => ({ kbDocs: s.kbDocs.map((d, k) => (k === i ? { ...d, status: "ready" } : d)) }))
-        await a.sleep(350)
+        await a.sleep(300)
       }
-      a.update({ ...sub(3, "kb"), columns: A_COLUMNS.map((c) => ({ ...c, desc: "" })) })
-      await a.sleep(900)
-      // 欄位說明一個一個補上
+      a.update({ columns: A_COLUMNS.map((c) => ({ ...c, desc: "" })) })
+      await a.sleep(700)
       for (let i = 0; i < A_COLUMNS.length; i++) {
-        await a.type((v) => ({ columns: A_COLUMNS.map((c, k) => ({ ...c, desc: k < i ? c.desc : k === i ? v : "" })) }), A_COLUMNS[i].desc, 45)
-        await a.sleep(250)
+        await a.type((v) => ({ columns: A_COLUMNS.map((c, k) => ({ ...c, desc: k < i ? c.desc : k === i ? v : "" })) }), A_COLUMNS[i].desc, 40)
+        await a.sleep(200)
       }
-      a.update(sub(4, "kb"))
-      await a.focus("col-panel", "N02 = 護理師", 2600)
+      await a.focus("col-panel", "N02 = 護理師", 2400)
       a.update({ spot: null })
     },
 
-    /* 5 · 用問的整理資料 */
+    /* 5 · 一種 SQL 查三套資料庫 */
+    async (a) => {
+      a.update({ ...nav("/sql-playground", "sql"), ws: WS_A, sqlMode: "cross", sqlText: "", sqlRan: false, dialects: true })
+      await a.sleep(500)
+      await a.focus("dialects", "以前：三套資料庫，三種語法", 2600)
+      a.update({ spot: null })
+      await a.moveTo("sql-editor")
+      await a.type((v) => ({ sqlText: v }), CROSS_SQL, 14)
+      await a.focus("sql-editor", "現在：一句 SQL 查三套", 1400)
+      a.update({ spot: null })
+      await press(a, "btn-run-sql", "執行")
+      await a.sleep(600)
+      a.update({ sqlRan: true })
+      await a.focus("sql-result", "三套資料庫，一次查到", 2400)
+      a.update({ spot: null })
+    },
+
+    /* 6 · 用問的整理資料 */
     async (a) => {
       const q = "整理 A 分院的護理人員名冊。"
-      a.update({ screen: "agent", agentMsgs: [], agentInput: "", ws: A.ws, ...sub(0, "ai") })
-      await a.sleep(900)
-      await a.focus("agent-input", "直接問", 600)
-      await a.type((v) => ({ agentInput: v }), q, 55)
+      a.update({ screen: "agent", agentMsgs: [], agentInput: "", ws: WS_A })
+      await a.sleep(600)
+      await a.focus("agent-input", "直接問", 500)
+      await a.type((v) => ({ agentInput: v }), q, 60)
       a.update({ spot: null })
       await a.click("agent-send")
-      a.update((s) => ({ agentInput: "", agentMsgs: [...s.agentMsgs, { role: "user", text: q }], ...sub(1, "ai") }))
-      const tools = [
-        "list_tables → NURSE_MST",
-        "describe_columns → N02 = 護理師",
-        "create_view → 護理人員名冊",
-      ]
-      for (const t of tools) {
-        await a.sleep(1400)
+      a.update((s) => ({ agentInput: "", agentMsgs: [...s.agentMsgs, { role: "user", text: q }] }))
+      for (const t of ["list_tables → 三套資料庫", "describe_columns → N02 = 護理師", "create_view → 護理人員名冊"]) {
+        await a.sleep(1100)
         a.update((s) => ({ agentMsgs: [...s.agentMsgs, { role: "tool", text: t }] }))
       }
-      await a.sleep(1400)
-      a.update((s) => ({ agentMsgs: [...s.agentMsgs, { role: "ai", text: "A 分院 248 位護理人員（示意）：", table: true }], ...sub(3, "ai") }))
-      await a.focus("agent-answer", "名冊完成", 2600)
+      await a.sleep(1100)
+      a.update((s) => ({ agentMsgs: [...s.agentMsgs, { role: "ai", text: "A 分院 248 位護理人員（示意）：", table: true }] }))
+      await a.focus("agent-answer", "名冊完成", 2400)
       a.update({ spot: null })
     },
 
-    /* 6 · 上架成資料產品 */
+    /* 7 · 上架資料產品 */
     async (a) => {
-      a.update({ ...nav("/data-product", "product"), ws: A.ws, form: { ...emptyForm }, products: [], ...sub(0) })
-      await a.sleep(700)
+      a.update({ ...nav("/data-product", "product"), ws: WS_A, form: { ...emptyForm }, products: [] })
+      await a.sleep(600)
       await press(a, "btn-add-product", "新增資料產品")
-      a.update({ productOpen: true, ...sub(1, "prod") })
-      await a.focus("f-product-name", "命名", 500)
-      await a.type((v) => ({ form: { ...emptyForm, display_name: v } }), "A 分院護理人員名冊", 100)
-      a.update({ spot: null, ...sub(2, "prod") })
-      await a.sleep(800)
+      a.update({ productOpen: true })
+      await a.focus("f-product-name", "命名", 400)
+      await a.type((v) => ({ form: { ...emptyForm, display_name: v } }), "A 分院護理人員名冊", 90)
+      a.update({ spot: null })
+      await a.sleep(500)
       await press(a, "btn-product-save", "發布")
-      a.update({ productOpen: false, products: ["A 分院護理人員名冊"], ...sub(3, "prod") })
-      await a.sleep(2200)
+      a.update({ productOpen: false, products: ["A 分院護理人員名冊"] })
+      await a.sleep(1800)
     },
 
-    /* 7 · 跨院交換:總院彙整 */
+    /* 8 · 跨院交換:總院取用 */
     async (a) => {
-      a.update({ ...nav("/data-product", "product"), ws: A.ws, products: ["A 分院護理人員名冊"], sqlText: "", sqlRan: false, ...sub(0, "others") })
-      await a.sleep(3200) // 情境圖:B、C、D 分院照同樣步驟接上、上架
-      a.update(sub(1, "hq"))
+      a.update({ ...nav("/data-product", "product"), ws: WS_A, products: ["A 分院護理人員名冊"], sqlText: "", sqlRan: false, dialects: false, sqlMode: "hq" })
+      await a.sleep(600)
       await press(a, "ws-switch", "切到總院")
-      a.update({ ws: HQ_WS, products: BRANCHES.map((b) => `${b.ws}護理人員名冊`), ...sub(2, "hq") })
-      await a.sleep(800)
-      await a.focus("product-table", "四家資料產品", 2200)
+      a.update({ ws: HQ_WS })
+      await a.sleep(600)
+      await a.focus("product-table", "取用 A 分院名冊", 1800)
       a.update({ spot: null })
-      await press(a, "nav-sql-playground", "一次查四家")
-      a.update({ ...nav("/sql-playground", "sql"), ...sub(3, "hq") })
+      await press(a, "nav-sql-playground", "彙整")
+      a.update(nav("/sql-playground", "sql"))
       await a.moveTo("sql-editor")
-      await a.type((v) => ({ sqlText: v }), HQ_SQL, 12)
+      await a.type((v) => ({ sqlText: v }), HQ_UNIT_SQL, 16)
       await press(a, "btn-run-sql", "執行")
-      await a.sleep(700)
-      a.update({ sqlRan: true, ...sub(4, "hq") })
-      await a.focus("sql-result", "合計 812 人", 2600)
+      await a.sleep(600)
+      a.update({ sqlRan: true })
+      await a.focus("sql-result", "248 人", 2400)
       a.update({ spot: null })
     },
   ]
