@@ -39,18 +39,24 @@ export function buildScenes(): SceneRun[] {
       await a.sleep(2600)
     },
 
-    /* 2 · A 分院接上 Plasma */
+    /* 2 · 登入 Plasma */
     async (a) => {
       a.update({ screen: "login", loginUser: "", loginPass: "", ...sub(0) })
-      await a.focus("login-user", "用 A 分院的帳號登入")
+      await a.focus("login-user", "輸入 A 分院的帳號")
       await a.type((v) => ({ loginUser: v }), "a-admin")
       await a.moveTo("login-pass")
       await a.type((v) => ({ loginPass: v }), "••••••••", 70)
-      a.update({ spot: null })
-      await a.click("login-submit")
+      a.update({ spot: null, ...sub(1) })
+      await press(a, "login-submit", "登入")
       a.update({ loggingIn: true })
       await a.sleep(800)
       a.update({ loggingIn: false, ...nav("/database", "list"), ws: A.ws, ...sub(1, "plasma") })
+      await a.sleep(1400)
+    },
+
+    /* 3 · A 分院接上 Plasma */
+    async (a) => {
+      a.update({ ...nav("/database", "list"), ws: A.ws, connections: [], ...sub(0, "plasma") })
       await a.sleep(700)
 
       await press(a, "nav-database", "到 Data Access，接上資料庫")
@@ -67,16 +73,16 @@ export function buildScenes(): SceneRun[] {
       a.update((s) => ({ spot: null, form: { ...s.form, port: A.port, db_name: A.db, username: "readonly", password: "readonly" } }))
       await a.sleep(600)
       await press(a, "btn-verify", "用唯讀帳號驗證連線")
-      a.update({ connStatus: "preparing", ...sub(2) })
+      a.update({ connStatus: "preparing", ...sub(1) })
       await a.sleep(1300)
       a.update({ connStatus: "ready" })
       await a.sleep(700)
       await press(a, "btn-save", "連線成功，儲存")
-      a.update({ addOpen: false, connections: [{ name: A.conn, type: A.type, status: "ready" }], ...sub(3, "edgeA") })
+      a.update({ addOpen: false, connections: [{ name: A.conn, type: A.type, status: "ready" }], ...sub(2, "edgeA") })
       await a.sleep(1600)
     },
 
-    /* 3 · 讓 AI 看懂 A 分院的欄位 */
+    /* 4 · 讓 AI 看懂 A 分院的欄位 */
     async (a) => {
       a.update({ ...nav("/database", "list"), ws: A.ws, ...sub(0) })
       await a.sleep(500)
@@ -111,7 +117,7 @@ export function buildScenes(): SceneRun[] {
       a.update({ spot: null })
     },
 
-    /* 4 · 用問的整理資料 */
+    /* 5 · 用問的整理資料 */
     async (a) => {
       const q = "把 A 分院的護理人員整理成一份名冊：員工編號、姓名、職稱、單位。"
       a.update({ screen: "agent", agentMsgs: [], agentInput: "", ws: A.ws, ...sub(0, "ai") })
@@ -136,7 +142,7 @@ export function buildScenes(): SceneRun[] {
       a.update({ spot: null })
     },
 
-    /* 5 · 上架成資料產品 */
+    /* 6 · 上架成資料產品 */
     async (a) => {
       a.update({ ...nav("/data-product", "product"), ws: A.ws, form: { ...emptyForm }, products: [], ...sub(0) })
       await a.sleep(700)
@@ -151,7 +157,7 @@ export function buildScenes(): SceneRun[] {
       await a.sleep(2200)
     },
 
-    /* 6 · 跨院交換:總院彙整 */
+    /* 7 · 跨院交換:總院彙整 */
     async (a) => {
       a.update({ ...nav("/data-product", "product"), ws: A.ws, products: ["A 分院護理人員名冊"], sqlText: "", sqlRan: false, ...sub(0, "others") })
       await a.sleep(3200) // 情境圖:B、C、D 分院照同樣步驟接上、上架

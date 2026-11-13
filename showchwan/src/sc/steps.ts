@@ -17,10 +17,17 @@ export const STEPS: ScenarioDef[] = [
     main: "scn",
   },
   {
+    title: "登入 Plasma",
+    goal: "先從 A 分院開始：用 A 分院的帳號登入 Plasma。",
+    done: "已登入 Plasma，接下來把 A 分院的資料庫接上來。",
+    subs: ["輸入帳號密碼", "登入"],
+    main: "plasma",
+  },
+  {
     title: "A 分院接上 Plasma",
-    goal: "先從 A 分院開始：登入 Plasma，把 A 分院的資料庫以唯讀方式接上。",
+    goal: "把 A 分院的資料庫以唯讀方式接上 Plasma，不搬資料、不動原本的系統。",
     done: "A 分院的資料庫已經唯讀接上 Plasma，不搬資料，也不動原本的系統。",
-    subs: ["登入 Plasma", "新增 A 分院資料庫（唯讀）", "驗證連線並儲存"],
+    subs: ["新增 A 分院資料庫（唯讀）", "驗證連線並儲存"],
     main: "plasma",
   },
   {

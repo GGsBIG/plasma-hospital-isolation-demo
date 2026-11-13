@@ -111,9 +111,12 @@ function IsoNode({ n }: { n: N }) {
 
 export function Scenario({ step, sub, hot }: { step: number; sub: number; hot: string | null }) {
   const { ref, k } = useFit()
-  const { nodes, edges } = scene(step, sub, hot)
+  // 登入(1)與接上(2)共用同一張圖:登入後 Plasma 出現;接上的兩個子步驟對應原本的第 2、3 格
+  const dk = step <= 1 ? step : step - 1
+  const ds = step === 1 ? Math.min(sub, 1) : step === 2 ? sub + 1 : sub
+  const { nodes, edges } = scene(dk, ds, hot)
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]))
-  const note = noteOf(step, sub)
+  const note = noteOf(dk, ds)
   const st = STEPS[step]
   return (
     <div className="scn">
@@ -148,7 +151,7 @@ export function Scenario({ step, sub, hot }: { step: number; sub: number; hot: s
           </svg>
           {nodes.map((n) => <IsoNode key={n.id + (n.grow ? "-grow" : "")} n={n} />)}
           {note && <div key={`${step}-${note.text}`} className={`scn-note ${note.tone}`} style={{ left: note.at.x, top: note.at.y }}>{note.text}</div>}
-          {step === 2 && hot === "docs" && KB_FILES.map((name, i) => (
+          {dk === 2 && hot === "docs" && KB_FILES.map((name, i) => (
             <div key={name} className="scn-doc-anchor" style={{ left: PLASMA.x, top: PLASMA.y - KB_DY }}>
               <div className="scn-doc" style={{ "--x0": "260px", "--y0": `${-170 + i * 46}px`, animationDelay: `${0.15 * i}s` } as CSSProperties}>
                 <FileText className="h-4 w-4" />{name}
