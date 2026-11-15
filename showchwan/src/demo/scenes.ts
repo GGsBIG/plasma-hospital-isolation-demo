@@ -36,7 +36,7 @@ export function buildScenes(): SceneRun[] {
       await a.sleep(10500) // 等情境圖列完痛點與「在 Plasma 裡這樣做」再出總結卡
     },
 
-    /* 2 · 接上三套資料庫 */
+    /* 2 · 接上異質資料庫 */
     async (a) => {
       a.update({ ...nav("/database", "list"), ws: WS_A, connections: [] })
       await a.sleep(600)
