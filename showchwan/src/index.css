@@ -198,3 +198,11 @@ body { overflow: hidden; }
 .sql-mark.on { outline-color: #ef4444; background: rgb(239 68 68 / 0.18); }
 .sql-mark-tag { display: inline-block; margin-left: 18px; padding: 0 8px; background: #b42622; color: #fff; font: 700 13px/19px ui-sans-serif, system-ui, -apple-system, "PingFang TC", sans-serif; border-radius: 2px; animation: why-li .4s cubic-bezier(.22,1,.36,1) both; }
 th .sql-mark-tag { margin-left: 8px; line-height: 20px; }
+
+/* MCP 說明卡:各家 AI Agent → MCP → Plasma */
+.mcp-flow { margin-top: 18px; display: flex; align-items: center; gap: 10px; animation: why-li .5s cubic-bezier(.22,1,.36,1) .2s both; }
+.mcp-agents { display: grid; grid-template-columns: repeat(2, auto); gap: 6px; }
+.mcp-agents span { padding: 4px 10px; border: 2px solid var(--sc-ink); font-size: 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+.mcp-flow i { flex: 1; min-width: 24px; height: 2px; background: repeating-linear-gradient(90deg, var(--sc-red) 0 8px, transparent 8px 14px); }
+.mcp-flow b { padding: 8px 14px; background: var(--sc-ink); color: #fff; font-size: 16px; white-space: nowrap; }
+.mcp-flow b.plasma { background: var(--sc-red); }

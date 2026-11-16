@@ -70,8 +70,9 @@ function scene(k: number, t: number) {
     }
   }
   if (k === 5) {
-    nodes.push({ id: "ai", kind: "app", pos: RIGHT, label: "AI Agent", sub: t >= 2 ? "名冊完成" : "問答整理", tone: "ok", hot: t < 2 })
+    nodes.push({ id: "ai", kind: "app", pos: RIGHT, label: "AI Agent", sub: t === 0 ? "GPT · Claude · 地端 · OpenCode" : t === 1 ? "問答整理" : "名冊完成", tone: "ok", hot: t < 2 })
     edges.push({ from: "plasma", to: "ai", tone: "ok" })
+    if (t < 2) note = { at: { x: 640, y: 300 }, text: "透過 MCP 接上", tone: "ink" }
     if (t >= 2) note = { at: { x: 800, y: 250 }, text: "248 位護理師", tone: "ink" }
   }
   if (k === 6) {
@@ -204,7 +205,7 @@ export const Scenario = memo(function Scenario({ step, epoch, isMain }: { step: 
       n++
       setT(n)
       if (n >= total) clearInterval(id)
-    }, DK[step] === 3 ? 2400 : TICK) // 上傳文件那一步:文件飛進去要久一點
+    }, DK[step] === 3 ? 2400 : DK[step] === 5 ? 4500 : TICK) // 上傳文件:文件飛進去要久一點;MCP 問答:配合左邊的 MCP 說明卡
     return () => clearInterval(id)
   }, [step, epoch, total])
 

@@ -112,7 +112,7 @@ export function AgentScreen({ s }: { s: DemoState }) {
       <div className="h-14 shrink-0 flex items-center gap-3 border-b px-6">
         <span className="h-8 w-8 rounded-md bg-foreground text-background grid place-items-center"><Bot className="h-4 w-4" /></span>
         <span className="font-medium">AI Agent</span>
-        <span className="ml-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
+        <span data-t="agent-mcp" className="ml-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--sidebar-ring))]" />Plasma MCP
         </span>
       </div>

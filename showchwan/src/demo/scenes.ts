@@ -146,15 +146,17 @@ export function buildScenes(): SceneRun[] {
       a.update({ spot: null })
     },
 
-    /* 5 · 用問的整理資料(先接上:剛剛要會寫 SQL,現在 AI 看懂欄位,用問的) */
+    /* 5 · 用問的整理資料(先說明:AI Agent 透過 MCP 接上 Plasma,接上之後就能問答) */
     async (a) => {
       const q = "整理 A 分院的護理人員名冊。"
       a.update({ screen: "agent", agentMsgs: [], agentInput: "", ws: WS_A, schemaOpen: false, card: null })
       await a.sleep(500)
       a.update({ card: "ask" })
-      await a.sleep(7000) // 說明卡:剛剛要會寫 SQL,現在 AI 看懂欄位,直接用問的
+      await a.sleep(9000) // 說明卡:AI Agent 透過 MCP 接上 Plasma(GPT、Claude、地端 Agent、OpenCode 都能接)
       a.update({ card: null })
       await a.sleep(400)
+      await a.focus("agent-mcp", "這個 AI Agent 透過 MCP 接上 Plasma", 2200)
+      a.update({ spot: null })
       await a.focus("agent-input", "直接問", 500)
       await a.type((v) => ({ agentInput: v }), q, 60)
       a.update({ spot: null })

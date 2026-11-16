@@ -58,7 +58,7 @@ export function Spotlight({ s }: { s: DemoState }) {
 }
 
 /** 畫面中央的說明卡:沒有 Plasma 之前(跨資料庫查詢)、為什麼要上傳文件、為什麼可以用問的 */
-const CARDS: Record<"before" | "why" | "ask", { title: string; items: [string, string][]; end: string; code?: boolean }> = {
+const CARDS: Record<"before" | "why" | "ask", { title: string; items: [string, string][]; end: string; code?: boolean; mcp?: boolean }> = {
   before: {
     title: "沒有 Plasma 之前",
     items: [["HIS 門診 · Oracle", "SELECT * FROM NURSE_MST WHERE ROWNUM <= 10"], ["護理系統 · PostgreSQL", "SELECT * FROM shift LIMIT 10"], ["人事系統 · MS SQL", "SELECT TOP 10 * FROM HR_DEPT"]],
@@ -71,9 +71,10 @@ const CARDS: Record<"before" | "why" | "ask", { title: string; items: [string, s
     end: "AI 看懂欄位，之後用問的才答得對。",
   },
   ask: {
-    title: "不會寫 SQL，也能整理資料",
-    items: [["剛剛：一句 SQL 查三套資料庫", "還是要會寫 SQL"], ["AI 已經看懂每個欄位", "TITLE_CD = N02 就是護理師"], ["現在：用一句話問", "AI 自己寫 SQL，去三套資料庫查"]],
-    end: "不用排隊等 IT，自己就能整理名冊。",
+    title: "AI Agent 透過 MCP 接上 Plasma",
+    items: [["任何 AI Agent 都能接", "GPT、Claude、地端 Agent、OpenCode"], ["透過 Plasma 的 MCP 連線", "AI 讀得到剛剛看懂的 Schema"], ["接上之後，用問的", "AI 自己寫 SQL，去三套資料庫查"]],
+    end: "不會寫 SQL，也能自己整理名冊。",
+    mcp: true,
   },
 }
 export function InfoCard({ s }: { s: DemoState }) {
@@ -82,6 +83,15 @@ export function InfoCard({ s }: { s: DemoState }) {
   return (
     <div key={s.card} className={`why-card ${c.code ? "code" : ""}`} role="status">
       <h2>{c.title}</h2>
+      {c.mcp && (
+        <div className="mcp-flow" aria-hidden>
+          <div className="mcp-agents">{["GPT", "Claude", "地端 Agent", "OpenCode"].map((n) => <span key={n}>{n}</span>)}</div>
+          <i />
+          <b>MCP</b>
+          <i />
+          <b className="plasma">Plasma</b>
+        </div>
+      )}
       <ol>
         {c.items.map(([a, b], i) => <li key={a}><span>{i + 1}</span><p>{a}<small>{b}</small></p></li>)}
       </ol>
