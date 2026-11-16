@@ -206,24 +206,54 @@ export function App() {
     return step.current
   }, [])
 
+  // 捲動位置(px)。桌機是瀏覽器真正的捲動位置;手機不能手動捲動,頁面也不真的捲:
+  // 位置只是一個數字(virtualY),換頁與對話播放直接改它。手機上每格呼叫 window.scrollTo
+  // 會逼瀏覽器捲動整頁、重新合成所有固定在畫面上的圖層,在 iframe 裡尤其卡
+  const virtualY = useRef(0)
+  const getY = useCallback(() => (layoutMode() === "desktop" ? window.scrollY : virtualY.current), [])
+  const setY = useCallback((y: number) => {
+    if (layoutMode() === "desktop") {
+      window.scrollTo({ top: y, behavior: "instant" })
+      return
+    }
+    virtualY.current = y
+    const h = stepPx()
+    if (h) scrollStore.set(y / h)
+  }, [stepPx])
+
   useEffect(() => {
     // 瀏覽器原生捲動(無阻尼):滾多少走多少,可停在任何位置(含過場中途),觸控板慣性照常
     const update = () => {
       const h = stepPx()
-      if (h) scrollStore.set(window.scrollY / h)
+      if (h) scrollStore.set(getY() / h)
+    }
+    const onScroll = () => {
+      if (layoutMode() === "desktop") update()
     }
     const onResize = () => {
       step.current = 0
+      // 手機:視窗大小變了(網址列伸縮、轉向),停在同一頁的同一個進度
+      if (layoutMode() !== "desktop") virtualY.current = scrollStore.get() * stepPx()
       update()
     }
-    window.addEventListener("scroll", update, { passive: true })
+    window.addEventListener("scroll", onScroll, { passive: true })
     window.addEventListener("resize", onResize)
+    // 換版面(桌機 ⇄ 手機):進度不變,捲動位置交給另一邊
+    const p = scrollStore.get()
+    step.current = 0
+    const h = stepPx()
+    if (mode === "desktop") {
+      if (h && p) window.scrollTo({ top: p * h, behavior: "instant" })
+    } else {
+      virtualY.current = p ? p * h : window.scrollY
+      if (window.scrollY) window.scrollTo({ top: 0, behavior: "instant" })
+    }
     update()
     return () => {
-      window.removeEventListener("scroll", update)
+      window.removeEventListener("scroll", onScroll)
       window.removeEventListener("resize", onResize)
     }
-  }, [stepPx])
+  }, [stepPx, getY, mode])
 
   // 對話自動播放:等速捲到對話播完;使用者一滾動、觸控或按鍵就停,交還手動控制
   const autoRaf = useRef(0)
@@ -264,15 +294,15 @@ export function App() {
   }, [mode])
   const autoScroll = useCallback((to: number, seconds: number) => {
     stopAuto()
-    const from = window.scrollY
+    const from = getY()
     const start = performance.now()
     const tick = (now: number) => {
       const u = Math.min(1, (now - start) / (seconds * 1000))
-      window.scrollTo(0, from + (to - from) * u)
+      setY(from + (to - from) * u)
       if (u < 1) autoRaf.current = requestAnimationFrame(tick)
     }
     autoRaf.current = requestAnimationFrame(tick)
-  }, [stopAuto])
+  }, [stopAuto, getY, setY])
 
   // 分頁在背景時暫停所有持續動畫(光點、光暈、閃爍、轉圈),不佔資源
   useEffect(() => {
@@ -292,12 +322,12 @@ export function App() {
     chatTimer.current = window.setTimeout(() => {
       const h = stepPx()
       const end = (LAST + CHAT_SPAN) * h
-      if (!h || !plasmaOn(LAST) || window.scrollY >= end - 1) return
+      if (!h || !plasmaOn(LAST) || getY() >= end - 1) return
       // 已經捲到一半就只播剩下的部分
-      const left = (end - window.scrollY) / (CHAT_SPAN * h)
+      const left = (end - getY()) / (CHAT_SPAN * h)
       autoScroll(end, Math.max(1, CHAT_PLAY * Math.min(1, left)))
     }, CHAT_DELAY)
-  }, [stepPx, autoScroll])
+  }, [stepPx, autoScroll, getY])
 
   // 切到第 i 頁(切換列、方向鍵、說明卡片):直接切過去,不刷過中間的頁面,
   // 再從頭完整播放那一頁的效果;最後一頁導入後連同 Agent 對話一起從頭播
@@ -309,11 +339,11 @@ export function App() {
     const target = Math.max(0, Math.min(i, LAST))
     // 換到別頁一律從導入前開始
     if (target !== Math.round(clampProgress(scrollStore.get()))) plasmaOff()
-    window.scrollTo({ top: target * h, behavior: "instant" })
+    setY(target * h)
     scrollStore.set(target)
     replay(target)
     if (target === LAST && plasmaOn(LAST) && !GATED) playChat()
-  }, [stepPx, stopAuto, playChat])
+  }, [stepPx, stopAuto, playChat, setY])
 
   // 重播目前這一頁(重播鈕、R 鍵):位置不動;在最後一頁的對話中途按,先回到對話開頭再播
   const replayCurrent = useCallback(() => {
@@ -445,9 +475,10 @@ export function App() {
       </header>
 
       {/* 頁面高度只用來提供捲動距離:舞台高 + 每個過場一段 --scroll-step;左右兩欄都固定在畫面上 */}
+      {/* 手機不真的捲動(見 virtualY),頁面就只有一個畫面高,瀏覽器不必維護好幾個畫面長的頁面 */}
       <main
         className="relative flex items-start gap-5 px-6 pp:flex-col pp:items-stretch pp:gap-0 pp:px-6 pl:gap-3 pl:px-3"
-        style={{ height: `calc(var(--pin-h) + ${END} * var(--scroll-step))` }}
+        style={{ height: mode === "desktop" ? `calc(var(--pin-h) + ${END} * var(--scroll-step))` : "var(--pin-h)" }}
       >
         <div ref={stepRef} aria-hidden className="pointer-events-none invisible absolute h-[var(--scroll-step)] w-0" />
 

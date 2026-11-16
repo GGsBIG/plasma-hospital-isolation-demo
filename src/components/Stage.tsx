@@ -96,6 +96,44 @@ let measureCtx: CanvasRenderingContext2D | null = null
 // 徽章膠囊比文字寬多少(內距 + 圓點 + 間距 + 框線):量到第一個徽章後更新
 let padSeen = 48
 
+// Safari(以及 iOS 上所有瀏覽器,都是 WebKit):圖層的點陣圖一律照「排版尺寸 × 螢幕密度」配置,
+// 不管外層把它縮得多小。手機版舞台用 1390×1250 的座標排版再縮到約 1/4,每個節點、連線層、
+// 大腦都照原尺寸配圖層,整頁吃掉兩百多 MB 的圖層記憶體,iPhone 會直接卡住甚至重新載入。
+// 所以在 WebKit 的手機版面,舞台先用 CSS zoom 縮小排版(圖層跟著變小),剩下的差距才交給 transform。
+// 畫面上的大小、位置完全一樣。Chrome 的圖層本來就照實際顯示大小配置,不需要也不套用
+const WEBKIT = typeof window !== "undefined" && "GestureEvent" in window
+// 倍率固定 0.5:手機上舞台實際顯示約 0.15~0.3 倍,0.5 倍排版再縮一點點就到位,圖層記憶體剩 1/4。
+// 不再更小有兩個原因:WebKit 會把縮小後不到 9px 的字硬拉回 9px;而且沒寫單位的行高是用「取整數後的字級」算的,
+// 舞台上的字級(32、34、36、50px…)乘 0.5 都還是整數,行高才會分毫不差
+const ZOOM = 0.5
+// zoom 是各家瀏覽器、各版本行為不完全一致的屬性,所以第一次套用後實際量一次:
+// 舞台裡放一個已知大小的探針(px 寬高、字級、transform 位移),比例全部對得上才繼續用;
+// 只要有一項對不上(例如某個版本把小字拉大、或 transform 沒跟著縮),就整個關掉,退回只用 transform 的做法
+let zoomVerdict: boolean | null = null
+function zoomWorks(el: HTMLElement, w: number, h: number, visualW: number, z: number) {
+  const probe = document.createElement("div")
+  probe.style.cssText = "position:absolute;left:0;top:0;width:100px;height:40px;font-size:36px;line-height:1;white-space:nowrap;visibility:hidden;pointer-events:none"
+  const mark = document.createElement("span")
+  mark.style.cssText = "display:inline-block;transform:translate(50px,0)"
+  mark.textContent = "國"
+  probe.appendChild(mark)
+  el.appendChild(probe)
+  const host = el.getBoundingClientRect()
+  const p = probe.getBoundingClientRect()
+  const t = mark.getBoundingClientRect()
+  probe.remove()
+  const near = (a: number, b: number) => Math.abs(a - b) <= Math.abs(b) * 0.03
+  return (
+    p.width > 0 && p.height > 0 &&
+    // 舞台在畫面上的寬度沒變(有的版本回傳的座標不含 zoom,兩種都算對)
+    (near(host.width, visualW) || near(host.width, visualW / z)) &&
+    near(p.width / host.width, 100 / w) &&
+    near(p.height / host.height, 40 / h) &&
+    near(t.height / p.height, 36 / 40) &&
+    near((t.left - p.left) / p.width, 0.5)
+  )
+}
+
 function useFit(w: number, h: number, compact: boolean) {
   const ref = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
@@ -106,6 +144,8 @@ function useFit(w: number, h: number, compact: boolean) {
   // 節點本身用 --ux 反向縮回去,圖示與文字不變形
   const stretch = useRef(1)
   const scaleX = useRef(1)
+  // 目前的排版縮放(0 = 還沒決定)。只在需要更大時往上調,過場中不會來回變動
+  const zoom = useRef(0)
 
   const apply = (box: Box | null) => {
     const el = innerRef.current
@@ -118,19 +158,44 @@ function useFit(w: number, h: number, compact: boolean) {
     const sx = s * (compact ? stretch.current : 1)
     const tx = (width - (b.x1 - b.x0) * sx) / 2 - b.x0 * sx
     const ty = (height - (b.y1 - b.y0) * s) / 2 - b.y0 * s
-    el.style.transform = `translate(${tx}px, ${ty}px) scale(${sx}, ${s})`
-    el.style.setProperty("--ux", `${s / sx}`)
+    let z = 1
+    if (compact && WEBKIT && zoomVerdict !== false) {
+      // 實際顯示倍率超過 0.5(平板)就不縮:否則是把小圖放大,會糊。一旦不縮就維持到容器大小改變,過場中不來回切換
+      const need = Math.max(s, sx) <= ZOOM ? ZOOM : 1
+      if (need > zoom.current) zoom.current = need
+      z = zoom.current
+    }
+    const write = (z: number) => {
+      const zs = z === 1 ? "" : `${z}`
+      if (el.style.zoom !== zs) el.style.zoom = zs
+      // 元素自己的 zoom 也會縮放它 transform 裡的 px,位移要先除回去
+      el.style.transform = `translate(${tx / z}px, ${ty / z}px) scale(${sx / z}, ${s / z})`
+    }
+    write(z)
+    if (z !== 1 && zoomVerdict === null) {
+      zoomVerdict = zoomWorks(el, w, h, w * sx, z)
+      if (!zoomVerdict) write(1)
+    }
+    const ux = `${s / sx}`
+    if (ux !== lastUx.current) {
+      lastUx.current = ux
+      el.style.setProperty("--ux", ux)
+    }
     scale.current = s
     scaleX.current = sx
   }
+  const lastUx = useRef("")
 
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
     const fit = (width: number, height: number) => {
+      // 容器大小變了:排版縮放重新決定
+      if (width !== size.current.width || height !== size.current.height) zoom.current = 0
       size.current = { width, height }
       apply(lastBox.current)
     }
+    zoom.current = 0
     fit(el.clientWidth, el.clientHeight)
     const ro = new ResizeObserver(([entry]) => fit(entry.contentRect.width, entry.contentRect.height))
     ro.observe(el)
@@ -182,7 +247,14 @@ function useFit(w: number, h: number, compact: boolean) {
     const L = spanAt(f).L
     return { box: { x0: L / sx, y0, x1: L / sx + width / sx, y1 }, f }
   }
-  return { ref, innerRef, setBox, scale, solve, sizeRef: size }
+  // 量 DOM 用:getBoundingClientRect 的 1 單位等於幾個舞台單位。
+  // 套了 zoom 之後,各版本瀏覽器回傳的座標有的含 zoom、有的不含,所以不假設,直接拿舞台自己的寬度校正
+  const unit = () => {
+    const el = innerRef.current
+    const rw = el && scaleX.current ? el.getBoundingClientRect().width / (w * scaleX.current) : 1
+    return scale.current * (rw > 0 ? rw : 1)
+  }
+  return { ref, innerRef, setBox, scale, solve, sizeRef: size, unit }
 }
 
 // 每個畫面狀態的內容外框,依版面快取
@@ -208,7 +280,7 @@ export function Stage() {
   const mode = useLayoutMode()
   const compact = mode !== "desktop"
   const { w, h } = stageSize()
-  const { ref, innerRef, setBox, scale, solve, sizeRef } = useFit(w, h, compact)
+  const { ref, innerRef, setBox, scale, solve, sizeRef, unit } = useFit(w, h, compact)
   // 只在離散狀態改變時重繪:換段、徽章文字改用另一端情境、負載跨過門檻
   useScrollSelector(stageKey)
   const p = scrollStore.get()
@@ -310,7 +382,7 @@ export function Stage() {
   // 每個節點只量一次(圖示、名稱不會變;徽章文字會變,所以徽章另外用文字寬度推算,版面才不會跟著分幕跳動)
   const measureExtents = (ids: string[]) => {
     let changed = false
-    const k = scale.current || 1
+    const k = unit() || 1
     for (const id of ids) {
       const rec = nodeEls.current.get(id)
       if (!rec || rec.el.style.display === "none" || extents.current.has(id)) continue
@@ -672,6 +744,8 @@ export function Stage() {
     let raf = 0
     let last = 0
     let box = ""
+    let curK = 0
+    let blank = true
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame)
       if (now - last < 33) return
@@ -691,9 +765,15 @@ export function Stage() {
         }
       }
       if (x0 === Infinity) {
-        if (canvas.width) { canvas.width = 0; canvas.height = 0; box = "" }
+        // 沒有連線:清一次就好(畫布留著,下次出現不必重新配置)
+        if (!blank) {
+          ctx.setTransform(1, 0, 0, 1, 0, 0)
+          ctx.clearRect(0, 0, canvas.width, canvas.height)
+          blank = true
+        }
         return
       }
+      blank = false
       const Q = 64
       const M = 40 // 光點半徑、終點轉圈與打勾的邊界
       x0 = Math.floor((x0 - M) / Q) * Q
@@ -704,18 +784,25 @@ export function Stage() {
       const k = Math.min(1.5, Math.max(0.5, Math.ceil(scale.current * (window.devicePixelRatio || 1) * 4) / 4))
       const cw = Math.round((x1 - x0) * k)
       const ch = Math.round((y1 - y0) * k)
-      const nb = `${x0},${y0},${x1},${y1},${k}`
+      // 畫布只放大、不縮小:過場中連線範圍一直在變,每變一次就重新配置一張畫布,
+      // 手機瀏覽器來不及回收舊的那幾張,記憶體會一路往上堆。解析度改變時才整張重配
+      if (k !== curK || cw > canvas.width || ch > canvas.height) {
+        const bw = k !== curK ? cw : Math.max(cw, canvas.width)
+        const bh = k !== curK ? ch : Math.max(ch, canvas.height)
+        curK = k
+        canvas.width = bw
+        canvas.height = bh
+        canvas.style.width = `${bw / k}px`
+        canvas.style.height = `${bh / k}px`
+      }
+      const nb = `${x0},${y0}`
       if (nb !== box) {
         box = nb
-        canvas.width = cw
-        canvas.height = ch
         canvas.style.left = `${x0}px`
         canvas.style.top = `${y0}px`
-        canvas.style.width = `${x1 - x0}px`
-        canvas.style.height = `${y1 - y0}px`
       }
       ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.clearRect(0, 0, cw, ch)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.setTransform(k, 0, 0, k, -x0 * k, -y0 * k)
       const hv = hoverRef.current
       for (const e of edgeEls.current.values()) e.faded = hv !== null && e.from !== hv && e.to !== hv
@@ -774,10 +861,14 @@ export function Stage() {
 
         {/* 資料大腦光暈:在連線之上、節點之下 */}
         <div ref={auraRef} aria-hidden className="pointer-events-none absolute left-0 top-0 h-0 w-0" style={{ display: "none" }}>
-          <div
-            className="brain-aura absolute rounded-full"
-            style={{ width: 620 * iconScale("plasma"), height: 500 * iconScale("plasma"), left: -310 * iconScale("plasma"), top: -250 * iconScale("plasma") }}
-          />
+          {/* 光暈是一大片柔和的漸層:用 1/4 大小畫、外層放大 4 倍。Safari 的圖層照排版尺寸配記憶體,
+            這樣這張圖層只要原本的 1/16;漸層沒有銳利邊緣,放大後看不出差別(Chrome 會照實際大小重畫,本來就沒差) */}
+          <div className="absolute left-0 top-0 h-0 w-0" style={{ transform: "scale(4)" }}>
+            <div
+              className="brain-aura absolute rounded-full"
+              style={{ width: 155 * iconScale("plasma"), height: 125 * iconScale("plasma"), left: -77.5 * iconScale("plasma"), top: -62.5 * iconScale("plasma") }}
+            />
+          </div>
           {/* 大腦輪廓:線條逐筆畫出,把知識庫與 Plasma 包在裡面;有上傳動畫時等文件都飛進去才開始畫 */}
           {(!upload || uploadDone) && (
             <BrainNet

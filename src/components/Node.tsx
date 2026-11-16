@@ -142,7 +142,7 @@ export const Node = memo(function Node({
                       row.map((cell, c) => (
                         <span
                           key={`${r}-${c}`}
-                          className={r === 0 ? "text-[0.85em] text-muted-foreground" : c === 1 ? "font-medium text-foreground" : "text-muted-foreground"}
+                          className={r === 0 ? "text-[0.85em] leading-[1.375em] text-muted-foreground" : c === 1 ? "font-medium text-foreground" : "text-muted-foreground"}
                         >
                           {cell}
                         </span>
@@ -237,7 +237,7 @@ function StepCard({ text, time, tone, compact }: { text: string; time: string; t
   return (
     <>
       <div className={`font-medium ${tone === "danger" ? "text-danger" : tone === "ok" ? "text-ok" : ""}`}>{text}</div>
-      <div className="mt-0.5 flex items-center gap-1.5 text-[0.85em] text-muted-foreground">
+      <div className="mt-0.5 flex items-center gap-1.5 text-[0.85em] leading-[1.375em] text-muted-foreground">
         <Timer className={compact ? "h-7 w-7" : "h-4 w-4"} />
         {time}
       </div>
