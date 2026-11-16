@@ -108,7 +108,7 @@ export function buildScenes(): SceneRun[] {
       await a.sleep(500)
       await press(a, "btn-view-schema", "看欄位")
       a.update({ schemaOpen: true })
-      await a.focus("schema-table", "這些代碼是什麼意思？", 2200)
+      await a.focus("schema-table", "這些 Schema 是什麼意思？", 2200)
       a.update({ spot: null, card: "why" })
       await a.sleep(6500) // 說明卡:為什麼要上傳文件
       a.update({ card: null, schemaOpen: false })

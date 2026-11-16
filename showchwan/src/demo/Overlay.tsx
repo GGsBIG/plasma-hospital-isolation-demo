@@ -67,7 +67,7 @@ const CARDS: Record<"before" | "why" | "ask", { title: string; items: [string, s
   },
   why: {
     title: "為什麼要上傳文件？",
-    items: [["資料庫的欄位都是代碼", "NRS_NAME、TITLE_CD = N02"], ["代碼的意思，只寫在系統文件裡", "規格書、資料字典、職稱代碼表"], ["交給 Plasma 的 AI 讀", "每個欄位自動補上說明"]],
+    items: [["資料庫的 Schema 看不懂", "NRS_NAME、TITLE_CD = N02"], ["Schema 的意思，只寫在系統文件裡", "規格書、資料字典、職稱代碼表"], ["交給 Plasma 的 AI 讀", "每個欄位自動補上說明"]],
     end: "AI 看懂欄位，之後用問的才答得對。",
   },
   ask: {
