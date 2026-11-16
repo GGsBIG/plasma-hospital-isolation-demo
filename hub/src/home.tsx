@@ -15,34 +15,51 @@ import m941a from "./assets/hero/bridge-mobile-941.avif"
 import m640w from "./assets/hero/bridge-mobile-640.webp"
 import m941w from "./assets/hero/bridge-mobile-941.webp"
 
+type Head = { key: string; tab: string; lines: [string, string]; lead: ReactNode }
+
+const MANUFACTURING: Head = {
+  key: "manufacturing", tab: "製造業", lines: ["報表和 AI", "改從 Plasma 取資料"],
+  lead: <>正式資料庫不受影響，各單位只看得到自己權限內的資料。</>,
+}
+const HOSPITAL: Head = {
+  key: "hospital", tab: "醫院", lines: ["既有系統", "不需遷移"],
+  lead: <>健保申報、FHIR 對外交換和院內 AI 都從 Plasma 取資料，門診、護理系統照常運作。</>,
+}
+const TECH: Head = {
+  key: "tech", tab: "技術人員", lines: ["Plasma 元件", "逐一說明"],
+  lead: <>從資料庫連線、View、排程、資料產品到 MCP，說明每個元件的用途、規格與限制。</>,
+}
+
+/** 同一份首頁 build 成兩個網站(WordPress 分開上傳):
+ *  沒設 VITE_SITE      → brobridge.com/demos/:製造業、醫院、元件總覽(不含秀傳)
+ *  VITE_SITE=showchwan → brobridge.com/showchwan/:秀傳情境與元件總覽
+ *  判斷寫在 import.meta.env 上,build 時就把另一個網站的內容整段刪掉,
+ *  /demos/ 的檔案裡完全不會出現秀傳的字。見 build.sh */
+const SHOWCHWAN = import.meta.env.VITE_SITE === "showchwan"
+
 /** 主標輪播:每則對應一張入口卡,輪到時那張卡轉紅 */
-const HEADS: { key: string; tab: string; lines: [string, string]; lead: ReactNode }[] = [
-  {
-    key: "manufacturing", tab: "製造業", lines: ["報表和 AI", "改從 Plasma 取資料"],
-    lead: <>正式資料庫不受影響，各單位只看得到自己權限內的資料。</>,
-  },
-  {
-    key: "hospital", tab: "醫院", lines: ["既有系統", "不需遷移"],
-    lead: <>健保申報、FHIR 對外交換和院內 AI 都從 Plasma 取資料，門診、護理系統照常運作。</>,
-  },
-  {
-    key: "showchwan", tab: "秀傳醫院", lines: ["四家分院", "一份彙整資料"],
-    lead: <>各分院資料庫 schema 不同，經 Plasma 由 AI 整理成資料產品，總院直接取用彙整。</>,
-  },
-  {
-    key: "tech", tab: "技術人員", lines: ["Plasma 元件", "逐一說明"],
-    lead: <>從資料庫連線、View、排程、資料產品到 MCP，說明每個元件的用途、規格與限制。</>,
-  },
-]
+const HEADS: Head[] = SHOWCHWAN
+  ? [
+      {
+        key: "showchwan", tab: "秀傳醫院", lines: ["四家分院", "一份彙整資料"],
+        lead: <>各分院資料庫 schema 不同，經 Plasma 由 AI 整理成資料產品，總院直接取用彙整。</>,
+      },
+      TECH,
+    ]
+  : [MANUFACTURING, HOSPITAL, TECH]
 const HOLD = 6500
 
-/** 入口卡:href 對應 WordPress 上 /demos/ 底下的子資料夾 */
-const CARDS = [
-  { key: "manufacturing", href: "manufacturing/", title: "製造業情境" },
-  { key: "hospital", href: "hospital/", title: "醫院情境" },
-  { key: "showchwan", href: "showchwan/", title: "秀傳醫院" },
-  { key: "tech", href: "tech/", title: "元件總覽" },
-]
+/** 入口卡:href 是首頁底下的子資料夾(秀傳網站的情境放在 /showchwan/demo/) */
+const CARDS = SHOWCHWAN
+  ? [
+      { key: "showchwan", href: "demo/", title: "秀傳醫院" },
+      { key: "tech", href: "tech/", title: "元件總覽" },
+    ]
+  : [
+      { key: "manufacturing", href: "manufacturing/", title: "製造業情境" },
+      { key: "hospital", href: "hospital/", title: "醫院情境" },
+      { key: "tech", href: "tech/", title: "元件總覽" },
+    ]
 
 /** 主標的 text reveal:每一行有遮罩,字一個接一個從遮罩下方升上來 */
 function Reveal({ lines }: { lines: readonly string[] }) {
@@ -116,7 +133,7 @@ function Viewer({ card, onClose }: { card: Card; onClose: () => void }) {
 }
 
 function Home() {
-  // 從 demo 點 logo 回來時網址帶 #manufacturing / #hospital / #tech,首頁就停在那個情境
+  // 從 demo 點 logo 回來時網址帶 #manufacturing / #hospital / #showchwan / #tech,首頁就停在那個情境
   const [cur, setCur] = useState(() => Math.max(0, HEADS.findIndex((h) => `#${h.key}` === location.hash)))
   const [still, setStill] = useState(false)
   // 滑鼠移到卡片上時取消輪播高亮,避免兩張卡同時是紅的
