@@ -64,10 +64,43 @@ export function buildScenes(): SceneRun[] {
       await a.sleep(800)
     },
 
-    /* 3 · AI 看懂欄位(Plasma 長出大腦) */
+    /* 3 · 一種 SQL 查三套資料庫(放慢:先看以前的三種語法,再一句 SQL,逐一框出跨了哪三套資料庫,最後看結果) */
+    async (a) => {
+      a.update({ ...nav("/sql-playground", "sql"), ws: WS_A, sqlText: "", sqlRan: false, sqlRunning: false, marks: 0, schemaOpen: false, card: null })
+      await a.sleep(600)
+      a.update({ card: "before" })
+      await a.sleep(7000) // 說明卡:沒有 Plasma 之前,三套資料庫三種語法
+      a.update({ card: null })
+      await a.sleep(400)
+      await a.focus("sql-editor", "在 Plasma：一句 SQL", 1200)
+      a.update({ spot: null })
+      await a.type((v) => ({ sqlText: v }), CROSS_SQL, 34)
+      await a.sleep(900)
+      // 逐一框出這句 SQL 跨了哪三套資料庫
+      for (let i = 1; i <= 3; i++) {
+        a.update({ marks: i })
+        await a.sleep(1700)
+      }
+      await a.focus("sql-editor", "一句 SQL，同時查三套資料庫", 2600)
+      a.update({ spot: null })
+      await press(a, "btn-run-sql", "執行")
+      a.update({ sqlRunning: true })
+      await a.sleep(1800)
+      a.update({ sqlRunning: false, sqlRan: true })
+      await a.sleep(500)
+      await a.focus("sql-result", "下方是執行結果：三套資料庫的欄位，合在同一張表", 1400)
+      for (let i = 4; i <= 6; i++) {
+        a.update({ marks: i })
+        await a.sleep(1200)
+      }
+      await a.sleep(1800)
+      a.update({ spot: null })
+    },
+
+    /* 4 · AI 看懂欄位(Plasma 長出大腦) */
     async (a) => {
       const conns = A_DBS.map((d) => ({ name: d.conn, type: d.type, status: "ready" }))
-      a.update({ ...nav("/database", "list"), ws: WS_A, connections: conns, kbDocs: [], kbDone: false, columns: A_COLUMNS.map((c) => ({ ...c, desc: "" })), schemaOpen: false, why: false })
+      a.update({ ...nav("/database", "list"), ws: WS_A, connections: conns, kbDocs: [], kbDone: false, columns: A_COLUMNS.map((c) => ({ ...c, desc: "" })), schemaOpen: false, card: null })
       await a.sleep(500)
       // 先看資料庫裡有什麼:點進 HIS 門診 → 資料表 → 欄位
       await press(a, "row-detail", "點進 HIS 門診")
@@ -76,9 +109,9 @@ export function buildScenes(): SceneRun[] {
       await press(a, "btn-view-schema", "看欄位")
       a.update({ schemaOpen: true })
       await a.focus("schema-table", "這些代碼是什麼意思？", 2200)
-      a.update({ spot: null, why: true })
+      a.update({ spot: null, card: "why" })
       await a.sleep(6500) // 說明卡:為什麼要上傳文件
-      a.update({ why: false, schemaOpen: false })
+      a.update({ card: null, schemaOpen: false })
       await a.sleep(300)
       // 上傳系統文件
       await press(a, "nav-knowledge", "知識庫")
@@ -113,34 +146,21 @@ export function buildScenes(): SceneRun[] {
       a.update({ spot: null })
     },
 
-    /* 4 · 一種 SQL 查三套資料庫 */
-    async (a) => {
-      a.update({ ...nav("/sql-playground", "sql"), ws: WS_A, sqlMode: "cross", sqlText: "", sqlRan: false, dialects: true, schemaOpen: false })
-      await a.sleep(500)
-      await a.focus("dialects", "以前：三套資料庫，三種語法", 2600)
-      a.update({ spot: null })
-      await a.moveTo("sql-editor")
-      await a.type((v) => ({ sqlText: v }), CROSS_SQL, 14)
-      await a.focus("sql-editor", "現在：一句 SQL 查三套", 1400)
-      a.update({ spot: null })
-      await press(a, "btn-run-sql", "執行")
-      await a.sleep(600)
-      a.update({ sqlRan: true })
-      await a.focus("sql-result", "三套資料庫，一次查到", 2400)
-      a.update({ spot: null })
-    },
-
-    /* 5 · 用問的整理資料 */
+    /* 5 · 用問的整理資料(先接上:剛剛要會寫 SQL,現在 AI 看懂欄位,用問的) */
     async (a) => {
       const q = "整理 A 分院的護理人員名冊。"
-      a.update({ screen: "agent", agentMsgs: [], agentInput: "", ws: WS_A, schemaOpen: false })
-      await a.sleep(600)
+      a.update({ screen: "agent", agentMsgs: [], agentInput: "", ws: WS_A, schemaOpen: false, card: null })
+      await a.sleep(500)
+      a.update({ card: "ask" })
+      await a.sleep(7000) // 說明卡:剛剛要會寫 SQL,現在 AI 看懂欄位,直接用問的
+      a.update({ card: null })
+      await a.sleep(400)
       await a.focus("agent-input", "直接問", 500)
       await a.type((v) => ({ agentInput: v }), q, 60)
       a.update({ spot: null })
       await a.click("agent-send")
       a.update((s) => ({ agentInput: "", agentMsgs: [...s.agentMsgs, { role: "user", text: q }] }))
-      for (const t of ["list_tables → 三套資料庫", "describe_columns → N02 = 護理師", "create_view → 護理人員名冊"]) {
+      for (const t of ["list_tables → 三套資料庫", "describe_columns → TITLE_CD = N02（護理師）", "run_sql → 自己寫 SQL，查 a_his、a_nursing、a_hr", "create_view → 護理人員名冊"]) {
         await a.sleep(1100)
         a.update((s) => ({ agentMsgs: [...s.agentMsgs, { role: "tool", text: t }] }))
       }

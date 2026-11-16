@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import { FileText } from "lucide-react"
 import { Platform } from "./components/Iso"
 import { BrainNet, brainVisibility } from "./components/BrainNet"
@@ -17,6 +17,9 @@ const W = 1000
 const H = 680
 const BRAND = [oracleLogo, postgresLogo, mssqlLogo]
 const TICK = 1500 // 子步驟間隔
+// 情境 → 圖的狀態編號:現況 0、接上資料庫 2、跨資料庫查詢 4、AI 看懂欄位 3、問答 5、資料產品 6
+// (狀態 1 是已拿掉的登入;跨資料庫查詢排在上傳文件之前,所以那張圖沒有大腦)
+const DK = [0, 2, 4, 3, 5, 6]
 const DIALECT = ["WHERE ROWNUM <= 10", "LIMIT 10", "SELECT TOP 10"]
 
 interface N { id: string; kind: NodeKind; variant?: string; pos: Pos; label?: string; sub?: ReactNode; tone?: "ok" | "danger"; brand?: string; grow?: boolean; bare?: boolean; hot?: boolean }
@@ -51,7 +54,8 @@ function scene(k: number, t: number) {
 
   const ps = k === 1 ? "已登入" : k === 2 ? "唯讀接上" : k === 3 ? (t >= 1 ? "長出大腦" : "讀文件") : undefined
   nodes.push({ id: "plasma", kind: "plasma", pos: PLASMA, sub: ps, tone: "ok", hot: k === 1 || (k === 4 && t >= 1) })
-  if (k >= 3) nodes.push({ id: "kb", kind: "kb", pos: { x: PLASMA.x, y: PLASMA.y - KB_DY }, bare: true, grow: k === 3 })
+  // 知識庫(大腦上方)在上傳文件(3)之後才出現;跨資料庫查詢(4)排在上傳之前,還沒有
+  if (k === 3 || k >= 5) nodes.push({ id: "kb", kind: "kb", pos: { x: PLASMA.x, y: PLASMA.y - KB_DY }, bare: true, grow: k === 3 })
   const linked = k === 2 ? t : k >= 3 ? 3 : 0
   A_DBS.slice(0, Math.min(linked, 3)).forEach((_, i) => edges.push({ from: db(i), to: "plasma", tone: "ok" }))
   if (k === 2 && t >= 3) note = { at: { x: 430, y: 170 }, text: "唯讀接上，不動原系統", tone: "ink" }
@@ -78,46 +82,94 @@ function scene(k: number, t: number) {
   return { nodes, edges, note }
 }
 
-// 三次貝茲曲線長度(edgePath 產生的 "M x y C ...")
-function bezLen(d: string) {
-  const v = d.match(/-?\d+(\.\d+)?/g)!.map(Number)
-  const [x0, y0, x1, y1, x2, y2, x3, y3] = v
-  let len = 0, px = x0, py = y0
-  for (let i = 1; i <= 40; i++) {
-    const t = i / 40, u = 1 - t
-    const x = u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3
-    const y = u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3
-    len += Math.hypot(x - px, y - py); px = x; py = y
+// 三次貝茲曲線(edgePath 產生的 "M x y C ...")依弧長等距取樣:每一點的位置與切線角度
+const SAMPLES = 48
+function samplePath(d: string) {
+  const [x0, y0, x1, y1, x2, y2, x3, y3] = d.match(/-?\d+(\.\d+)?/g)!.map(Number)
+  const at = (t: number) => {
+    const u = 1 - t
+    return {
+      x: u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
+      y: u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3,
+      dx: 3 * u * u * (x1 - x0) + 6 * u * t * (x2 - x1) + 3 * t * t * (x3 - x2),
+      dy: 3 * u * u * (y1 - y0) + 6 * u * t * (y2 - y1) + 3 * t * t * (y3 - y2),
+    }
   }
-  return len
+  const FINE = 240
+  const acc = [0]
+  let p = at(0)
+  for (let i = 1; i <= FINE; i++) {
+    const q = at(i / FINE)
+    acc.push(acc[i - 1] + Math.hypot(q.x - p.x, q.y - p.y))
+    p = q
+  }
+  const len = acc[FINE]
+  const pts: { x: number; y: number; a: number }[] = []
+  let j = 1
+  let prev = 0
+  for (let k = 0; k <= SAMPLES; k++) {
+    const target = (k / SAMPLES) * len
+    while (j < FINE && acc[j] < target) j++
+    const seg = acc[j] - acc[j - 1] || 1
+    const q = at((j - 1 + (target - acc[j - 1]) / seg) / FINE)
+    // 角度接續前一點(不跨 ±180° 跳動),中間才不會多轉一圈
+    let a = (Math.atan2(q.dy, q.dx) * 180) / Math.PI
+    if (k) a += Math.round((prev - a) / 360) * 360
+    prev = a
+    pts.push({ x: q.x, y: q.y, a })
+  }
+  return { len, pts }
 }
 
-// 連線上流動的點/虛線:每一段是一個沿路徑移動的小方塊(offset-path),只改位置不重畫;
-// 原本用 SVG stroke-dashoffset 動畫,整張情境圖每格都要重畫,手機會卡
-function Ride({ d, gap, speed, cls }: { d: string; gap: number; speed: number; cls: string }) {
-  const len = bezLen(d)
+// 連線上流動的點/虛線:每一段是一個沿路徑移動的小方塊。路徑先取樣成 transform 關鍵影格
+// (位移 + 沿切線旋轉),整段動畫交給 GPU 合成,主執行緒每格不必做任何事。
+// 原本用 offset-path:瀏覽器不會把它交給 GPU,幾十個方塊每格都要重算樣式,手機會卡
+const RIDE_SIZE = { dot: [5.1, 5], dash: [7, 2] } as const
+function Ride({ d, gap, speed, cls }: { d: string; gap: number; speed: number; cls: "dot" | "dash" }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const { len, frames } = useMemo(() => {
+    const { len, pts } = samplePath(d)
+    const [w, h] = RIDE_SIZE[cls]
+    return { len, frames: pts.map((q) => ({ transform: `translate(${(q.x - w / 2).toFixed(2)}px, ${(q.y - h / 2).toFixed(2)}px) rotate(${q.a.toFixed(2)}deg)` })) }
+  }, [d, cls])
   const n = Math.max(1, Math.round(len / gap))
   const dur = len / speed
+  useLayoutEffect(() => {
+    const box = ref.current
+    if (!box) return
+    // 減少動態:停在各自的位置,看起來是靜止的虛線
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const anims = Array.from(box.children, (el, i) => {
+      const a = el.animate(frames, { duration: dur * 1000, iterations: Infinity, delay: (-i * dur * 1000) / n })
+      if (still) a.pause()
+      return a
+    })
+    return () => anims.forEach((a) => a.cancel())
+  }, [frames, n, dur])
   return (
-    <>
-      {Array.from({ length: n }, (_, i) => (
-        <span key={i} className={`scn-ride ${cls}`} style={{ offsetPath: `path("${d}")`, animationDuration: `${dur}s`, animationDelay: `${(-i * dur) / n}s` }} />
-      ))}
-    </>
+    <div ref={ref} className="scn-fade absolute left-0 top-0">
+      {Array.from({ length: n }, (_, i) => <span key={i} className={`scn-ride ${cls}`} style={{ transform: frames[0].transform }} />)}
+    </div>
   )
 }
 
+// 舞台以固定大小繪製,再等比縮放放進窗格。縮放倍率直接寫進 DOM,不經過 React:
+// 對調畫面時窗格大小每格都在變,每格重畫整張情境圖手機會卡
 function useFit() {
   const ref = useRef<HTMLDivElement>(null)
-  const [k, setK] = useState(1)
+  const stageRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const ro = new ResizeObserver(() => setK(Math.min(el.clientWidth / W, el.clientHeight / H)))
+    const fit = () => {
+      if (stageRef.current) stageRef.current.style.transform = `translate(-50%, -50%) scale(${Math.min(el.clientWidth / W, el.clientHeight / H)})`
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-  return { ref, k }
+  return { ref, stageRef }
 }
 
 function IsoNode({ n }: { n: N }) {
@@ -139,8 +191,8 @@ function IsoNode({ n }: { n: N }) {
 }
 
 /** 情境圖:step 換了或 epoch(重播)變了,就從第 0 個子步驟開始,依時間自己往下播 */
-export function Scenario({ step, epoch, isMain }: { step: number; epoch: number; isMain: boolean }) {
-  const { ref, k } = useFit()
+export const Scenario = memo(function Scenario({ step, epoch, isMain }: { step: number; epoch: number; isMain: boolean }) {
+  const { ref, stageRef } = useFit()
   const [t, setT] = useState(0)
   const intro = step === 0 // 現況:右側列出痛點,再一步步帶出「在 Plasma 裡怎麼做」
   const ROAD = STEPS.slice(1)
@@ -152,16 +204,16 @@ export function Scenario({ step, epoch, isMain }: { step: number; epoch: number;
       n++
       setT(n)
       if (n >= total) clearInterval(id)
-    }, step === 2 ? 2400 : TICK) // 上傳文件那一步:文件飛進去要久一點
+    }, DK[step] === 3 ? 2400 : TICK) // 上傳文件那一步:文件飛進去要久一點
     return () => clearInterval(id)
   }, [step, epoch, total])
 
   const tt = Math.min(t, total)
   const ts = Math.min(tt, STEPS[step].subs.length) // 圖與子步驟用
-  const dk = step === 0 ? 0 : step + 1 // 圖的狀態編號:登入那張(1)已拿掉
+  const dk = DK[step]
   const { nodes, edges, note } = scene(dk, ts)
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]))
-  const brain = dk > 3 || (dk === 3 && ts >= 1)
+  const brain = dk >= 5 || (dk === 3 && ts >= 1)
   brainVisibility.shown = brain
   const st = STEPS[step]
   return (
@@ -181,14 +233,19 @@ export function Scenario({ step, epoch, isMain }: { step: number; epoch: number;
       )}
       <div className={intro ? "scn-row" : "contents"}>
       <div ref={ref} className="scn-board">
-        <div className="scn-stage" style={{ width: W, height: H, transform: `translate(-50%, -50%) scale(${k})` }}>
+        <div ref={stageRef} className="scn-stage" style={{ width: W, height: H }}>
           {brain && (
             <div key={`brain-${step}-${epoch}`} className="absolute" style={{ left: PLASMA.x, top: PLASMA.y - 40 }}>
-              <div className="brain-aura absolute rounded-full" style={{ width: 620, height: 500, left: -310, top: -250 }} />
+              {/* 光暈是一大片柔和的漸層:用 1/4 大小畫、外層放大 4 倍。Safari 的圖層照排版尺寸配記憶體,
+              這樣這張圖層只要原本的 1/16;漸層沒有銳利邊緣,放大後看不出差別(Chrome 會照實際大小重畫,本來就沒差) */}
+              <div className="absolute left-0 top-0 h-0 w-0" style={{ transform: "scale(4)" }}>
+                <div className="brain-aura absolute rounded-full" style={{ width: 155, height: 125, left: -77.5, top: -62.5 }} />
+              </div>
               <BrainNet width={640} delay={dk === 3 ? 0.3 : 0} mode={dk === 3 ? "full" : "idle"} />
             </div>
           )}
-          <svg className="absolute inset-0 overflow-visible" width={W} height={H}>
+          {/* 連線層只佔 1×1,內容照樣畫在外面(overflow-visible):Safari 的圖層只會配到連線實際經過的範圍,不是整個舞台 */}
+          <svg className="absolute left-0 top-0 overflow-visible" width={1} height={1}>
             <defs>
               <radialGradient id="plasma-glow">
                 <stop offset="0" style={{ stopColor: "var(--iso-glow)", stopOpacity: "var(--iso-glow-opacity)" }} />
@@ -210,11 +267,8 @@ export function Scenario({ step, epoch, isMain }: { step: number; epoch: number;
             const f = byId[e.from]
             const to = byId[e.to]
             const d = edgePath(f.pos, f.kind, to.pos, to.kind)
-            return (
-              <div key={`ride-${step}-${epoch}-${e.from}-${e.to}`} className="scn-fade absolute left-0 top-0">
-                {e.tone === "red" ? <Ride d={d} gap={14} speed={14} cls="dash" /> : <Ride d={d} gap={26} speed={26 / 1.2} cls="dot" />}
-              </div>
-            )
+            const key = `ride-${step}-${epoch}-${e.from}-${e.to}`
+            return e.tone === "red" ? <Ride key={key} d={d} gap={14} speed={14} cls="dash" /> : <Ride key={key} d={d} gap={26} speed={26 / 1.2} cls="dot" />
           })}
           {nodes.map((n) => <IsoNode key={`${n.id}-${n.grow ? `grow-${epoch}` : ""}`} n={n} />)}
           {note && <div key={`${step}-${epoch}-${note.text}`} className={`scn-note ${note.tone}`} style={{ left: note.at.x, top: note.at.y }}>{note.text}</div>}
@@ -248,4 +302,4 @@ export function Scenario({ step, epoch, isMain }: { step: number; epoch: number;
       </div>
     </div>
   )
-}
+})

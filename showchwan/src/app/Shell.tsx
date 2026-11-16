@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, LibraryBig, Database, SquareTerminal, Package, Workflow, FilePen, FileBox, FileCode2,
-  GitCompareArrows, FileSliders, Layers, Calendar, Bot, BookOpenText, Users, SlidersHorizontal, Box, UserRound,
+  GitCompareArrows, FileSliders, Layers, Calendar, Bot, BookOpenText, SlidersHorizontal, Box, UserRound,
   Award, ScrollText, PanelLeft, ChevronDown, ChevronRight, Moon, User, Plus, Filter, RefreshCcw, Clock,
   Info, Table2, Pencil, Trash2, ArrowLeft, FileUp, Server, FileText, MoreHorizontal, ArrowUp, ArrowUpDown,
   ChevronLeft, Link2, Copy, Check, Grid2X2,
@@ -51,7 +51,7 @@ const NAV: { group: string; sep?: boolean; items: { label: string; path: string;
   },
   { group: "SCHEDULER", items: [{ label: "Scheduler", path: "/scheduler", icon: Calendar }] },
   {
-    group: "AI",
+    group: "AI", sep: true,
     items: [
       { label: "MCP", path: "/mcp", icon: Bot },
       { label: "Knowledge", path: "/knowledge", icon: BookOpenText },
@@ -60,7 +60,6 @@ const NAV: { group: string; sep?: boolean; items: { label: string; path: string;
   {
     group: "WORKSPACE", sep: true,
     items: [
-      { label: "Workspace", path: "/workspace", icon: Users },
       { label: "Package Library", path: "/workspace-package", icon: Package },
       { label: "AI Model", path: "/workspace-ai", icon: SlidersHorizontal },
     ],

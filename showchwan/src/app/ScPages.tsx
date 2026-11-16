@@ -1,8 +1,9 @@
 // 秀傳 demo 用到、原本操作 demo 沒有的 Plasma 畫面:工作區、知識庫、AI Agent、資料產品、SQL Playground。
 // 版型沿用 Shell.tsx 的 ListPage(與真正 Plasma 前端相同)
-import { Plus, BookOpenText, ArrowLeft, Upload, Package, Bot, User, Wrench, CheckCircle2, Play, FileText, Loader2 } from "lucide-react"
+import { Plus, BookOpenText, ArrowLeft, Upload, Package, Bot, User, Wrench, CheckCircle2, Play, FileText, Loader2, Database, Search, Save, EllipsisVertical, Grid2X2, X } from "lucide-react"
 import {
   Button, IconButton, Input, Textarea, Label, StatusBadge, Card,
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
   DataTable, DTHeadRow, DTHead, DTRow, DTCell, DTEmpty,
   DialogShell, DialogHeaderRow, DialogFooter,
 } from "@/components/ui"
@@ -192,53 +193,111 @@ export function NewProductDialog({ s }: { s: DemoState }) {
 }
 
 /* ---------- SQL Playground(跨資料庫查詢) ---------- */
-export function SqlPage({ s }: { s: DemoState }) {
-  const hq = s.sqlMode === "hq"
-  const total = UNIT_COUNTS.reduce((a, [, n]) => a + n, 0)
+/* ---------- SQL Playground:照最新 Plasma 前端(SQLPlaygroundContainer + SQLPlaygroundContent)----------
+   上方:分頁列 + Monaco 編輯器(淺色模式用 vs-dark);中間:拖拉把手;下方:執行結果。
+   紅框與紅色標籤是 demo 的標注,不是 Plasma 介面的一部分 */
+const KW = new Set(["SELECT", "FROM", "JOIN", "ON", "LIMIT", "WHERE", "AS", "GROUP", "BY", "ORDER", "COUNT"])
+const REFS: Record<string, string> = { a_his: "HIS 門診 · Oracle", a_nursing: "護理系統 · PostgreSQL", a_hr: "人事系統 · MS SQL" }
+const REF_ORDER = ["a_his", "a_nursing", "a_hr"]
+const RES_COLS: [string, string][] = [["NRS_NAME", "HIS 門診"], ["DEPT_NAME", "人事系統"], ["shift", "護理系統"]]
+
+function SqlTokens({ text }: { text: string }) {
+  const parts = text.split(/(\s+|[A-Za-z_]\w*|\d+|[^\s\w])/).filter(Boolean)
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center border-b pl-8 pr-6 pt-6 pb-4 bg-background">
+    <>
+      {parts.map((t, i) => (
+        <span key={i} style={{ color: KW.has(t.toUpperCase()) ? "#569cd6" : /^\d+$/.test(t) ? "#b5cea8" : "#d4d4d4" }}>{t}</span>
+      ))}
+    </>
+  )
+}
+
+function SqlLine({ line, marks }: { line: string; marks: number }) {
+  const m = line.match(/\b(a_his|a_nursing|a_hr)\.\w+/)
+  if (!m || m.index === undefined) return <SqlTokens text={line} />
+  const k = REF_ORDER.indexOf(m[1])
+  const on = marks > k
+  return (
+    <>
+      <SqlTokens text={line.slice(0, m.index)} />
+      <span data-t={`ref-${m[1]}`} className={on ? "sql-mark on" : "sql-mark"}><SqlTokens text={m[0]} /></span>
+      <SqlTokens text={line.slice(m.index + m[0].length)} />
+      {on && <span className="sql-mark-tag">{REFS[m[1]]}</span>}
+    </>
+  )
+}
+
+export function SqlPage({ s }: { s: DemoState }) {
+  const lines = s.sqlText.split("\n")
+  return (
+    <div className="h-full flex flex-col mx-8 py-6 overflow-hidden">
+      <div className="flex items-center">
         <div className="font-medium text-2xl">SQL Playground</div>
-        <div className="ml-auto"><Button data-t="btn-run-sql" variant="brand" size="iconText"><Play /> Run</Button></div>
+        <div className="ml-auto flex gap-2">
+          <Button size="iconText" variant="outline"><Database />Explore</Button>
+          <Button size="iconText" variant="outline"><Search />Search</Button>
+          <Button data-t="btn-run-sql" size="iconText" variant="brand" disabled={!s.sqlText.trim() || s.sqlRunning}><Play />Run</Button>
+          <Button size="iconText" variant="brand" disabled={!s.sqlText.trim()}><Save />Save as View</Button>
+          <Button size="icon" variant="outline" className="h-9 w-9"><EllipsisVertical /></Button>
+        </div>
       </div>
-      <div className="flex-1 min-h-0 bg-sidebar p-6 flex flex-col gap-4">
-        {/* 沒有 Plasma 之前:三套資料庫,各寫一種語法 */}
-        {s.dialects && (
-          <div data-t="dialects" className="grid grid-cols-3 gap-3 fadeup on">
-            {A_DBS.map((d) => (
-              <div key={d.conn} className="rounded-lg border bg-background p-3 opacity-80">
-                <div className="text-xs font-medium text-muted-foreground">{d.name} · {d.type}</div>
-                <code className="mt-1.5 block font-mono text-[12px] text-[#b42622]">{d.dialect}</code>
+      <div className="flex flex-1 flex-col overflow-hidden py-4">
+        {/* 分頁列 */}
+        <div className="flex h-12 shrink-0 items-center rounded-t-lg bg-[#525252] pr-4 text-neutral-300">
+          <div className="sql-tab-active relative flex h-12 items-center text-sm font-medium text-white">
+            <div className="ml-2 mr-2 flex h-10 items-center py-2 pl-2 pr-1">
+              <Grid2X2 className="mr-2 h-4 w-4" />
+              <span className="mr-1">A 分院護理人員</span>
+              <span className="rounded-sm p-0.5"><X className="h-4 w-4" /></span>
+            </div>
+          </div>
+          <span className="h-5 w-[2px] bg-neutral-500" />
+          <span className="ml-2 grid h-9 w-9 place-items-center text-white"><Plus className="h-4 w-4" /></span>
+        </div>
+        {/* 編輯器(Monaco vs-dark) */}
+        <div data-t="sql-editor" className="h-[34%] shrink-0 overflow-hidden rounded-b-lg bg-[#1e1e1e] py-4 pr-4">
+          <div className="font-mono text-[14px] leading-[19px]" style={{ fontFamily: 'Menlo, Monaco, "Courier New", monospace' }}>
+            {lines.map((ln, i) => (
+              <div key={i} className="relative flex whitespace-pre">
+                <span className="w-[52px] shrink-0 pr-[26px] text-right" style={{ color: i === lines.length - 1 ? "#c6c6c6" : "#858585" }}>{i + 1}</span>
+                <span className="relative">
+                  <SqlLine line={ln} marks={s.marks} />
+                  {i === lines.length - 1 && !s.sqlRan && <span className="absolute -right-[2px] top-0 h-[19px] w-[2px] bg-[#aeafad] animate-pulse" />}
+                </span>
               </div>
             ))}
           </div>
-        )}
-        <Card className="p-0 overflow-hidden">
-          <pre data-t="sql-editor" className="min-h-[120px] p-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap">{s.sqlText}<span className="inline-block w-[7px] h-4 align-middle bg-foreground/60 animate-pulse" /></pre>
-        </Card>
-        {s.sqlRan && (
-          <Card data-t="sql-result" className="p-0 overflow-hidden fadeup on max-w-[720px]">
-            <div className="px-4 py-2.5 border-b text-xs text-muted-foreground">示意資料</div>
-            {hq ? (
-              <table className="w-full text-sm">
-                <thead className="bg-sidebar text-muted-foreground"><tr><th className="px-4 py-2 text-left font-medium">unit</th><th className="px-4 py-2 text-left font-medium">nurses</th></tr></thead>
-                <tbody>
-                  {UNIT_COUNTS.map(([u, n]) => <tr key={u} className="border-t"><td className="px-4 py-2">{u}</td><td className="px-4 py-2 tabular-nums">{n}</td></tr>)}
-                  <tr className="border-t bg-sidebar font-medium"><td className="px-4 py-2">合計</td><td className="px-4 py-2 tabular-nums">{total}</td></tr>
-                </tbody>
-              </table>
-            ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-sidebar text-muted-foreground"><tr>
-                  {[["NRS_NAME", "HIS 門診"], ["DEPT_NAME", "人事系統"], ["shift", "護理系統"]].map(([c, src]) => (
-                    <th key={c} className="px-4 py-2 text-left font-medium">{c} <span className="ml-1 rounded bg-background px-1.5 py-0.5 text-[11px] font-normal">{src}</span></th>
+        </div>
+        {/* 拖拉把手 */}
+        <div className="flex items-center justify-center px-2"><div className="my-4 flex h-1 w-10 items-center justify-center rounded-full bg-border" /></div>
+        {/* 執行結果 */}
+        <div data-t="sql-result" className="min-h-0 flex-1 overflow-hidden rounded-lg border p-4">
+          {s.sqlRunning ? (
+            <div className="flex h-full flex-col items-center justify-center gap-8">
+              <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+              <Button variant="outline" size="iconText">Cancel</Button>
+            </div>
+          ) : s.sqlRan ? (
+            // 表格寬度留在右下角情境圖的左邊,三個欄位都看得到
+            <Table className="max-w-[600px]">
+              <TableHeader>
+                <TableRow className="bg-muted">
+                  {RES_COLS.map(([c, src], k) => (
+                    <TableHead key={c}>
+                      <span className={s.marks > 3 + k ? "sql-mark on" : "sql-mark"}>{c}</span>
+                      {s.marks > 3 + k && <span className="sql-mark-tag ml-2">{src}</span>}
+                    </TableHead>
                   ))}
-                </tr></thead>
-                <tbody>{CROSS_ROWS.map((r) => <tr key={r[0]} className="border-t">{r.map((c, i) => <td key={i} className="px-4 py-2">{c}</td>)}</tr>)}</tbody>
-              </table>
-            )}
-          </Card>
-        )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {CROSS_ROWS.map((r) => <TableRow key={r[0]}>{r.map((c, i) => <TableCell key={i}>{c}</TableCell>)}</TableRow>)}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="grid h-full place-items-center text-sm text-muted-foreground">No data available</div>
+          )}
+        </div>
       </div>
     </div>
   )

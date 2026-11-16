@@ -187,3 +187,14 @@ body { overflow: hidden; }
 .why-card li p { font-size: 19px; font-weight: 700; line-height: 1.35; }
 .why-card li small { display: block; margin-top: 3px; font-size: 15px; font-weight: 500; color: var(--sc-muted); font-family: ui-monospace, Menlo, monospace, "PingFang TC"; }
 .why-card-end { margin-top: 20px; padding-top: 14px; border-top: 2px solid var(--sc-ink); font-size: 18px; font-weight: 700; opacity: 0; animation: why-li 0.5s var(--sc-ease) 4s forwards; }
+.why-card.code li p small { color: #b42622; font-size: 14px; }
+
+/* SQL Playground:目前分頁(照真前端 sql-tab.css)與 demo 標注 */
+.sql-tab-active { background: #1e1e1e; border-top-left-radius: 6px; border-top-right-radius: 6px; box-shadow: 6px 6px 0 0 #1e1e1e, -6px 6px 0 0 #1e1e1e; }
+.sql-tab-active::before, .sql-tab-active::after { content: ""; position: absolute; bottom: 0; width: 6px; height: 3rem; background: #525252; }
+.sql-tab-active::before { left: -6px; border-radius: 0 0 6px 0; }
+.sql-tab-active::after { right: -6px; border-radius: 0 0 0 6px; }
+.sql-mark { border-radius: 3px; outline: 2px solid transparent; outline-offset: 2px; transition: outline-color .3s, background-color .3s; }
+.sql-mark.on { outline-color: #ef4444; background: rgb(239 68 68 / 0.18); }
+.sql-mark-tag { display: inline-block; margin-left: 18px; padding: 0 8px; background: #b42622; color: #fff; font: 700 13px/19px ui-sans-serif, system-ui, -apple-system, "PingFang TC", sans-serif; border-radius: 2px; animation: why-li .4s cubic-bezier(.22,1,.36,1) both; }
+th .sql-mark-tag { margin-left: 8px; line-height: 20px; }

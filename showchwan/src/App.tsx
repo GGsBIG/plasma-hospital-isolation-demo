@@ -5,7 +5,7 @@ import { Sidebar, TopBar, DatabaseListPage } from "@/app/Shell"
 import { LoginPage } from "@/app/Login"
 import { AddDatabaseDialog, UploadDocDialog } from "@/dialogs/Dialogs"
 import { AgentScreen, ColumnsDialog, DbDetailPage, KnowledgePage, NewProductDialog, ProductPage, SqlPage } from "@/app/ScPages"
-import { Cursor, ChapterBar, Spotlight, DoneCard, WhyCard } from "@/demo/Overlay"
+import { Cursor, ChapterBar, Spotlight, DoneCard, InfoCard } from "@/demo/Overlay"
 import { STEPS } from "@/sc/steps"
 import { Scenario } from "@/scn/Scenario"
 import type { DemoState } from "@/demo/store"
@@ -53,20 +53,26 @@ function PlasmaApp({ s }: { s: DemoState }) {
 /** Plasma 畫面框:固定大小,依所在窗格等比縮放置中 */
 function PlasmaFrame({ s }: { s: DemoState }) {
   const ref = useRef<HTMLDivElement>(null)
-  const [k, setK] = useState(1)
+  const frameRef = useRef<HTMLDivElement>(null)
+  // 縮放倍率直接寫進 DOM,不經過 React:對調畫面時窗格大小每格都在變,每格重畫整個 Plasma 畫面手機會卡
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const ro = new ResizeObserver(() => setK(Math.min(el.clientWidth / FRAME_W, el.clientHeight / FRAME_H)))
+    const fit = () => {
+      if (frameRef.current) frameRef.current.style.transform = `translate(-50%, -50%) scale(${Math.min(el.clientWidth / FRAME_W, el.clientHeight / FRAME_H)})`
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
   return (
     <div ref={ref} className="absolute inset-0 overflow-hidden bg-[#f4f4f5]">
       <div
+        ref={frameRef}
         data-plasma-frame
         className="absolute left-1/2 top-1/2 overflow-hidden bg-background text-foreground shadow-[0_0_0_1px_rgb(0_0_0/0.08)]"
-        style={{ width: FRAME_W, height: FRAME_H, transform: `translate(-50%, -50%) scale(${k})`, transformOrigin: "50% 50%" }}
+        style={{ width: FRAME_W, height: FRAME_H, transformOrigin: "50% 50%" }}
       >
         <PlasmaApp s={s} />
         <Spotlight s={s} />
@@ -115,7 +121,7 @@ export function App() {
             <ul>{STEPS[cur].pains.map((x) => <li key={x}>{x}</li>)}</ul>
           </div>
         )}
-        <WhyCard s={s} />
+        <InfoCard s={s} />
         <DoneCard s={s} onReplay={() => play(cur)} onNext={() => play(cur + 1)} />
       </main>
 

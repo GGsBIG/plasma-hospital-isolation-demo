@@ -57,18 +57,35 @@ export function Spotlight({ s }: { s: DemoState }) {
   )
 }
 
-/** 情境 3 開頭:為什麼要上傳文件 */
-export function WhyCard({ s }: { s: DemoState }) {
-  if (!s.why) return null
+/** 畫面中央的說明卡:沒有 Plasma 之前(跨資料庫查詢)、為什麼要上傳文件、為什麼可以用問的 */
+const CARDS: Record<"before" | "why" | "ask", { title: string; items: [string, string][]; end: string; code?: boolean }> = {
+  before: {
+    title: "沒有 Plasma 之前",
+    items: [["HIS 門診 · Oracle", "SELECT * FROM NURSE_MST WHERE ROWNUM <= 10"], ["護理系統 · PostgreSQL", "SELECT * FROM shift LIMIT 10"], ["人事系統 · MS SQL", "SELECT TOP 10 * FROM HR_DEPT"]],
+    end: "三套資料庫，三種語法，查完還要匯出再合併。",
+    code: true,
+  },
+  why: {
+    title: "為什麼要上傳文件？",
+    items: [["資料庫的欄位都是代碼", "NRS_NAME、TITLE_CD = N02"], ["代碼的意思，只寫在系統文件裡", "規格書、資料字典、職稱代碼表"], ["交給 Plasma 的 AI 讀", "每個欄位自動補上說明"]],
+    end: "AI 看懂欄位，之後用問的才答得對。",
+  },
+  ask: {
+    title: "不會寫 SQL，也能整理資料",
+    items: [["剛剛：一句 SQL 查三套資料庫", "還是要會寫 SQL"], ["AI 已經看懂每個欄位", "TITLE_CD = N02 就是護理師"], ["現在：用一句話問", "AI 自己寫 SQL，去三套資料庫查"]],
+    end: "不用排隊等 IT，自己就能整理名冊。",
+  },
+}
+export function InfoCard({ s }: { s: DemoState }) {
+  if (!s.card) return null
+  const c = CARDS[s.card]
   return (
-    <div className="why-card" role="status">
-      <h2>為什麼要上傳文件？</h2>
+    <div key={s.card} className={`why-card ${c.code ? "code" : ""}`} role="status">
+      <h2>{c.title}</h2>
       <ol>
-        <li><span>1</span><p>資料庫的欄位都是代碼<small>NRS_NAME、TITLE_CD = N02</small></p></li>
-        <li><span>2</span><p>代碼的意思，只寫在系統文件裡<small>規格書、資料字典、職稱代碼表</small></p></li>
-        <li><span>3</span><p>交給 Plasma 的 AI 讀<small>每個欄位自動補上說明</small></p></li>
+        {c.items.map(([a, b], i) => <li key={a}><span>{i + 1}</span><p>{a}<small>{b}</small></p></li>)}
       </ol>
-      <p className="why-card-end">之後跨庫查詢、AI 問答，才查得對。</p>
+      <p className="why-card-end">{c.end}</p>
     </div>
   )
 }
