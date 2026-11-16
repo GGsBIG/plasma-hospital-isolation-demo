@@ -390,17 +390,17 @@ export function App() {
   return (
     <div className="min-h-full">
       <header
-        className="sticky top-0 z-20 flex h-[var(--header-h)] items-center justify-between border-b border-border bg-background px-6 pl:px-3 pp:px-6"
+        className="sticky top-0 z-20 flex h-[var(--header-h)] items-center justify-between border-b border-t-[6px] border-b-foreground border-t-[#b42622] bg-background px-4 md:px-8 lg:px-[max(40px,calc((100vw-90rem)/2+40px))] pl:px-3"
       >
         <ProgressBar onSelect={goTo} />
         <div className="flex items-center gap-4">
           {/* 點 logo 回 Demo 首頁(/demos/#views,首頁會停在這個情境);在入口頁的視窗裡開啟時,由入口頁攔下來直接關閉視窗 */}
           <a href="../#views" target="_top" aria-label="回到 Plasma Demo 首頁" className="shrink-0">
-            <img src={logo} alt="Brobridge" className="h-[22px] w-auto dark:hidden" />
-            <img src={logoDark} alt="Brobridge" className="hidden h-[26px] w-auto dark:block" />
+            <img src={logo} alt="Brobridge" className="h-4 w-auto md:h-[18px] dark:hidden" />
+            <img src={logoDark} alt="Brobridge" className="hidden h-4 w-auto md:h-[18px] dark:block" />
           </a>
           <span className="h-5 w-px bg-border cp:hidden" />
-          <h1 className="text-[15px] text-foreground/85 cp:hidden">Plasma View 與 Materialized View</h1>
+          <h1 className="text-[15px] font-bold text-foreground cp:hidden">Plasma View 與 Materialized View</h1>
         </div>
         <div className="flex items-center gap-4">
           <span className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">

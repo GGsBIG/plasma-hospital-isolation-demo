@@ -97,7 +97,7 @@ export function App() {
   return (
     <div className="sc-app">
       <header className="sc-top">
-        <a href="../#showchwan" target="_top" aria-label="回到 Plasma Demo 首頁"><img src={logo} alt="Brobridge" className="h-[18px] w-auto" /></a>
+        <a href="../#showchwan" target="_top" aria-label="回到 Plasma Demo 首頁"><img src={logo} alt="Brobridge" className="h-4 w-auto md:h-[18px]" /></a>
         <span className="flex-1" />
         {!solo && <button className="sc-swap" onClick={swap} aria-label={`主畫面改看${label(main === "plasma" ? "scn" : "plasma")}`}>
           <ArrowLeftRight className="h-4 w-4" />

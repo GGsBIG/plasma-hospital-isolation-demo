@@ -91,7 +91,11 @@ body { overflow: hidden; }
 
 .sc-app { position: fixed; inset: 0; display: flex; flex-direction: column; background: #fff; color: var(--sc-ink);
   font-family: ui-sans-serif, system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
-.sc-top { flex: none; height: 56px; display: flex; align-items: center; gap: 16px; padding: 0 24px; border-top: 5px solid var(--sc-red); border-bottom: 1px solid var(--sc-ink); }
+/* 跟 Demo 首頁同一款頁首:6px 紅線 + 64px + 1px 底線 = 71px,左右內距與 logo 大小也一樣 */
+.sc-top { flex: none; box-sizing: border-box; height: 71px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-top: 6px solid var(--sc-red); border-bottom: 1px solid var(--sc-ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+@media (min-width: 768px) { .sc-top { padding: 0 32px; } }
+@media (min-width: 1024px) { .sc-top { padding: 0 max(40px, calc((100vw - 90rem) / 2 + 40px)); } }
 .sc-top-title { padding-left: 16px; border-left: 1px solid rgb(17 17 17 / 0.18); font-weight: 700; font-size: 15px; white-space: nowrap; }
 .sc-swap { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 14px; border: 2px solid var(--sc-ink); background: #fff; font-weight: 700; font-size: 14px; cursor: pointer; transition: background-color 160ms var(--sc-ease), color 160ms var(--sc-ease); }
 .sc-swap:hover { background: var(--sc-ink); color: #fff; }

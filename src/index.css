@@ -8,7 +8,7 @@ html, body, #root { min-height: 100%; }
 :root {
   /* 頂部進度條左右對齊頁面內容(桌機為 main 的左右內距) */
   --bar-x: 24px;
-  --header-h: 48px;
+  --header-h: 71px; /* 跟 Demo 首頁一樣:6px 紅線 + 64px + 1px 底線 */
   --footer-h: 73px;
   --stage-h: calc(100vh - var(--header-h) - var(--footer-h));
   /* 固定在畫面上的區域高度:桌機是舞台(說明欄在旁邊);手機是舞台 + 下方說明區 */
@@ -24,7 +24,7 @@ html, body, #root { min-height: 100%; }
    用 svh(不含網址列的高度),捲動時網址列伸縮不會讓版面跳動 */
 @media (max-width: 1023px) and (orientation: portrait) {
   :root {
-    --header-h: 44px;
+    --header-h: 71px;
     /* 最下方是有情境名稱的進度條 */
     --footer-h: 62px; /* 9 頁,名稱兩行 */
     --view-h: calc(100svh - var(--header-h) - var(--footer-h));
@@ -41,7 +41,7 @@ html, body, #root { min-height: 100%; }
 /* 手機橫拿(pl):左說明、右舞台(舞台在右側區域內置中、盡量放大),標題列變矮,沒有底部情境切換列 */
 @media (max-height: 500px) and (orientation: landscape) {
   :root {
-    --header-h: 40px;
+    --header-h: 46px; /* 手機橫拿高度不夠,標題列維持矮版(含 6px 紅線) */
     --footer-h: 0px;
     --stage-h: calc(100svh - var(--header-h));
     --narr-w: 28vw;
