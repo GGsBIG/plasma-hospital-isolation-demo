@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# 產生 WordPress 用的靜態 HTML,兩個網站分開打包、分開上傳:
-#   release/plasma-demos-wordpress.zip     → 解壓到 httpdocs/,得到 demos/(入口頁、元件總覽、製造業、醫院……,不含秀傳)
-#   release/plasma-showchwan-wordpress.zip → 解壓到 httpdocs/,得到 showchwan/(秀傳專用首頁、秀傳情境、元件總覽)
-# release/ 不進 git。
+# 產生 WordPress 用的靜態 HTML,兩個網站分開放、分開上傳(repo 根目錄的 上傳WordPress/,不進 git):
+#   上傳WordPress/一般客戶/ + 一般客戶.zip  → 入口頁、元件總覽、製造業、醫院……(不含秀傳)
+#   上傳WordPress/秀傳醫院/ + 秀傳醫院.zip  → 秀傳專用首頁、秀傳情境、元件總覽
+# zip 裡直接是網站檔案(沒有外層資料夾):進到 WordPress 上要放的那個資料夾,上傳後解壓即可,
+# 網站全用相對路徑,放在哪個網址底下都能用。hub/release/ 是中間產物(開發伺服器也讀它)。
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"   # repo/hub
 REPO="$(cd "$HERE/.." && pwd)"           # plasma-hospital-isolation-demo
@@ -42,5 +43,9 @@ for f in "$OUT"/*/index.html "$SC"/*/index.html; do
 done
 find "$HERE/release" -name .DS_Store -delete
 
-(cd "$HERE/release" && zip -qr plasma-demos-wordpress.zip demos && zip -qr plasma-showchwan-wordpress.zip showchwan)
-du -sh "$OUT" "$SC" "$HERE/release/"*.zip
+UP="$REPO/上傳WordPress"
+rm -rf "$UP" && mkdir -p "$UP"
+cp -R "$OUT" "$UP/一般客戶" && cp -R "$SC" "$UP/秀傳醫院"
+(cd "$UP/一般客戶" && zip -qr ../一般客戶.zip .)
+(cd "$UP/秀傳醫院" && zip -qr ../秀傳醫院.zip .)
+du -sh "$UP"/*

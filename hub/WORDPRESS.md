@@ -12,44 +12,27 @@
 
     ./build.sh
 
-會重新 build 兩個網站，產生兩個 zip：
+會重新 build 兩個網站，放在 repo 根目錄的 `上傳WordPress/`（不進 git）：
 
-- `release/plasma-demos-wordpress.zip`（內容在 `release/demos/`）
-- `release/plasma-showchwan-wordpress.zip`（內容在 `release/showchwan/`）
+| 檔案 | 內容 |
+|---|---|
+| `一般客戶/`、`一般客戶.zip` | 入口頁、元件總覽、製造業、醫院、View 圖解、UI 操作、Power BI（不含秀傳） |
+| `秀傳醫院/`、`秀傳醫院.zip` | 秀傳專用入口頁、秀傳情境（`demo/`）、元件總覽（`tech/`） |
 
-第一個 zip解壓後的 `demos/` 就對應主機上的 `httpdocs/demos/`：
-
-| 網址 | 內容 | 原始碼 |
-|---|---|---|
-| `/demos/` | 入口頁 | `hub/`(React) |
-| `/demos/tech/` | Plasma 元件總覽 | `hub/`(React) |
-| `/demos/hospital/` | 醫院資料隔離 | repo 根目錄(React) |
-| `/demos/ui-hospital/` | 醫院 UI 操作 demo | `ui-demo/`(React) |
-| `/demos/views/` | View 與 Materialized View 圖解 | `views-demo/`(React,資料隔離 demo 的引擎) |
-| `/demos/ops/` | Plasma 操作 demo(跟官網 bbg-web 同一份) | `ops-demo/`(React) |
-| `/demos/powerbi/` | Plasma × Power BI 簡報(對外版) | `powerbi/`(靜態 HTML) |
-| `/demos/manufacturing/` | 製造業資料隔離 | 另一個 private repo `plasma-data-isolation-demo`,需放在本 repo 旁邊 |
-
-所有頁面都加了 `noindex, nofollow`，搜尋引擎不會收錄。入口頁不要放進官網選單。
+zip 裡直接是網站檔案，沒有外層資料夾；網站全用相對路徑，放在哪個網址底下都能用。
 
 ## 上傳（WP File Manager）
 
+兩個網站各做一次：
+
 1. 後台 **外掛 → 安裝外掛**，裝 WP File Manager 並啟用（用完記得停用、刪除）。
-2. 進 `httpdocs/demos/`，把裡面舊的東西全部刪掉。
-3. 回到 `httpdocs/`，上傳 `plasma-demos-wordpress.zip`，右鍵 **Extract files from archive**。
-   解壓會直接產生（或覆蓋）`demos/` 資料夾。確認 `httpdocs/demos/index.html` 存在。
-4. 刪掉 zip，開 https://brobridge.com/demos/ 逐一點五張卡確認。
+2. 在 `httpdocs/` 底下進到要放的資料夾（例如一般客戶用 `demos/`，秀傳用 `showchwan/`；沒有就新建）。
+   裡面舊的東西全部刪掉。
+3. 在這個資料夾裡上傳對應的 zip，右鍵 **Extract files from archive**。確認這個資料夾裡有 `index.html`。
+4. 刪掉 zip，開網址逐一點首頁的卡片確認。
 5. 畫面沒更新：**LiteSpeed Cache → 清除所有快取**。
 
+秀傳不要放進一般客戶的資料夾裡；舊版放在 `demos/showchwan/` 的秀傳要刪掉。
 demo 的 JS／CSS 檔名帶雜湊，更新時整個資料夾換掉即可，瀏覽器不會吃到舊快取。
 
-## 秀傳網站（brobridge.com/showchwan/）
-
-| 網址 | 內容 | 原始碼 |
-|---|---|---|
-| `/showchwan/` | 秀傳專用入口頁 | `hub/`(React,`VITE_SITE=showchwan`) |
-| `/showchwan/tech/` | Plasma 元件總覽 | `hub/`(React) |
-| `/showchwan/demo/` | 秀傳醫院跨院資料整合 | `showchwan/`(React) |
-
-上傳方式同上，但是在 `httpdocs/` 上傳 `plasma-showchwan-wordpress.zip` 並解壓，會產生（或覆蓋）`showchwan/` 資料夾。
-不要上傳到 `demos/` 裡。舊版放在 `httpdocs/demos/showchwan/` 的秀傳要刪掉。
+所有頁面都加了 `noindex, nofollow`，搜尋引擎不會收錄。入口頁不要放進官網選單。
