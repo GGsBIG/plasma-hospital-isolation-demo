@@ -124,3 +124,6 @@
 .scn-road .n { flex: none; display: grid; place-items: center; width: 1.7em; height: 1.7em; background: var(--ink); color: var(--paper); font-weight: 700; font-size: clamp(10px, 1.4cqw, 15px); }
 .scn-road b { display: block; font-size: clamp(10px, 1.6cqw, 18px); }
 .scn-road small { display: block; font-size: clamp(9px, 1.25cqw, 14px); color: var(--muted); margin-top: 0.2em; }
+
+/* Oracle 減壓:節點縮小 */
+.scn-zoom { left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; transition: transform 0.8s var(--ease); }

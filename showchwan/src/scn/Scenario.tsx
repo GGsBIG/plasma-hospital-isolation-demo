@@ -17,12 +17,12 @@ const W = 1000
 const H = 680
 const BRAND = [oracleLogo, postgresLogo, mssqlLogo]
 const TICK = 1500 // 子步驟間隔
-// 情境 → 圖的狀態編號:現況 0、接上資料庫 2、跨資料庫查詢 4、AI 看懂欄位 3、問答 5、資料產品 6
+// 情境 → 圖的狀態編號:現況 0、接上資料庫 2、跨資料庫查詢 4、AI 看懂欄位 3、問答 5、資料產品 6、Oracle 減壓 7
 // (狀態 1 是已拿掉的登入;跨資料庫查詢排在上傳文件之前,所以那張圖沒有大腦)
-const DK = [0, 2, 4, 3, 5, 6]
+const DK = [0, 2, 4, 3, 5, 6, 7]
 const DIALECT = ["WHERE ROWNUM <= 10", "LIMIT 10", "SELECT TOP 10"]
 
-interface N { id: string; kind: NodeKind; variant?: string; pos: Pos; label?: string; sub?: ReactNode; tone?: "ok" | "danger"; brand?: string; grow?: boolean; bare?: boolean; hot?: boolean }
+interface N { id: string; kind: NodeKind; variant?: string; pos: Pos; label?: string; sub?: ReactNode; tone?: "ok" | "danger"; brand?: string; grow?: boolean; bare?: boolean; hot?: boolean; small?: boolean }
 interface E { from: string; to: string; tone: "red" | "ok" }
 interface Note { at: Pos; text: string; tone: "red" | "ink" }
 
@@ -36,9 +36,13 @@ function scene(k: number, t: number) {
     id: db(i), kind: "db" as const, pos: { x: 110, y: 170 + i * 175 }, label: d.name, brand: BRAND[i],
     sub: k === 0 ? (t >= 1 ? <code className="scn-code">{DIALECT[i]}</code> : undefined)
       : k === 4 && t === 0 ? <code className="scn-code">{DIALECT[i]}</code>
+      : k === 0 && i === 0 && t >= 3 ? "授權稽核"
+      : k === 7 && i === 0 ? (t >= 2 ? "只跑門診交易" : "負載高 · 授權稽核")
       : k === 2 ? (t > i ? "唯讀" : undefined) : k >= 3 ? "唯讀" : undefined,
-    tone: k >= 2 ? ("ok" as const) : undefined,
-    hot: (k === 0 && t === 1) || (k === 2 && t === i) || (k === 4 && t >= 1),
+    tone: k === 0 && i === 0 && t >= 3 ? ("danger" as const) : k === 7 && i === 0 && t < 2 ? ("danger" as const) : k >= 2 ? ("ok" as const) : undefined,
+    hot: (k === 0 && t === 1) || (k === 0 && i === 0 && t >= 3) || (k === 2 && t === i) || (k === 4 && t >= 1) || (k === 7 && i === 0 && t === 0),
+    // Oracle 減壓:讀取移走之後,Oracle 變小
+    small: k === 7 && i === 0 && t >= 2,
   }))
   const edges: E[] = []
   let note: Note | null = null
@@ -48,7 +52,7 @@ function scene(k: number, t: number) {
     nodes.push({ id: "out", kind: "app", variant: "receipt", pos: RIGHT, label: "護理人員名冊", sub: t >= 2 ? "整理不出來" : undefined, tone: "danger", hot: t >= 2 })
     A_DBS.forEach((_, i) => edges.push({ from: db(i), to: "it", tone: "red" }))
     if (t >= 2) edges.push({ from: "it", to: "out", tone: "red" })
-    note = t >= 2 ? { at: { x: 430, y: 170 }, text: "TITLE_CD、NRS_NAME 是什麼？", tone: "red" } : t >= 1 ? { at: { x: 430, y: 170 }, text: "三套資料庫，三種語法", tone: "red" } : null
+    note = t >= 3 ? { at: { x: 330, y: 70 }, text: "Oracle 授權稽核，費用高", tone: "red" } : t >= 2 ? { at: { x: 430, y: 170 }, text: "TITLE_CD、NRS_NAME 是什麼？", tone: "red" } : t >= 1 ? { at: { x: 430, y: 170 }, text: "三套資料庫，三種語法", tone: "red" } : null
     return { nodes, edges, note }
   }
 
@@ -74,6 +78,18 @@ function scene(k: number, t: number) {
     edges.push({ from: "plasma", to: "ai", tone: "ok" })
     if (t < 2) note = { at: { x: 640, y: 300 }, text: "透過 MCP 接上", tone: "ink" }
     if (t >= 2) note = { at: { x: 800, y: 250 }, text: "248 位護理師", tone: "ink" }
+  }
+  if (k === 7) {
+    // 讀取原本都經 Plasma 打到 Oracle;Streaming 把 Oracle 的資料表同步到 PostgreSQL 副本,讀取改走副本
+    const PG = { x: 800, y: 170 }
+    const APP = { x: 800, y: 540 }
+    if (t >= 1) nodes.push({ id: "pg", kind: "db", pos: PG, label: "PostgreSQL 副本", brand: postgresLogo, sub: "Streaming 同步", tone: "ok", hot: t === 1 })
+    nodes.push({ id: "use", kind: "app", pos: APP, label: "報表 · AI · 資料產品", sub: t >= 2 ? "改讀 PostgreSQL" : "都在讀 Oracle", tone: t >= 2 ? "ok" : "danger", hot: t >= 2 })
+    if (t >= 1) edges.push({ from: "plasma", to: "pg", tone: "ok" })
+    edges.push(t >= 2 ? { from: "pg", to: "use", tone: "ok" } : { from: "plasma", to: "use", tone: "ok" })
+    note = t === 0 ? { at: { x: 300, y: 60 }, text: "讀取都壓在 Oracle", tone: "red" }
+      : t === 1 ? { at: { x: 620, y: 60 }, text: "Oracle 逐筆同步到 PostgreSQL", tone: "ink" }
+      : { at: { x: 300, y: 60 }, text: "Oracle 縮小，授權負擔減輕", tone: "ink" }
   }
   if (k === 6) {
     nodes.push({ id: "prod", kind: "app", variant: "package", pos: RIGHT, label: "護理人員名冊", sub: "資料產品", tone: "ok", hot: t === 0 })
@@ -175,14 +191,17 @@ function useFit() {
 
 function IsoNode({ n }: { n: N }) {
   const { a, t } = sizeOf(n.kind)
+  const z = n.small ? 0.6 : 1 // 縮小的節點(Oracle 減壓後)
   return (
     <div className={`scn-node ${n.hot ? "hot" : ""}`} style={{ left: n.pos.x, top: n.pos.y }}>
       {n.hot && <span className="scn-pulse" aria-hidden="true" />}
-      <div className={n.grow ? "kb-grow absolute" : "absolute"} style={n.grow ? { animationDelay: "1.6s" } : undefined}>
-        <Platform kind={n.kind} variant={n.variant} bare={n.bare} />
+      <div className="scn-zoom absolute" style={{ transform: `scale(${z})` }}>
+        <div className={n.grow ? "kb-grow absolute" : "absolute"} style={n.grow ? { animationDelay: "1.6s" } : undefined}>
+          <Platform kind={n.kind} variant={n.variant} bare={n.bare} />
+        </div>
       </div>
       {(n.label || n.sub) && (
-        <div className="scn-label" style={{ top: a / 2 + t + 6 }}>
+        <div className="scn-label" style={{ top: (a / 2 + t) * z + 6, transition: "top 0.8s var(--ease)" }}>
           {n.label && <div className="scn-pill scn-name">{n.brand && <img src={n.brand} alt="" />}{n.label}</div>}
           {n.sub && <div className={`scn-pill scn-sub ${n.tone ? `tone-${n.tone}` : ""}`}>{n.sub}</div>}
         </div>
@@ -205,7 +224,7 @@ export const Scenario = memo(function Scenario({ step, epoch, isMain }: { step: 
       n++
       setT(n)
       if (n >= total) clearInterval(id)
-    }, DK[step] === 3 ? 2400 : DK[step] === 5 ? 4500 : TICK) // 上傳文件:文件飛進去要久一點;MCP 問答:配合左邊的 MCP 說明卡
+    }, DK[step] === 3 ? 2400 : DK[step] === 5 ? 4500 : DK[step] === 7 ? 11000 : TICK) // 上傳文件:文件飛進去要久一點;MCP 問答、Oracle 減壓:配合左邊的說明卡
     return () => clearInterval(id)
   }, [step, epoch, total])
 

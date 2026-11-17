@@ -57,8 +57,8 @@ export function Spotlight({ s }: { s: DemoState }) {
   )
 }
 
-/** 畫面中央的說明卡:沒有 Plasma 之前(跨資料庫查詢)、為什麼要上傳文件、為什麼可以用問的 */
-const CARDS: Record<"before" | "why" | "ask", { title: string; items: [string, string][]; end: string; code?: boolean; mcp?: boolean }> = {
+/** 畫面中央的說明卡:沒有 Plasma 之前(跨資料庫查詢)、為什麼要上傳文件、為什麼可以用問的、Oracle 為什麼要減壓 */
+const CARDS: Record<"before" | "why" | "ask" | "oracle", { title: string; items: [string, string][]; end: string; code?: boolean; mcp?: boolean }> = {
   before: {
     title: "沒有 Plasma 之前",
     items: [["HIS 門診 · Oracle", "SELECT * FROM NURSE_MST WHERE ROWNUM <= 10"], ["護理系統 · PostgreSQL", "SELECT * FROM shift LIMIT 10"], ["人事系統 · MS SQL", "SELECT TOP 10 * FROM HR_DEPT"]],
@@ -75,6 +75,11 @@ const CARDS: Record<"before" | "why" | "ask", { title: string; items: [string, s
     items: [["任何 AI Agent 都能接", "GPT、Claude、地端 Agent、OpenCode"], ["透過 Plasma 的 MCP 連線", "AI 讀得到剛剛看懂的 Schema"], ["接上之後，用問的", "AI 自己寫 SQL，去三套資料庫查"]],
     end: "不會寫 SQL，也能自己整理名冊。",
     mcp: true,
+  },
+  oracle: {
+    title: "Oracle 授權稽核的壓力",
+    items: [["查詢、報表、AI 都直接讀 Oracle", "剛剛的名冊、資料產品，也都在讀 HIS 門診"], ["Oracle 授權跟著 CPU 核心數走", "讀取越多，核心數越降不下來，稽核時壓力大"], ["把讀取移到 PostgreSQL", "Plasma Streaming 逐筆同步，開源資料庫不用授權費"]],
+    end: "Oracle 只留門診交易，規模可以縮小，授權負擔跟著減輕。",
   },
 }
 export function InfoCard({ s }: { s: DemoState }) {
@@ -115,7 +120,7 @@ export function DoneCard({ s, onReplay, onNext }: { s: DemoState; onReplay: () =
   )
 }
 
-/** 下方控制列:六個情境(點了就播那一個)、重播、暫停、上一個／下一個 */
+/** 下方控制列:七個情境(點了就播那一個)、重播、暫停、上一個／下一個 */
 export function ChapterBar({ cur, paused, done, onPlay, onToggle }: { cur: number; paused: boolean; done: boolean; onPlay: (i: number) => void; onToggle: () => void }) {
   return (
     <div className="sc-bar">

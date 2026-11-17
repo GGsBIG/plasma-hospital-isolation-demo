@@ -4,7 +4,7 @@ import { useDemo } from "@/demo/engine"
 import { Sidebar, TopBar, DatabaseListPage } from "@/app/Shell"
 import { LoginPage } from "@/app/Login"
 import { AddDatabaseDialog, UploadDocDialog } from "@/dialogs/Dialogs"
-import { AgentScreen, ColumnsDialog, DbDetailPage, KnowledgePage, NewProductDialog, ProductPage, SqlPage } from "@/app/ScPages"
+import { AddSinkDialog, AgentScreen, CdcPage, ColumnsDialog, DbDetailPage, KnowledgePage, NewProductDialog, ProductPage, SqlPage } from "@/app/ScPages"
 import { Cursor, ChapterBar, Spotlight, DoneCard, InfoCard } from "@/demo/Overlay"
 import { STEPS } from "@/sc/steps"
 import { Scenario } from "@/scn/Scenario"
@@ -17,7 +17,7 @@ const FRAME_H = 800
 
 const CRUMBS: Record<DemoState["page"], string[]> = {
   list: ["Data Access"], detail: ["Data Access", "Detail"], dbdetail: ["Data Access", "a_his"], mview: ["Materialized View"], api: ["Data Product"], mcp: ["MCP"],
-  workspace: ["Workspace"], knowledge: ["AI", "Knowledge"], product: ["Data Product"], sql: ["SQL Playground"],
+  workspace: ["Workspace"], knowledge: ["AI", "Knowledge"], product: ["Data Product"], sql: ["SQL Playground"], cdc: ["Streaming Pipeline"],
 }
 
 function PlasmaApp({ s }: { s: DemoState }) {
@@ -26,6 +26,7 @@ function PlasmaApp({ s }: { s: DemoState }) {
     : s.page === "knowledge" ? <KnowledgePage s={s} />
     : s.page === "product" ? <ProductPage s={s} />
     : s.page === "sql" ? <SqlPage s={s} />
+    : s.page === "cdc" ? <CdcPage s={s} />
     : <DatabaseListPage s={s} />
   if (s.screen === "login") return <LoginPage s={s} />
   return (
@@ -39,6 +40,7 @@ function PlasmaApp({ s }: { s: DemoState }) {
       <UploadDocDialog s={s} />
       <NewProductDialog s={s} />
       <ColumnsDialog s={s} />
+      <AddSinkDialog s={s} />
       {s.screen === "agent" && <AgentScreen s={s} />}
       {s.analyzing && (
         <div className="absolute bottom-8 right-8 z-50 flex items-center gap-2 rounded-lg border bg-background px-4 py-3 shadow-lg">

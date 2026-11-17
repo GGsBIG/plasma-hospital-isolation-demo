@@ -1,11 +1,11 @@
 // 秀傳 demo 用到、原本操作 demo 沒有的 Plasma 畫面:工作區、知識庫、AI Agent、資料產品、SQL Playground。
 // 版型沿用 Shell.tsx 的 ListPage(與真正 Plasma 前端相同)
-import { Plus, BookOpenText, ArrowLeft, Upload, Package, Bot, User, Wrench, CheckCircle2, Play, FileText, Loader2, Database, Search, Save, EllipsisVertical, Grid2X2, X } from "lucide-react"
+import { Plus, BookOpenText, ArrowLeft, Upload, Package, Bot, User, Wrench, CheckCircle2, Play, FileText, Loader2, Database, Search, Save, EllipsisVertical, Grid2X2, X, Radio, RotateCw, RotateCcw, Info, Pencil, ArrowDownToLine } from "lucide-react"
 import {
   Button, IconButton, Input, Textarea, Label, StatusBadge, Card,
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
   DataTable, DTHeadRow, DTHead, DTRow, DTCell, DTEmpty,
-  DialogShell, DialogHeaderRow, DialogFooter,
+  DialogShell, DialogHeaderRow, DialogFooter, FakeSelect, SearchBox,
 } from "@/components/ui"
 import { ListPage, Pagination, SortIcon } from "@/app/Shell"
 import type { DemoState } from "@/demo/store"
@@ -305,3 +305,106 @@ export function SqlPage({ s }: { s: DemoState }) {
 
 export const KB_ICON = BookOpenText
 export { HQ_SQL }
+
+/* ---------- Streaming Pipeline:照最新 Plasma 前端 CDCPage(左邊 Sources 清單、右邊選到的 Source 與它的 Sinks)----------
+   HIS 門診(Oracle)開了 CDC Source;新增 Sink 把資料表逐筆同步到 PostgreSQL 副本,查詢、報表、AI 改讀副本 */
+export function CdcPage({ s }: { s: DemoState }) {
+  const n = s.sinks.length
+  return (
+    <div className="h-full flex flex-col">
+      <div className="flex items-center border-b pl-8 pr-6 pt-6 pb-4 bg-background">
+        <div className="font-medium text-2xl">Streaming Pipeline</div>
+      </div>
+      <div className="py-6 px-6 flex-1 min-h-0 bg-sidebar">
+        <div className="flex h-full min-h-0 rounded-lg border border-border bg-background overflow-hidden">
+          {/* master list */}
+          <div className="w-80 shrink-0 border-r border-border flex flex-col min-h-0">
+            <div className="py-3 pl-3 pr-2 border-b border-border shrink-0 flex items-center gap-1">
+              <SearchBox className="flex-1" />
+              <span className="h-8 w-8 grid place-items-center opacity-50"><RotateCw className="h-5 w-5" /></span>
+            </div>
+            <div className="px-3 pt-2 pb-4 space-y-2">
+              <div className="pt-1 text-[10px] px-1 font-semibold tracking-[0.12em] text-muted-foreground/70 uppercase">Sources</div>
+              {[["his_opd_cdc", n], ["nis_shift_cdc", 0]].map(([name, c], i) => (
+                <Card key={name as string} data-t={i === 0 ? "cdc-source" : undefined}
+                  className={`w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 shadow-sm ${i === 0 ? "bg-sidebar-ring/10 border-sidebar-ring/25" : "border-border"}`}>
+                  <span className="h-2 w-2 rounded-full shrink-0 bg-emerald-500" />
+                  <div className="min-w-0 flex-1">
+                    <div className={`font-medium text-sm truncate ${i === 0 ? "text-sidebar-ring" : ""}`}>{name}</div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">Upsert · {c} sink</div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+          {/* detail panel */}
+          <div className="flex-1 min-w-0 min-h-0 overflow-hidden p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3 py-2">
+                  <Radio className="h-6 w-6 text-sidebar-ring" />
+                  <h2 className="text-xl font-semibold">his_opd_cdc</h2>
+                  <StatusBadge status="active" />
+                </div>
+                <div className="text-sm text-muted-foreground mt-1.5 font-mono">a_his · Upsert</div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button variant="outline" size="iconText"><Info />Detail</Button>
+                <Button variant="outline" size="iconText"><RotateCcw />Reset</Button>
+              </div>
+            </div>
+            <div className="flex items-end justify-between mt-4 mb-3">
+              <h3 className="font-semibold">Sinks ({n})</h3>
+              <Button data-t="btn-add-sink" variant="brand" size="iconText"><Plus />Add Sink</Button>
+            </div>
+            {n === 0 ? (
+              <div className="text-center text-sm text-muted-foreground py-8 border border-dashed border-border rounded-lg">No sinks yet</div>
+            ) : (
+              <div data-t="sink-list" className="flex flex-col gap-2 max-w-[560px]">
+                {s.sinks.map((k) => (
+                  <Card key={k.name} className="w-full flex items-center gap-3 rounded-lg border-border px-4 py-3 fadeup on">
+                    <div className="bg-muted rounded-lg p-2 shrink-0"><ArrowDownToLine className="h-4 w-4 text-sidebar-ring" /></div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm truncate">{k.name}</span>
+                        {k.status === "loading"
+                          ? <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Initial load</span>
+                          : <StatusBadge status="active" />}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate mt-0.5 font-mono">{k.table} → {k.target}</div>
+                    </div>
+                    <div className="flex gap-1 shrink-0 text-muted-foreground">
+                      <IconButton><Info /></IconButton><IconButton><Pencil /></IconButton><IconButton><RotateCw /></IconButton>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Create Sink(照前端 AddSinkDialog 的欄位) */
+export function AddSinkDialog({ s }: { s: DemoState }) {
+  const f = s.sinkForm
+  return (
+    <DialogShell open={s.sinkOpen} className="sm:max-w-[520px] px-6 pb-6 pt-4">
+      <DialogHeaderRow title="Create Sink" icon={ArrowDownToLine} />
+      <Field label="Name" required><Input data-t="f-sink-name" value={f.name} readOnly placeholder="Enter sink name" /></Field>
+      <Field label="Source Table" required><FakeSelect value={f.table} placeholder="Select a source table" /></Field>
+      <div data-t="f-sink-conn"><Field label="Database Connection" required><FakeSelect value={f.conn} placeholder="Select a database connection" /></Field></div>
+      <Field label="Target Table Name" required><Input value={f.target} readOnly placeholder="e.g. orders" className="font-mono" /></Field>
+      <div className="space-y-2">
+        <Label required>Initial Load Mode</Label>
+        <div className="flex gap-6 text-sm">
+          <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-full border border-primary grid place-items-center"><span className="h-2 w-2 rounded-full bg-primary" /></span>Truncate</span>
+          <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-full border border-primary" />Overwrite</span>
+        </div>
+      </div>
+      <DialogFooter><Button variant="outline">Cancel</Button><Button data-t="btn-sink-create" variant="brand" disabled={!f.target}>Create</Button></DialogFooter>
+    </DialogShell>
+  )
+}

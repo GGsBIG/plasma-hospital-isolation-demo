@@ -14,7 +14,7 @@ export interface DemoState {
   loginPass: string
   loggingIn: boolean
 
-  page: "list" | "detail" | "mview" | "api" | "mcp" | "workspace" | "knowledge" | "product" | "sql" | "dbdetail"
+  page: "list" | "detail" | "mview" | "api" | "mcp" | "workspace" | "knowledge" | "product" | "sql" | "dbdetail" | "cdc"
   detailTab: "general" | "tables" | "mcp"
   connections: { name: string; type: string; status: string }[]
   navActive: string
@@ -81,7 +81,11 @@ export interface DemoState {
   sqlMode: "cross" | "hq"
   dialects: boolean // SQL Playground 上方「以前:三種語法」對照
   epoch: number // 重播次數(情境圖用來從頭播)
-  card: "before" | "why" | "ask" | null // 畫面中央的說明卡
+  card: "before" | "why" | "ask" | "oracle" | null // 畫面中央的說明卡
+  // Streaming Pipeline:HIS 門診(Oracle)的 CDC Source → Sink 到 PostgreSQL 副本,讀取改走 PostgreSQL
+  sinks: { name: string; table: string; target: string; status: string }[]
+  sinkOpen: boolean
+  sinkForm: { name: string; table: string; conn: string; target: string }
   marks: number // SQL Playground 標注:1–3 = SQL 裡的三套資料庫,4–6 = 結果的欄位來源
   sqlRunning: boolean
   kbDone: boolean // 知識庫文件讀完了
@@ -158,6 +162,9 @@ export const initialState: DemoState = {
   dialects: false,
   epoch: 0,
   card: null,
+  sinks: [],
+  sinkOpen: false,
+  sinkForm: { name: "", table: "", conn: "", target: "" },
   marks: 0,
   sqlRunning: false,
   kbDone: false,

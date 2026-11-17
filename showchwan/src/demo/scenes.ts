@@ -19,6 +19,7 @@ const A = A_DBS[0]
 const WS_A = "A 分院"
 const emptyForm = { display_name: "", db_type: "", description: "", host: "", port: "", db_name: "", username: "", password: "" }
 const nav = (path: string, page: DemoState["page"]) => ({ navActive: path, page, screen: "app" as const })
+const emptySink = { name: "", table: "", conn: "", target: "" }
 const sub = (n: number, hot: string | null = null) => ({ sub: n, hot })
 
 // 點一下:先打聚光燈說明,再點,然後收掉聚光燈
@@ -33,7 +34,7 @@ export function buildScenes(): SceneRun[] {
     /* 1 · 現況:只看情境圖 */
     async (a) => {
       a.update({ screen: "login" })
-      await a.sleep(10500) // 等情境圖列完痛點與「在 Plasma 裡這樣做」再出總結卡
+      await a.sleep(16000) // 等情境圖列完四個痛點與「在 Plasma 裡這樣做」再出總結卡
     },
 
     /* 2 · 接上異質資料庫 */
@@ -185,6 +186,44 @@ export function buildScenes(): SceneRun[] {
       await press(a, "btn-product-save", "發布")
       a.update({ productOpen: false, products: ["A 分院護理人員名冊"] })
       await a.sleep(1800)
+    },
+
+    /* 7 · Oracle 減壓:HIS 門診(Oracle)的資料表用 Streaming 同步到 PostgreSQL,查詢、報表、AI 改讀 PostgreSQL,
+       Oracle 只跑門診交易、可以縮小,減輕授權稽核的負擔 */
+    async (a) => {
+      a.update({ ...nav("/cdc", "cdc"), ws: WS_A, sinks: [], sinkOpen: false, sinkForm: { ...emptySink }, productOpen: false, schemaOpen: false, card: null })
+      await a.sleep(600)
+      a.update({ card: "oracle" })
+      await a.sleep(9000) // 說明卡:Oracle 授權稽核的壓力、為什麼移到 PostgreSQL
+      a.update({ card: null })
+      await a.sleep(400)
+      await a.focus("cdc-source", "HIS 門診（Oracle）的異動，持續同步進 Plasma", 2200)
+      a.update({ spot: null })
+      await press(a, "btn-add-sink", "新增 Sink：同步到 PostgreSQL")
+      a.update({ sinkOpen: true, sinkForm: { ...emptySink } })
+      await a.focus("f-sink-name", "命名", 400)
+      await a.type((v) => ({ sinkForm: { ...emptySink, name: v } }), "opd_reg_to_pg", 60)
+      a.update((s) => ({ spot: null, sinkForm: { ...s.sinkForm, table: "OPD_REG" } }))
+      await a.sleep(600)
+      a.update((s) => ({ sinkForm: { ...s.sinkForm, conn: "a_report_pg（PostgreSQL）" } }))
+      await a.focus("f-sink-conn", "目的地：PostgreSQL，開源、不用授權費", 2000)
+      a.update((s) => ({ spot: null, sinkForm: { ...s.sinkForm, target: "opd_reg" } }))
+      await a.sleep(600)
+      await press(a, "btn-sink-create", "建立")
+      a.update({ sinkOpen: false, sinks: [{ name: "opd_reg_to_pg", table: "OPD_REG", target: "a_report_pg.opd_reg", status: "loading" }] })
+      await a.sleep(900)
+      // 另外兩張表照樣同步
+      for (const [t, tg] of [["NURSE_MST", "nurse_mst"], ["DEPT_M", "dept_m"]]) {
+        a.update((s) => ({ sinks: [...s.sinks, { name: `${tg}_to_pg`, table: t, target: `a_report_pg.${tg}`, status: "loading" }] }))
+        await a.sleep(700)
+      }
+      await a.sleep(800)
+      for (let i = 0; i < 3; i++) {
+        a.update((s) => ({ sinks: s.sinks.map((k, j) => (j === i ? { ...k, status: "active" } : k)) }))
+        await a.sleep(400)
+      }
+      await a.focus("sink-list", "查詢、報表、AI 改讀 PostgreSQL，Oracle 只跑門診交易", 3400)
+      a.update({ spot: null })
     },
   ]
 }
