@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 產生 WordPress 用的靜態 HTML,兩個網站分開放、分開上傳(repo 根目錄的 上傳WordPress/,不進 git):
-#   上傳WordPress/一般客戶/ + 一般客戶.zip  → 入口頁、元件總覽、製造業、醫院……(不含秀傳)
+#   上傳WordPress/一般客戶/ + 一般客戶.zip  → 入口頁、元件總覽、製造業、醫院、K8s Sentinel……(不含秀傳)
 #   上傳WordPress/秀傳醫院/ + 秀傳醫院.zip  → 秀傳專用首頁、秀傳情境、元件總覽
 # zip 裡直接是網站檔案(沒有外層資料夾):進到 WordPress 上要放的那個資料夾,上傳後解壓即可,
 # 網站全用相對路徑,放在哪個網址底下都能用。hub/release/ 是中間產物(開發伺服器也讀它)。
@@ -30,6 +30,8 @@ echo "› Plasma 操作 demo(官網同一份)"
 need "$REPO/ops-demo";     (cd "$REPO/ops-demo" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/ops" --emptyOutDir --logLevel warn)
 echo "› View 與 Materialized View 圖解"
 need "$REPO/views-demo";   (cd "$REPO/views-demo" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/views" --emptyOutDir --logLevel warn)
+echo "› K8s Sentinel 情境"
+need "$REPO/sentinel";     (cd "$REPO/sentinel" && npx tsc -b && npx vite build --base ./ --outDir "$OUT/sentinel" --emptyOutDir --logLevel warn)
 echo "› Power BI 簡報"
 mkdir -p "$OUT/powerbi" && cp -R "$REPO/powerbi/." "$OUT/powerbi/"
 

@@ -25,6 +25,10 @@ const HOSPITAL: Head = {
   key: "hospital", tab: "醫院", lines: ["既有系統", "不需遷移"],
   lead: <>健保申報、FHIR 對外交換和院內 AI 都從 Plasma 取資料，門診、護理系統照常運作。</>,
 }
+const SENTINEL: Head = {
+  key: "sentinel", tab: "K8s Sentinel", lines: ["容器裡的異常", "當下就擋"],
+  lead: <>在 kernel 層看見容器實際執行的程式：異常程式當下終止、可疑 Pod 一鍵隔離，每個操作都留下稽核紀錄。</>,
+}
 const TECH: Head = {
   key: "tech", tab: "技術人員", lines: ["Plasma 元件", "逐一說明"],
   lead: <>從資料庫連線、View、排程、資料產品到 MCP，說明每個元件的用途、規格與限制。</>,
@@ -46,7 +50,7 @@ const HEADS: Head[] = SHOWCHWAN
       },
       TECH,
     ]
-  : [MANUFACTURING, HOSPITAL, TECH]
+  : [MANUFACTURING, HOSPITAL, TECH, SENTINEL]
 const HOLD = 6500
 
 /** 入口卡:href 是首頁底下的子資料夾(秀傳網站的情境放在 /showchwan/demo/) */
@@ -59,6 +63,7 @@ const CARDS = SHOWCHWAN
       { key: "manufacturing", href: "manufacturing/", title: "製造業情境" },
       { key: "hospital", href: "hospital/", title: "醫院情境" },
       { key: "tech", href: "tech/", title: "元件總覽" },
+      { key: "sentinel", href: "sentinel/", title: "K8s Sentinel 情境" },
     ]
 
 /** 主標的 text reveal:每一行有遮罩,字一個接一個從遮罩下方升上來 */
