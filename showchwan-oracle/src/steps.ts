@@ -4,10 +4,10 @@
 export interface Look {
   vm: boolean // ESXi 平台與上面的應用程式
   oracle: boolean // Oracle 資料庫與連線
-  k8s: boolean // K8s 平台
-  moved: boolean // 六支應用搬到 K8s,ESXi 縮小
+  k8s: boolean // Proxmox 平台
+  moved: boolean // 六支應用遷移到 Proxmox,ESXi 縮小
   pg: boolean // PostgreSQL 與 Plasma 同步
-  toPg: boolean // K8s 上的應用改連 PostgreSQL
+  toPg: boolean // Proxmox 上的應用改連 PostgreSQL
   oraSmall: boolean // Oracle 縮小
   load: number // Oracle 負載 %
   cam: Cam
@@ -21,7 +21,7 @@ export const CAMS: Record<Cam, { x0: number; y0: number; x1: number; y1: number 
   left: { x0: -470, y0: -120, x1: 560, y1: 560 },
   compute: { x0: -470, y0: -120, x1: 1120, y1: 580 },
   busy: { x0: -470, y0: -120, x1: 1120, y1: 580 },
-  data: { x0: -470, y0: 120, x1: 560, y1: 720 },
+  data: { x0: -470, y0: 140, x1: 680, y1: 790 },
   all: { x0: -470, y0: -120, x1: 1120, y1: 720 },
 }
 
@@ -46,15 +46,15 @@ export const STEPS: Step[] = [
     changes: [["+", "8 支應用程式，全在 ESXi"]] },
   { short: "全部連 Oracle", phase: "現況", title: "每一支都直接連 Oracle", look: L1,
     changes: [["+", "查詢、報表全擠在 Oracle"], ["!", "Oracle 負載 92%"]] },
-  { short: "建立 K8s", phase: "Step 1", title: "第一步：建立 K8s", look: L3,
-    changes: [["+", "K8s 平台，和 ESXi 並存"]] },
-  { short: "搬上 K8s", phase: "Step 1", title: "應用搬上 K8s，ESXi 使用降低", look: L4,
-    changes: [["~", "6 支應用程式包成容器搬過去"], ["−", "ESXi 只留 2 支核心系統"]] },
+  { short: "建立 Proxmox", phase: "Step 1", title: "第一步：建立 Proxmox", look: L3,
+    changes: [["+", "Proxmox 虛擬化平台，和 ESXi 並存"]] },
+  { short: "遷移 VM", phase: "Step 1", title: "VM 遷移到 Proxmox，ESXi 使用降低", look: L4,
+    changes: [["~", "6 支應用程式的 VM 遷移過去"], ["−", "ESXi 只留 2 支核心系統"]] },
   { short: "Oracle 還很忙", phase: "Step 1", title: "可是 Oracle 還是一樣忙", look: { ...L4, cam: "busy" },
     changes: [["!", "應用還是全部連 Oracle"], ["!", "Oracle 負載 92%，沒變"]] },
   { short: "即時同步", phase: "Step 2", title: "第二步：Plasma 即時同步", look: L6,
     changes: [["+", "加一套 PostgreSQL"], ["+", "Plasma 把 Oracle 即時同步過去"]] },
-  { short: "改連 PostgreSQL", phase: "Step 2", title: "K8s 應用改連 PostgreSQL", look: L7,
+  { short: "改連 PostgreSQL", phase: "Step 2", title: "Proxmox 上的應用改連 PostgreSQL", look: L7,
     changes: [["~", "6 支應用程式改連 PostgreSQL"], ["−", "Oracle 負載 92% → 30%"]] },
   { short: "Oracle 縮小", phase: "Step 2", title: "Oracle 使用降低", look: L8,
     changes: [["−", "只剩 2 支核心系統連 Oracle"], ["−", "Oracle 規模可以縮小"]] },

@@ -50,7 +50,7 @@ const HEADS: Head[] = SHOWCHWAN
       },
       {
         key: "oracle", tab: "Oracle 減壓", lines: ["降低 ESXi", "降低 Oracle"],
-        lead: <>應用程式搬上 K8s，再由 Plasma 把 Oracle 即時同步到 PostgreSQL，ESXi 與 Oracle 的使用一起降下來。</>,
+        lead: <>應用程式的 VM 遷移到 Proxmox，再由 Plasma 把 Oracle 即時同步到 PostgreSQL，ESXi 與 Oracle 的使用一起降下來。</>,
       },
       TECH,
     ]

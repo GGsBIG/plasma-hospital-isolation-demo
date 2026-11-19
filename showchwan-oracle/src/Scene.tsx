@@ -3,7 +3,8 @@ import { ChartColumn, ChartPie, ClipboardList, FileText, FlaskConical, HeartPuls
 import { APPS, CAMS, CORE, type Look } from "./steps"
 import plasmaLogo from "./assets/plasma-logo.webp"
 import oracleLogo from "./assets/oracle.svg"
-import k8sLogo from "./assets/kubernetes-logo.webp"
+import pgLogo from "./assets/postgresql.svg"
+import proxmoxLogo from "./assets/proxmox-mark.svg"
 
 /* ================= 效能架構 =================
    手機會卡的原因是「每一格都重畫整張 SVG」。這裡分成三層,讓每一格的工作量降到最低:
@@ -28,9 +29,9 @@ const GREEN = "#2f7d4f"
 const C = {
   host: ["#f6f7f9", "#e0e4e9", "#c7ced6"], // 實體主機
   vmPlane: ["#d4ebf8", "#a6cfe9", "#8dbcdd"], // ESXi 虛擬化平面(半透明)
-  k8sPlane: ["#dfe6fb", "#b8c8f1", "#9fb3e8"], // K8s 平面
+  k8sPlane: ["#fdeedd", "#f7d3ae", "#f0bf8f"], // Proxmox 平面
   app: ["#effbfd", "#c6e9f0", "#abdae5"], // 虛擬機(玻璃)
-  appK: ["#f2f5ff", "#d1dbf7", "#b9c8ef"], // 容器
+  appK: ["#effbfd", "#c6e9f0", "#abdae5"], // 遷移到 Proxmox 的虛擬機(一樣是 VM)
   plasma: ["#ffffff", "#f6e3e1", "#ecc9c5"],
 }
 
@@ -40,7 +41,7 @@ const WORLD = { x: -660, y: -200, w: 1780, h: 1000 }
 /* ================= 場景配置(地面座標) ================= */
 const SLAB_D = 160 // 平台深度
 const VM_BIG = 520
-const VM_SMALL = 140
+const VM_SMALL = 520 / 3 // 縮減後剛好一台伺服器的寬度
 const K8S = { x: 600, w: 360 }
 const DB_Y = 500 // 資料層
 const ORA_X = 260
@@ -53,12 +54,12 @@ const PIPE_Z = 26
 const CUBE = 56
 const CUBE_H = 44
 // 實體主機與浮在上面的虛擬化平面(參考 vSphere 架構圖:主機在下、虛擬機在平面上)
-const HOST = { w: 132, d: 112, h: 26, y: 70 } // 扁平的機架式伺服器(像機櫃裡的一層)
-const Z_PLANE = HOST.h + 14 // 平面底部高度
+const HOST = { w: 520 / 3, d: 160, h: 26, y: 0 } // 扁平的機架式伺服器;寬、深剛好跟平台對齊,平台直接疊在上面
+const Z_PLANE = HOST.h // 平面底部 = 伺服器頂面
 const PLANE_T = 22 // 平台厚度(前面寫 ESXi / Kubernetes)
 const Z_TOP = Z_PLANE + PLANE_T // 虛擬機/容器站的高度
-const VM_HOSTS = [4, 194, 384] // ESXi 主機(縮減後只留第一台)
-const K8S_NODES = [618, 810]
+const VM_HOSTS = [0, 520 / 3, 1040 / 3] // ESXi 主機(縮減後只留第一台)
+const K8S_NODES = [600, 780] // Proxmox 主機,各 180 寬
 const ICONS: LucideIcon[] = [ClipboardList, Stethoscope, HeartPulse, FlaskConical, PillIcon, FileText, ChartColumn, ChartPie]
 
 /** 第 i 支應用程式的位置 */
@@ -196,10 +197,10 @@ function Still({ l }: { l: Look }) {
       {l.vm && <VmZone moved={l.moved} />}
       {l.k8s && (
         <Drop>
-          {K8S_NODES.map((x) => <Host key={x} x={x} k8s />)}
+          {K8S_NODES.map((x) => <Host key={x} x={x} w={180} k8s />)}
           <Shadow poly={[P(K8S.x, 0, Z_PLANE), P(K8S.x + K8S.w, 0, Z_PLANE), P(K8S.x + K8S.w, SLAB_D, Z_PLANE), P(K8S.x, SLAB_D, Z_PLANE)].map((p) => add(p, [0, Z_PLANE]))} />
           <Box x={K8S.x} y={0} z={Z_PLANE} w={K8S.w} d={SLAB_D} h={PLANE_T} c={C.k8sPlane} op={0.82} />
-          <FaceLabel x0={K8S.x} text="Kubernetes" logo={k8sLogo} />
+          <FaceLabel x0={K8S.x} text="Proxmox" logo={proxmoxLogo} />
         </Drop>
       )}
 
@@ -229,7 +230,6 @@ function Still({ l }: { l: Look }) {
             <Shadow poly={[P(-42, -42), P(42, -42), P(42, 42), P(-42, 42)]} />
             <Box x={-42} y={-42} w={84} d={84} h={58} c={C.plasma} stroke="#b42622" sw={1.4} />
             <PlasmaFace />
-            <image href={plasmaLogo} x={-55} y={-146} width={110} height={24} />
           </Drop>
         </g>
       )}
@@ -246,7 +246,7 @@ function Still({ l }: { l: Look }) {
 
       {/* ---------- 標籤(最上層,不被擋住) ---------- */}
       {l.oracle && <OracleLabels small={l.oraSmall} load={l.load} />}
-      {l.pg && <Pill x={gX} y={gY + PG.r * 0.7 + 30} text="PostgreSQL" />}
+      {l.pg && <Tag x={gX} y={gY + PG.r * 0.7 + 30} text="PostgreSQL" logo={pgLogo} size={19} />}
     </>
   )
 }
@@ -256,7 +256,8 @@ function VmZone({ moved }: { moved: boolean }) {
   const w = useTween(moved ? VM_SMALL : VM_BIG)
   // 縮減時第一台主機滑到小平台底下,另外兩台拿掉,留下虛線輪廓
   const t = (VM_BIG - w) / (VM_BIG - VM_SMALL)
-  const hosts = moved ? [VM_HOSTS[0] - 17 * t] : VM_HOSTS
+  void t
+  const hosts = moved ? [VM_HOSTS[0]] : VM_HOSTS
   return (
     <>
       {moved && VM_HOSTS.slice(1).map((x) => <HostGhost key={x} x={x} />)}
@@ -537,7 +538,7 @@ function App({ i, at, inK8s }: { i: number; at: Pt; inK8s: boolean }) {
         <Box x={-h} y={-h} w={CUBE} d={CUBE} h={CUBE_H} c={inK8s ? C.appK : C.app} op={0.92} />
         {/* 玻璃的反光 */}
         <polygon points={pts([P(-h + 6, h, CUBE_H - 6), P(-h + 20, h, CUBE_H - 6), P(-h + 8, h, 8), P(-h + 6, h, 8)])} fill="#fff" opacity={0.55} />
-        <Icon x={-11} y={-CUBE_H - 30} width={22} height={22} strokeWidth={1.8} color={inK8s ? "#2a55b8" : "#1f6f86"} />
+        <Icon x={-11} y={-CUBE_H - 30} width={22} height={22} strokeWidth={1.8} color="#1f6f86" />
         <text className="cube-label" x={0} y={-CUBE_H + 12} textAnchor="middle" fontSize={12} fontWeight={800} fill={INK}>{APPS[i]}</text>
       </Drop>
     </g>
@@ -572,11 +573,11 @@ function PgMark({ y }: { y: number }) {
 }
 
 /* ---------- 實體主機:扁平的機架式伺服器,前面一排硬碟槽、燈號,側面散熱條 ---------- */
-function Host({ x, k8s = false }: { x: number; k8s?: boolean }) {
-  const { w, d, h, y } = HOST
+function Host({ x, w = HOST.w, k8s = false }: { x: number; w?: number; k8s?: boolean }) {
+  const { d, h, y } = HOST
   const F = (u: number, v: number) => P(x + u, y + d, v) // 前面板(朝左下)
   const S = (u: number, v: number) => P(x + w, y + u, v) // 側面(朝右下)
-  const bays = [8, 22, 36, 50, 64, 78]
+  const bays = Array.from({ length: Math.floor((w - 50) / 14) }, (_, i) => 8 + i * 14)
   return (
     <g>
       <Shadow poly={[P(x, y), P(x + w, y), P(x + w, y + d), P(x, y + d)]} />
@@ -586,8 +587,8 @@ function Host({ x, k8s = false }: { x: number; k8s?: boolean }) {
       {/* 硬碟槽 */}
       {bays.map((u) => <polygon key={u} points={pts([F(u + 4, h - 6), F(u + 15, h - 6), F(u + 15, 6), F(u + 4, 6)])} fill="#d7dce2" stroke="#8d97a3" strokeWidth={0.6} />)}
       {bays.map((u) => <polyline key={`l${u}`} points={pts([F(u + 6, h - 9), F(u + 13, h - 9)])} stroke="#7c8692" strokeWidth={0.8} fill="none" />)}
-      {/* 燈號(K8s 節點是藍色) */}
-      <ellipse cx={F(w - 24, h * 0.62)[0]} cy={F(w - 24, h * 0.62)[1]} rx={2.6} ry={2.2} fill={k8s ? "#4f74d6" : "#4fb06d"} stroke={INK} strokeWidth={0.5} />
+      {/* 燈號(Proxmox 主機是橘色) */}
+      <ellipse cx={F(w - 24, h * 0.62)[0]} cy={F(w - 24, h * 0.62)[1]} rx={2.6} ry={2.2} fill={k8s ? "#e57000" : "#4fb06d"} stroke={INK} strokeWidth={0.5} />
       <ellipse cx={F(w - 15, h * 0.62)[0]} cy={F(w - 15, h * 0.62)[1]} rx={2.6} ry={2.2} fill="#4fb06d" stroke={INK} strokeWidth={0.5} />
       <polyline points={pts([F(w - 28, h * 0.3), F(w - 11, h * 0.3)])} stroke="#9aa3ad" strokeWidth={1} fill="none" />
       {[0.35, 0.6].map((v) => <polyline key={v} points={pts([S(10, h * v), S(d - 10, h * v)])} stroke="#aab2bb" strokeWidth={0.8} fill="none" />)}
@@ -610,18 +611,22 @@ function Cable({ d }: { d: string }) {
   )
 }
 
-/** Plasma 方塊前面的散熱格柵與燈號 */
+/** Plasma 方塊:logo 貼在前側面上,下面一排散熱格柵,側面一顆燈 */
 function PlasmaFace() {
-  const F = (u: number, v: number) => P(-42 + u, 42, v)
+  const [X, Y] = P(-42, 42, 58) // 前側面的左上角
+  const S = (u: number, v: number) => P(42, -42 + u, v) // 右側面
   return (
     <g>
-      {[14, 22, 30, 38, 46, 54, 62].map((u) => <polyline key={u} points={pts([F(u, 12), F(u, 32)])} stroke="#e0aaa4" strokeWidth={1.4} fill="none" strokeLinecap="round" />)}
-      <ellipse cx={F(70, 46)[0]} cy={F(70, 46)[1]} rx={3.4} ry={2.8} fill="#e0452f" stroke={INK} strokeWidth={0.6} />
+      <g transform={`matrix(1 0.5 0 1 ${X} ${Y})`}>
+        <image href={plasmaLogo} x={6} y={10} width={72} height={15.5} />
+        {[12, 20, 28, 36, 44, 52, 60, 68].map((u) => <line key={u} x1={u} y1={36} x2={u} y2={50} stroke="#e0aaa4" strokeWidth={1.4} strokeLinecap="round" />)}
+      </g>
+      <ellipse cx={S(70, 46)[0]} cy={S(70, 46)[1]} rx={3.4} ry={2.8} fill="#e0452f" stroke={INK} strokeWidth={0.6} />
     </g>
   )
 }
 
-/** 平台前面的字(ESXi / Kubernetes):貼在平台的前側面上;手機上太小時改成浮在旁邊的標籤 */
+/** 平台前面的字(ESXi / Proxmox):貼在平台的前側面上;手機上太小時改成浮在旁邊的標籤 */
 function FaceLabel({ x0, text, logo }: { x0: number; text: string; logo?: string }) {
   const ui = useContext(UI)
   const [X, Y] = P(x0, SLAB_D, Z_TOP) // 前側面的左上角
