@@ -77,9 +77,9 @@ const CARDS: Record<"before" | "why" | "ask" | "oracle", { title: string; items:
     mcp: true,
   },
   oracle: {
-    title: "Oracle 授權稽核的壓力",
-    items: [["查詢、報表、AI 都直接讀 Oracle", "剛剛的名冊、資料產品，也都在讀 HIS 門診"], ["Oracle 授權跟著 CPU 核心數走", "讀取越多，核心數越降不下來，稽核時壓力大"], ["把讀取移到 PostgreSQL", "Plasma Streaming 逐筆同步，開源資料庫不用授權費"]],
-    end: "Oracle 只留門診交易，規模可以縮小，授權負擔跟著減輕。",
+    title: "Oracle 為什麼要減壓",
+    items: [["查詢、報表、AI 都直接讀 Oracle", "剛剛的名冊、資料產品，也都在讀 HIS 門診"], ["讀取越多，Oracle 越忙", "Oracle 只能一直往上加大"], ["把讀取移到 PostgreSQL", "Plasma Streaming 逐筆同步"]],
+    end: "Oracle 只留門診交易，使用量降低，規模可以縮小。",
   },
 }
 export function InfoCard({ s }: { s: DemoState }) {

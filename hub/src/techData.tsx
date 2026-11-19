@@ -207,7 +207,7 @@ export const COMPONENTS: Component[] = [
   },
   {
     id: "admin", name: "系統管理", en: "Administration",
-    what: "系統管理員專用，用來管理使用者、工作區、AI 連線與稽核記錄。",
+    what: "系統管理員專用，用來管理使用者、工作區、AI 連線與操作記錄。",
     spec: [
       <>系統角色只有 <code>admin</code> 與 <code>user</code>；admin 可存取所有工作區</>,
       "使用者名稱以小寫字母開頭，只能有小寫字母、數字與底線，建立後不能改",

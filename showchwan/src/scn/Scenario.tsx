@@ -36,8 +36,8 @@ function scene(k: number, t: number) {
     id: db(i), kind: "db" as const, pos: { x: 110, y: 170 + i * 175 }, label: d.name, brand: BRAND[i],
     sub: k === 0 ? (t >= 1 ? <code className="scn-code">{DIALECT[i]}</code> : undefined)
       : k === 4 && t === 0 ? <code className="scn-code">{DIALECT[i]}</code>
-      : k === 0 && i === 0 && t >= 3 ? "授權稽核"
-      : k === 7 && i === 0 ? (t >= 2 ? "只跑門診交易" : "負載高 · 授權稽核")
+      : k === 0 && i === 0 && t >= 3 ? "負載高"
+      : k === 7 && i === 0 ? (t >= 2 ? "只跑門診交易" : "負載高")
       : k === 2 ? (t > i ? "唯讀" : undefined) : k >= 3 ? "唯讀" : undefined,
     tone: k === 0 && i === 0 && t >= 3 ? ("danger" as const) : k === 7 && i === 0 && t < 2 ? ("danger" as const) : k >= 2 ? ("ok" as const) : undefined,
     hot: (k === 0 && t === 1) || (k === 0 && i === 0 && t >= 3) || (k === 2 && t === i) || (k === 4 && t >= 1) || (k === 7 && i === 0 && t === 0),
@@ -52,7 +52,7 @@ function scene(k: number, t: number) {
     nodes.push({ id: "out", kind: "app", variant: "receipt", pos: RIGHT, label: "護理人員名冊", sub: t >= 2 ? "整理不出來" : undefined, tone: "danger", hot: t >= 2 })
     A_DBS.forEach((_, i) => edges.push({ from: db(i), to: "it", tone: "red" }))
     if (t >= 2) edges.push({ from: "it", to: "out", tone: "red" })
-    note = t >= 3 ? { at: { x: 330, y: 70 }, text: "Oracle 授權稽核，費用高", tone: "red" } : t >= 2 ? { at: { x: 430, y: 170 }, text: "TITLE_CD、NRS_NAME 是什麼？", tone: "red" } : t >= 1 ? { at: { x: 430, y: 170 }, text: "三套資料庫，三種語法", tone: "red" } : null
+    note = t >= 3 ? { at: { x: 330, y: 70 }, text: "Oracle 負載高", tone: "red" } : t >= 2 ? { at: { x: 430, y: 170 }, text: "TITLE_CD、NRS_NAME 是什麼？", tone: "red" } : t >= 1 ? { at: { x: 430, y: 170 }, text: "三套資料庫，三種語法", tone: "red" } : null
     return { nodes, edges, note }
   }
 
@@ -89,7 +89,7 @@ function scene(k: number, t: number) {
     edges.push(t >= 2 ? { from: "pg", to: "use", tone: "ok" } : { from: "plasma", to: "use", tone: "ok" })
     note = t === 0 ? { at: { x: 300, y: 60 }, text: "讀取都壓在 Oracle", tone: "red" }
       : t === 1 ? { at: { x: 620, y: 60 }, text: "Oracle 逐筆同步到 PostgreSQL", tone: "ink" }
-      : { at: { x: 300, y: 60 }, text: "Oracle 縮小，授權負擔減輕", tone: "ink" }
+      : { at: { x: 300, y: 60 }, text: "Oracle 縮小，使用量降低", tone: "ink" }
   }
   if (k === 6) {
     nodes.push({ id: "prod", kind: "app", variant: "package", pos: RIGHT, label: "護理人員名冊", sub: "資料產品", tone: "ok", hot: t === 0 })

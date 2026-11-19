@@ -189,12 +189,12 @@ export function buildScenes(): SceneRun[] {
     },
 
     /* 7 · Oracle 減壓:HIS 門診(Oracle)的資料表用 Streaming 同步到 PostgreSQL,查詢、報表、AI 改讀 PostgreSQL,
-       Oracle 只跑門診交易、可以縮小,減輕授權稽核的負擔 */
+       Oracle 只跑門診交易、使用量降低、可以縮小 */
     async (a) => {
       a.update({ ...nav("/cdc", "cdc"), ws: WS_A, sinks: [], sinkOpen: false, sinkForm: { ...emptySink }, productOpen: false, schemaOpen: false, card: null })
       await a.sleep(600)
       a.update({ card: "oracle" })
-      await a.sleep(9000) // 說明卡:Oracle 授權稽核的壓力、為什麼移到 PostgreSQL
+      await a.sleep(9000) // 說明卡:Oracle 為什麼要減壓、為什麼移到 PostgreSQL
       a.update({ card: null })
       await a.sleep(400)
       await a.focus("cdc-source", "HIS 門診（Oracle）的異動，持續同步進 Plasma", 2200)
@@ -206,7 +206,7 @@ export function buildScenes(): SceneRun[] {
       a.update((s) => ({ spot: null, sinkForm: { ...s.sinkForm, table: "OPD_REG" } }))
       await a.sleep(600)
       a.update((s) => ({ sinkForm: { ...s.sinkForm, conn: "a_report_pg（PostgreSQL）" } }))
-      await a.focus("f-sink-conn", "目的地：PostgreSQL，開源、不用授權費", 2000)
+      await a.focus("f-sink-conn", "目的地：PostgreSQL", 2000)
       a.update((s) => ({ spot: null, sinkForm: { ...s.sinkForm, target: "opd_reg" } }))
       await a.sleep(600)
       await press(a, "btn-sink-create", "建立")
