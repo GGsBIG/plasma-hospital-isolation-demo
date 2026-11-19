@@ -1,18 +1,24 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 import { NODES, STEPS } from "./steps"
-import type { Flow, Kind, Link, Look, Note, Put, Tone } from "./model"
+import type { Brain as BrainOpt, Flow, Kind, Link, Look, Note, Put, Tone } from "./model"
+import { BRAIN_LINES, BRAIN_NODES } from "./brainNet"
 import plasmaLogo from "./assets/plasma-logo.webp"
 
 /* ================= 效能架構(與 Oracle 減壓同一套) =================
    1. 靜態層(SVG):地板、物件、連線。只有換步驟時才變,平常不重畫。
    2. 鏡頭:移動、縮放包住整個場景的 HTML 圖層,交給 GPU,過場時不重畫 SVG。
    3. 動態層(HTML):流動的小點、過載的紅光,只用 transform / opacity。
-   4. 標籤層(SVG):名稱、狀態標籤、小卡,疊在小點上面,小點不會蓋住字。 */
+   4. 標籤層(SVG):名稱、狀態標籤、小卡,疊在小點上面,小點不會蓋住字。
+   Plasma 大腦是自己一小張 SVG(只有大腦那麼大),放在動態層;訊號光點是 HTML,只動 transform / opacity。 */
 
 /* ================= 等角投影 =================
    地面座標 (x, y, z):x 往右下、y 往左下、z 往上。畫面座標 = (x − y, (x + y) / 2 − z) */
 type Pt = [number, number]
 const P = (x: number, y: number, z = 0): Pt => [x - y, (x + y) / 2 - z]
+/** 版面的地面座標 → 畫面座標:整個版面在地面上轉 90°((x, y) → (y, −x)),鏡頭不動。
+   steps.ts 的 x 欄(既有系統 → 資料庫 → Plasma → 應用)因此由左下往右上排,應用接到資料庫的線是右上 → 左下;
+   物件本身(方塊、圓柱、Plasma 的 logo 面)仍用 P 畫,外觀與光影不變 */
+const L = (x: number, y: number, z = 0): Pt => P(y, -x, z)
 const pts = (a: Pt[]) => a.map((p) => p.join(",")).join(" ")
 const add = (a: Pt, b: Pt): Pt => [a[0] + b[0], a[1] + b[1]]
 
@@ -68,7 +74,7 @@ const nameOf = (id: string) => (NODES[id].kind === "plasma" || NODES[id].kind ==
 
 /** 物件的畫面中心(知識庫疊在 Plasma 上面) */
 function centerOf(id: string, p: Put): Pt {
-  return P(p.at[0], p.at[1])
+  return L(p.at[0], p.at[1])
 }
 
 /** 物件頭上的東西由下往上疊:負載表 → 狀態標籤 → 小卡。回傳各自的 y(相對物件中心,未乘 ui) */
@@ -110,6 +116,8 @@ function bounds(l: Look, ui = 1): Box | null {
     const z = zoneRect(l)
     if (z) for (const p of z.poly) grow(p[0] - 10, p[1] - 10, p[0] + 10, p[1] + 30 * ui)
   }
+  const br = brainBox(l, ui)
+  if (br) grow(br.x0 - 10, br.y0 - 10, br.x0 + br.w + 10, br.y0 + br.h)
   return b
 }
 
@@ -123,7 +131,191 @@ function zoneRect(l: Look) {
   const x1 = Math.max(...ps.map((p) => p[0])) + m
   const y0 = Math.min(...ps.map((p) => p[1])) - m
   const y1 = Math.max(...ps.map((p) => p[1])) + m
-  return { x0, x1, y0, y1, poly: [P(x0, y0), P(x1, y0), P(x1, y1), P(x0, y1)] }
+  return { x0, x1, y0, y1, poly: [L(x0, y0), L(x1, y0), L(x1, y1), L(x0, y1)] }
+}
+
+/* ================= Plasma 大腦:浮在 Plasma 上方的神經網路圖 =================
+   正面朝向觀眾的平面圖(不跟著等角傾斜),節點 + 連線的資料在 brainNet.ts(原圖座標 0–100)。
+   長出來(grow):節點從知識庫那一端往外一顆顆亮起、連線跟著畫出,接著訊號光點沿連線流動;
+   有回答(to)時,一道訊號從大腦沿連線走到最靠近對象的節點,再跑到對象身上。
+   已長好(idle):直接淡入,偶爾一顆訊號。精簡模式(lite)不跑循環的效果,暫停時全部停住。 */
+const BSQ = 0.72 // 垂直壓扁一點,看起來比較像浮在場景上
+const BX0 = 4
+const BY0 = 8 * BSQ
+const BVW = 92
+const BVH = (92 - 8) * BSQ
+const BRAIN_W = 400 // 大腦寬度(畫面座標)
+// 節點的顏色:知識庫的藍紫色系,深淺交錯
+const BRAIN_TONES = ["#8f9be0", "#6f63d9", "#b7bff0", "#9b7fe0", "#5b6fd6", "#c9b8f2"]
+const BN = BRAIN_NODES.map(([x, y, r], i) => ({ x, y: y * BSQ, r: r * 0.72, c: BRAIN_TONES[(i * 7) % BRAIN_TONES.length] }))
+const BL = BRAIN_LINES.map(([x1, y1, x2, y2]) => ({ x1, y1: y1 * BSQ, x2, y2: y2 * BSQ }))
+type XY = { x: number; y: number }
+const bdist = (a: XY, b: XY) => Math.hypot(a.x - b.x, a.y - b.y)
+function bnear(p: XY) {
+  let i = 0
+  let d = Infinity
+  BN.forEach((n, k) => {
+    const e = bdist(n, p)
+    if (e < d) { d = e; i = k }
+  })
+  return { i, d }
+}
+// 連線兩端對到最近的節點,建成圖(回答訊號要沿著連線走)
+const BEDGE = BL.map((l) => [bnear({ x: l.x1, y: l.y1 }), bnear({ x: l.x2, y: l.y2 })] as const)
+const BADJ = BN.map(() => [] as number[])
+BEDGE.forEach(([a, b]) => {
+  if (a.d < 2.5 && b.d < 2.5 && a.i !== b.i) { BADJ[a.i].push(b.i); BADJ[b.i].push(a.i) }
+})
+function bpath(from: number, to: number): number[] {
+  const prev = new Map<number, number>([[from, -1]])
+  const q = [from]
+  while (q.length) {
+    const u = q.shift()!
+    if (u === to) break
+    for (const v of BADJ[u]) if (!prev.has(v)) { prev.set(v, u); q.push(v) }
+  }
+  if (!prev.has(to)) return [from]
+  const out: number[] = []
+  for (let u = to; u !== -1; u = prev.get(u)!) out.unshift(u)
+  return out
+}
+// 知識庫在大腦底下:長出動畫從腦幹底部(最接近知識庫的地方)開始
+const B_ORIGIN = bnear({ x: 56, y: 89 * BSQ }).i
+const B_MAXD = Math.max(...BN.map((n) => bdist(n, BN[B_ORIGIN])))
+const B_SPREAD = 1.3 // 最遠的節點晚多少秒亮起
+const B_LINE_DELAY = BL.map((l) => Math.min(bdist({ x: l.x1, y: l.y1 }, BN[B_ORIGIN]), bdist({ x: l.x2, y: l.y2 }, BN[B_ORIGIN])) / B_MAXD * B_SPREAD)
+const B_NODE_DELAY = BN.map((n) => (bdist(n, BN[B_ORIGIN]) / B_MAXD) * B_SPREAD)
+
+const brainOpt = (l: Look): BrainOpt | null => (l.brain ? (l.brain === true ? {} : l.brain) : null)
+
+/** 大腦的位置(畫面座標):底邊在 Plasma(與知識庫)頭上的標籤之上,往右挪開一點;手機上放大一些 */
+function brainBox(l: Look, ui = 1) {
+  const o = brainOpt(l)
+  const host = l.put.kb ? "kb" : "plasma"
+  const p = l.put[host]
+  if (!o || !p) return null
+  const [cx, cy] = centerOf(host, p)
+  const top = Math.min(stack(host, p, ui).top, l.put.plasma ? stack("plasma", l.put.plasma, ui).top : 0)
+  const w = BRAIN_W * Math.min(1.45, Math.sqrt(ui))
+  const h = (w * BVH) / BVW
+  const bottom = cy + top + 4
+  // 手機上放大時往左長(右邊通常是應用與小卡),右緣維持在桌機的位置
+  return { x0: cx + (o.dx ?? 0) + BRAIN_W / 2 - w, y0: bottom - h, w, h, base: [cx, cy - ext(NODES[host].kind).top] as Pt }
+}
+
+function BrainNet({ l }: { l: Look }) {
+  const ui = useContext(UI)
+  const { R, paused, lite } = useContext(Layer)
+  const o = brainOpt(l)!
+  const b = brainBox(l, ui)!
+  const fx = useRef<HTMLDivElement>(null)
+  const pausedRef = useRef(paused)
+  pausedRef.current = paused
+  const g = b.w / BVW // 大腦座標 → 畫面座標
+  const grow = !!o.grow
+  const start = grow ? 1.7 : 0 // 長出來的那一步:等知識庫落到 Plasma 上再開始
+  // 大腦座標 → 這張圖層的 px
+  const px = (p: XY): Pt => [(p.x - BX0) * g * R, (p.y - BY0) * g * R]
+  // 回答的對象(畫面座標 → 圖層 px)
+  const tp = o.to && l.put[o.to] ? centerOf(o.to, l.put[o.to]) : null
+  const target: Pt | null = tp ? [(tp[0] - b.x0) * R, (tp[1] - ext(NODES[o.to!].kind).top * 0.6 - b.y0) * R] : null
+  // 知識庫頂面 → 腦幹:一條虛線,看得出大腦是從知識庫長出來的
+  const stem = { x: BX0 + (b.base[0] - b.x0) / g, y: BY0 + (b.base[1] - b.y0) / g }
+  const key = `${grow}|${o.to ?? ""}|${R}|${b.w.toFixed(1)}|${target?.map((v) => v.toFixed(0)).join(",") ?? ""}`
+
+  useEffect(() => {
+    const host = fx.current
+    if (!host || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    const add = (cls: string, size: number) => {
+      const e = document.createElement("i")
+      e.className = cls
+      e.style.width = e.style.height = `${size}px`
+      e.style.marginLeft = e.style.marginTop = `${-size / 2}px`
+      host.appendChild(e)
+      return e
+    }
+    const run = (e: HTMLElement, frames: Keyframe[], ms: number) => {
+      const a = e.animate(frames, { duration: ms, easing: "linear", fill: "forwards" })
+      a.finished.then(() => e.remove()).catch(() => e.remove())
+      return a
+    }
+    const at = ([x, y]: Pt) => `translate3d(${x}px, ${y}px, 0)`
+    // 一顆訊號沿一條隨機連線走
+    const spark = () => {
+      const k = Math.floor(Math.random() * BL.length)
+      const ln = BL[k]
+      const fwd = Math.random() < 0.5
+      const a = px(fwd ? { x: ln.x1, y: ln.y1 } : { x: ln.x2, y: ln.y2 })
+      const z = px(fwd ? { x: ln.x2, y: ln.y2 } : { x: ln.x1, y: ln.y1 })
+      run(add("bn-spark", 8 * R), [{ transform: at(a), opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 1, offset: 0.8 }, { transform: at(z), opacity: 0 }], 800 + Math.random() * 500)
+    }
+    // 漣漪:隨機一個節點往外擴散一圈
+    const ripple = () => {
+      const n = BN[Math.floor(Math.random() * BN.length)]
+      const e = add("bn-ring", 150 * R)
+      run(e, [{ transform: `${at(px(n))} scale(.05)`, opacity: 0.8 }, { transform: `${at(px(n))} scale(1)`, opacity: 0 }], 1100)
+    }
+    // 回答:從腦幹沿連線走到最靠近對象的節點,再跑到對象身上,抵達時閃一圈
+    const answer = () => {
+      if (!target) return
+      const local = { x: BX0 + target[0] / R / g, y: BY0 + target[1] / R / g }
+      const route = bpath(B_ORIGIN, bnear(local).i).map((i) => px(BN[i]))
+      route.push(target)
+      const cum = [0]
+      for (let i = 1; i < route.length; i++) cum.push(cum[i - 1] + Math.hypot(route[i][0] - route[i - 1][0], route[i][1] - route[i - 1][1]))
+      const total = cum[cum.length - 1] || 1
+      const ms = Math.min(2600, 900 + (total / R) * 2.2)
+      run(add("bn-answer", 15 * R), route.map((p, i) => ({ transform: at(p), offset: cum[i] / total, opacity: i === 0 ? 0 : 1 })), ms)
+        .finished.then(() => {
+          const e = add("bn-hit", 90 * R)
+          run(e, [{ transform: `${at(target)} scale(.1)`, opacity: 0.9 }, { transform: `${at(target)} scale(1)`, opacity: 0 }], 700)
+        }).catch(() => {})
+    }
+    // 時鐘只在沒暫停、分頁看得到時走,事件依時鐘觸發:暫停時不會再冒出新的光點
+    let t = 0
+    // 精簡模式:不跑循環的訊號與漣漪,回答訊號只跑一次
+    let nextSpark = lite ? Infinity : (start + B_SPREAD + 0.6) * 1000
+    let nextRipple = nextSpark + 2500
+    let nextAnswer = target ? (grow ? (start + B_SPREAD + 1) * 1000 : 1400) : Infinity
+    const id = window.setInterval(() => {
+      if (pausedRef.current || document.hidden) return
+      t += 100
+      if (t >= nextSpark) { spark(); nextSpark = t + (grow ? 450 : 1600) + Math.random() * (grow ? 300 : 1400) }
+      if (t >= nextRipple) { ripple(); nextRipple = t + (grow ? 3500 : 7000) + Math.random() * 3000 }
+      if (t >= nextAnswer) { answer(); nextAnswer = grow && !lite ? t + 9000 : Infinity }
+      if (nextSpark === Infinity && nextAnswer === Infinity) window.clearInterval(id)
+    }, 100)
+    return () => {
+      window.clearInterval(id)
+      host.getAnimations({ subtree: true }).forEach((a) => a.cancel())
+      host.replaceChildren()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, lite])
+
+  useEffect(() => {
+    fx.current?.getAnimations({ subtree: true }).forEach((a) => (paused ? a.pause() : a.play()))
+  }, [paused])
+
+  const W = b.w * R
+  const H = b.h * R
+  return (
+    <div className={`brain${grow ? " grow" : ""}`} style={{ width: W, height: H, transform: `translate3d(${(b.x0 - WORLD.x) * R}px, ${(b.y0 - WORLD.y) * R}px, 0)`, ["--bd" as string]: `${start}s` }}>
+      <div className="brain-glow" />
+      <svg className="brain-svg" width={W} height={H} viewBox={`${BX0} ${BY0} ${BVW} ${BVH}`} aria-hidden>
+        <line className="bn-stem" x1={stem.x} y1={stem.y} x2={BN[B_ORIGIN].x} y2={BN[B_ORIGIN].y} />
+        <g className="bn-lines">
+          {BL.map((ln, i) => (
+            <line key={i} className="bn-line" x1={ln.x1} y1={ln.y1} x2={ln.x2} y2={ln.y2} pathLength={1} style={{ animationDelay: `${(start + B_LINE_DELAY[i]).toFixed(2)}s` }} />
+          ))}
+        </g>
+        {BN.map((n, i) => (
+          <circle key={i} className="bn-node" cx={n.x} cy={n.y} r={n.r} fill={n.c} style={{ animationDelay: `${(start + B_NODE_DELAY[i]).toFixed(2)}s` }} />
+        ))}
+      </svg>
+      <div ref={fx} className="brain-fx" />
+    </div>
+  )
 }
 
 /* ---------- 整個故事用到的地面範圍:地板與靜態層的大小,一開始就算好,換步驟不會變 ---------- */
@@ -136,7 +328,7 @@ const FLOOR = {
 }
 const CAMS = STEPS.map((s) => bounds(s.look)!).filter(Boolean)
 const WORLD = (() => {
-  const fl = [P(FLOOR.x0, FLOOR.y0), P(FLOOR.x1, FLOOR.y0), P(FLOOR.x1, FLOOR.y1), P(FLOOR.x0, FLOOR.y1)]
+  const fl = [L(FLOOR.x0, FLOOR.y0), L(FLOOR.x1, FLOOR.y0), L(FLOOR.x1, FLOOR.y1), L(FLOOR.x0, FLOOR.y1)]
   const x0 = Math.min(...fl.map((p) => p[0]), ...CAMS.map((c) => c.x0)) - 260
   const x1 = Math.max(...fl.map((p) => p[0]), ...CAMS.map((c) => c.x1)) + 260
   const y0 = Math.min(...fl.map((p) => p[1]), ...CAMS.map((c) => c.y0)) - 260
@@ -158,10 +350,10 @@ function route(l: Look, k: Link): Pt[] | null {
       const ny = ((bx - ax) / len) * k.lane
       ax += nx; ay += ny; bx += nx; by += ny
     }
-    return [P(ax, ay), P(bx, by)]
+    return [L(ax, ay), L(bx, by)]
   }
   const mx = k.mx ?? (a[0] + b[0]) / 2
-  return [P(a[0], a[1]), P(mx, a[1]), P(mx, b[1]), P(b[0], b[1])]
+  return [L(a[0], a[1]), L(mx, a[1]), L(mx, b[1]), L(b[0], b[1])]
 }
 const toD = (a: Pt[]) => "M" + a.map((p) => p.join(" ")).join(" L")
 const linkKey = (k: Link) => `${k.from}>${k.to}:${k.flow}:${k.mx ?? ""}:${k.lane ?? ""}`
@@ -217,6 +409,7 @@ export function Scene({ l, paused, lite = false, insetTop = 0, insetBottom = 0 }
               {Object.entries(l.put).map(([id, p]) => NODES[id].kind === "db" && !p.down && (p.load ?? 0) > 60 && !p.dim && <Heat key={id} at={centerOf(id, p)} />)}
               {svg("still", <Still l={l} />)}
               <Moving l={l} />
+              {brainBox(l, ui) && <BrainNet l={l} />}
               {svg("still labels", <Labels l={l} />)}
             </div>
           </div>
@@ -224,7 +417,13 @@ export function Scene({ l, paused, lite = false, insetTop = 0, insetBottom = 0 }
       </UI.Provider>
     )
   }
-  return <div ref={box} className={`scene${paused ? " paused" : ""}${lite ? " lite" : ""}`}>{body}</div>
+  return (
+    <div ref={box} className={`scene${paused ? " paused" : ""}${lite ? " lite" : ""}`}>
+      {body}
+      {/* 大腦網路圖取自 Noun Project 的免費圖示,須標註作者 */}
+      {l.brain && <span className="brain-credit">Brain by Clockwise from the Noun Project</span>}
+    </div>
+  )
 }
 
 /* ================= 靜態層 ================= */
@@ -258,7 +457,7 @@ function Still({ l }: { l: Look }) {
       </defs>
       <rect x={WORLD.x} y={WORLD.y} width={WORLD.w} height={WORLD.h} fill="url(#grid)" mask="url(#gridMask)" />
       {/* 地板 */}
-      <polygon points={pts([P(FLOOR.x0, FLOOR.y0), P(FLOOR.x1, FLOOR.y0), P(FLOOR.x1, FLOOR.y1), P(FLOOR.x0, FLOOR.y1)])} fill="#f6ead2" fillOpacity={0.55} stroke="#e6d2a3" strokeWidth={1.2} />
+      <polygon points={pts([L(FLOOR.x0, FLOOR.y0), L(FLOOR.x1, FLOOR.y0), L(FLOOR.x1, FLOOR.y1), L(FLOOR.x0, FLOOR.y1)])} fill="#f6ead2" fillOpacity={0.55} stroke="#e6d2a3" strokeWidth={1.2} />
 
       {/* 防護框 */}
       {z && (
@@ -268,7 +467,7 @@ function Still({ l }: { l: Look }) {
       )}
       {/* Plasma 大腦的光圈 */}
       {l.brain && plasma && (
-        <g className="fade-in brain" transform={`translate(${P(...plasma.at)[0]} ${P(...plasma.at)[1]})`}>
+        <g className="fade-in brain" transform={`translate(${L(...plasma.at)[0]} ${L(...plasma.at)[1]})`}>
           <ellipse cx={0} cy={0} rx={190 * Math.SQRT2} ry={95 * Math.SQRT2} fill="url(#gBrain)" />
           <ellipse className="brain-ring" cx={0} cy={0} rx={150 * Math.SQRT2} ry={75 * Math.SQRT2} fill="none" stroke={RED} strokeWidth={2} strokeDasharray="10 8" strokeOpacity={0.7} />
         </g>
@@ -286,7 +485,7 @@ function Still({ l }: { l: Look }) {
   )
 }
 
-const depth = (id: string, p: Put) => p.at[0] + p.at[1] + (NODES[id].kind === "kb" ? 1 : 0)
+const depth = (id: string, p: Put) => p.at[1] - p.at[0] + (NODES[id].kind === "kb" ? 1 : 0)
 
 /** 換位置時,物件與它的標籤用同一段弧線跳過去 */
 function Mover({ at, children, className, style }: { at: Pt; children: ReactNode; className?: string; style?: React.CSSProperties }) {
@@ -337,7 +536,7 @@ function Labels({ l }: { l: Look }) {
     <>
       {z && (
         <g className="fade-in" key={`zl-${l.zone!.label}`}>
-          <Tag x={P((z.x0 + z.x1) / 2, z.y1)[0]} y={P((z.x0 + z.x1) / 2, z.y1)[1] + 26} text={l.zone!.label} color={GREEN} size={15} />
+          <Tag x={L((z.x0 + z.x1) / 2, z.y1)[0]} y={L((z.x0 + z.x1) / 2, z.y1)[1] + 26} text={l.zone!.label} color={GREEN} size={15} />
         </g>
       )}
       {ids.map((id) => {

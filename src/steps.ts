@@ -127,7 +127,7 @@ const S4: Look = {
   ],
   chips: [c("6 個", "warn"), c("96%", "warn"), NONE],
 }
-S4.put.bi = { ...S4.put.bi, note: { tone: "bad", dx: -170, title: "同一需求：取前 10 筆", lines: ["Oracle　WHERE ROWNUM <= 10", "MS SQL　SELECT TOP 10", "MySQL／PG　LIMIT 10", "Informix　SELECT FIRST 10"] } }
+S4.put.bi = { ...S4.put.bi, note: { tone: "bad", dx: 170, title: "同一需求：取前 10 筆", lines: ["Oracle　WHERE ROWNUM <= 10", "MS SQL　SELECT TOP 10", "MySQL／PG　LIMIT 10", "Informix　SELECT FIRST 10"] } }
 const S5: Look = {
   put: {
     ...dbs(NORMAL), plasma: { ...PLASMA, note: { tone: "ok", title: "同一需求：取前 10 筆", lines: ["Plasma　SELECT … LIMIT 10", "一種 SQL 查詢 5 套資料庫"] } }, ...apps(),
@@ -264,7 +264,7 @@ const S16: Look = {
     ai: { at: AI_AT, tag: tag("ok", "回答正確"), note: { tone: "ok", title: ASK, lines: ["312 人（DEPT_C = 心臟內科）"] } },
   },
   links: viaPlasma(["ai"]),
-  brain: true,
+  brain: { grow: true, to: "ai", dx: -80 },
   chips: [c("0 個", "down"), NONE, NONE],
 }
 
@@ -285,10 +285,10 @@ const S17: Look = {
 const S18: Look = {
   put: {
     ...dbs(null, { dim: true }), plasma: { ...PLASMA, tag: tag("ok", "MCP") }, kb: { ...KB },
-    agent: { at: AI_AT, tag: tag("ok", "幾分鐘拿到結果"), note: { tone: "ok", dx: -110, title: "本月住院計費彙總（依科別）", lines: ["list_tables → describe_columns → query", "全程在院內地端執行，資料不出院"] } },
+    agent: { at: AI_AT, tag: tag("ok", "幾分鐘拿到結果"), note: { tone: "ok", dx: 30, title: "本月住院計費彙總（依科別）", lines: ["list_tables → describe_columns → query", "全程在院內地端執行，資料不出院"] } },
   },
   links: viaPlasma(["agent"]),
-  brain: true,
+  brain: { to: "agent", dx: -80 },
   chips: [c("0 個", "down"), NONE, c("幾分鐘", "down")],
 }
 
@@ -297,7 +297,7 @@ const S19: Look = {
   put: { ...sys(), ...dbs(NORMAL), plasma: PLASMA, kb: KB, ...apps() },
   links: [...sysLinks(), ...viaPlasma(APPS)],
   zone: { ids: [...DBS, ...SYS], label: "核心資料庫 · 受保護" },
-  brain: true,
+  brain: { dx: -270 },
   chips: [c("0 個", "down"), c("34%", "down"), c("即時", "down")],
 }
 

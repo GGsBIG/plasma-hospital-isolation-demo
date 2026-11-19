@@ -87,6 +87,30 @@ button { font: inherit; color: inherit; }
 .mesh { animation: fade .6s ease 2.4s backwards; }
 .ghost { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 6 5; opacity: .45; animation: fade 1s ease .6s backwards; }
 .ghost-g { opacity: .45; animation: fade 1s ease .6s backwards; }
+/* Plasma 大腦:浮在 Plasma 上方的神經網路圖(自己一張小 SVG + 光暈 + HTML 訊號光點) */
+.brain { position: absolute; left: 0; top: 0; pointer-events: none; transition: transform 1.3s cubic-bezier(.65,0,.25,1); animation: fade .8s ease .3s backwards; }
+.brain.grow { animation: none; }
+.brain-glow { position: absolute; left: -30%; top: -35%; width: 160%; height: 170%; border-radius: 50%; background: radial-gradient(closest-side, rgb(111 99 217 / .26), rgb(155 127 224 / .16) 45%, rgb(224 69 47 / .07) 72%, rgb(224 69 47 / 0)); will-change: transform; animation: fade 1s ease var(--bd) backwards, brain-breathe 4s ease-in-out calc(var(--bd) + 1s) infinite alternate; }
+@keyframes brain-breathe { to { transform: scale(1.06); } }
+.brain-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+.bn-line { stroke: #5a55a8; stroke-opacity: .5; stroke-width: .22; stroke-linecap: round; }
+.bn-node { stroke: var(--ink); stroke-width: .2; transform-box: fill-box; transform-origin: center; }
+.bn-stem { stroke: #6f63d9; stroke-width: .3; stroke-dasharray: .9 .9; stroke-opacity: .7; }
+/* 長出來:連線由內往外畫出、節點一顆顆亮起(延遲寫在各元素上);腦幹的虛線最先出現 */
+.brain.grow .bn-line { stroke-dasharray: 1; animation: bn-draw .8s cubic-bezier(.22,1,.36,1) backwards; }
+.brain.grow .bn-node { animation: bn-pop .55s cubic-bezier(.34,1.56,.64,1) backwards; }
+.brain.grow .bn-stem { animation: fade .5s ease calc(var(--bd) - .2s) backwards; }
+@keyframes bn-draw { from { stroke-dashoffset: 1; } }
+@keyframes bn-pop { from { transform: scale(0); opacity: 0; } }
+.scene.lite .brain.grow .bn-line { animation-name: fade; }
+.scene.lite .brain-glow { animation: fade 1s ease var(--bd) backwards; }
+.brain-fx { position: absolute; inset: 0; overflow: visible; }
+.brain-fx i { position: absolute; left: 0; top: 0; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
+.bn-spark { background: #6f63d9; box-shadow: 0 0 0 1px #fffdf8; }
+.bn-answer { background: var(--green); border: 1.5px solid var(--ink); }
+.bn-ring { border: 1.5px solid rgb(111 99 217 / .6); }
+.bn-hit { border: 2px solid var(--green); }
+.brain-credit { position: absolute; left: 10px; bottom: 6px; font-size: 10px; color: rgb(107 99 89 / .6); pointer-events: none; white-space: nowrap; }
 .scene.paused * { animation-play-state: paused !important; }
 
 /* ---------- 右側面板:這一步的標題與畫面上的變化 ---------- */

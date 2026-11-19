@@ -56,8 +56,15 @@ export interface Look {
   put: Record<string, Put>
   links: Link[]
   zone?: { ids: string[]; label: string } // 地面上的防護框
-  brain?: boolean // Plasma 與知識庫合體的光圈
+  brain?: boolean | Brain // Plasma 大腦:地上的光圈 + 浮在 Plasma 上方的神經網路圖(true = 已長好、靜靜待著)
   chips: [string, ChipTone][] // 上方數字晶片的值
+}
+
+/** Plasma 大腦的樣子 */
+export interface Brain {
+  grow?: boolean // 這一步才長出來:節點從知識庫往外亮起、連線畫出
+  to?: string // 有回答時,一道訊號從大腦跑到這個物件(例如地端 AI)
+  dx?: number // 大腦往右(正)或往左(負)挪,避開旁邊的物件;預設 0
 }
 
 export interface Step {
