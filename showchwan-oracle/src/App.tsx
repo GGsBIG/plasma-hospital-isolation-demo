@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { ArrowLeft, ArrowRight, Pause, Play, RotateCcw, FastForward } from "lucide-react"
 import { EMPTY, STEPS, type Look, type Step } from "./steps"
 import { Scene } from "./Scene"
-import logo from "./assets/brobridge-logo.png"
+import logo from "./assets/brobridge-logo.webp"
 
 // 放在秀傳網站裡:logo 回秀傳入口頁;單獨上傳成一頁(VITE_STANDALONE=1):logo 回官網首頁
 const HOME = import.meta.env.VITE_STANDALONE === "1" ? { href: "/", label: "回到 Brobridge 首頁" } : { href: "../#oracle", label: "回到 Plasma Demo 首頁" }
@@ -54,6 +54,8 @@ export function App() {
   const next = STEPS[step + 1]
   // 桌機:數字晶片疊在場景上方,鏡頭要往下讓;手機:晶片在場景外面
   const narrow = useNarrow()
+  const hidden = useHidden()
+  const lite = useLite()
   return (
     <div className="app">
       <header className="top">
@@ -74,7 +76,7 @@ export function App() {
             </div>
           </div>
           <div className="stage">
-            <Scene l={look} paused={paused} insetTop={narrow ? 0 : 76} insetBottom={narrow ? 40 : 0} />
+            <Scene l={look} paused={paused || hidden} lite={lite} insetTop={narrow ? 0 : 76} insetBottom={narrow ? 40 : 0} />
           </div>
         </section>
 
@@ -101,6 +103,45 @@ export function App() {
       <Timeline step={step} onGo={go} />
     </div>
   )
+}
+
+/** 分頁切走、畫面捲出視窗(例如嵌在首頁的 iframe 被關掉)時暫停所有動畫,省電也不佔手機資源 */
+function useHidden() {
+  const [hidden, setHidden] = useState(() => document.hidden)
+  useEffect(() => {
+    let tab = document.hidden
+    let off = false
+    const sync = () => setHidden(tab || off)
+    const onVis = () => { tab = document.hidden; sync() }
+    document.addEventListener("visibilitychange", onVis)
+    const io = new IntersectionObserver(([e]) => { off = !e.isIntersecting; sync() })
+    io.observe(document.body)
+    return () => { document.removeEventListener("visibilitychange", onVis); io.disconnect() }
+  }, [])
+  return hidden
+}
+
+/** 輕量模式:開場量 1 秒的畫面更新率,太低(舊手機、省電模式)就減少動畫;
+ *  系統設定「減少動態效果」也算;網址加 #lite=1 可以強制開啟方便測試 */
+function useLite() {
+  const forced = new URLSearchParams(location.hash.slice(1)).get("lite")
+  const [lite, setLite] = useState(() => forced === "1" || window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+  useEffect(() => {
+    if (forced) return
+    let frames = 0
+    let raf = 0
+    let t0 = 0
+    const tick = (t: number) => {
+      if (!t0) t0 = t
+      frames++
+      if (t - t0 < 1000) raf = requestAnimationFrame(tick)
+      else if ((frames * 1000) / (t - t0) < 45) setLite(true)
+    }
+    // 等開場的掉落動畫開始後再量,量到的才是真的負擔
+    const start = window.setTimeout(() => (raf = requestAnimationFrame(tick)), 300)
+    return () => { window.clearTimeout(start); cancelAnimationFrame(raf) }
+  }, [forced])
+  return lite
 }
 
 function useNarrow() {
