@@ -4,6 +4,8 @@ import { EMPTY, STEPS, type Look, type Step } from "./steps"
 import { Scene } from "./Scene"
 import logo from "./assets/brobridge-logo.png"
 
+// 放在秀傳網站裡:logo 回秀傳入口頁;單獨上傳成一頁(VITE_STANDALONE=1):logo 回官網首頁
+const HOME = import.meta.env.VITE_STANDALONE === "1" ? { href: "/", label: "回到 Brobridge 首頁" } : { href: "../#oracle", label: "回到 Plasma Demo 首頁" }
 const AUTO_MS = 8000 // 自動播放時每一步停留多久
 const clampStep = (n: number) => Math.max(0, Math.min(STEPS.length - 1, n))
 
@@ -55,7 +57,7 @@ export function App() {
   return (
     <div className="app">
       <header className="top">
-        <a href="../#oracle" target="_top" aria-label="回到 Plasma Demo 首頁"><img src={logo} alt="Brobridge" className="top-logo" /></a>
+        <a href={HOME.href} target="_top" aria-label={HOME.label}><img src={logo} alt="Brobridge" className="top-logo" /></a>
         <span className="top-title">秀傳醫院・Oracle 授權減壓</span>
       </header>
 
