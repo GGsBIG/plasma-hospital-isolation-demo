@@ -9,6 +9,8 @@ export interface Look {
   pg: boolean // PostgreSQL 與 Plasma 同步
   toPg: boolean // Proxmox 上的應用改連 PostgreSQL
   oraSmall: boolean // Oracle 縮小
+  kube: boolean // 未來:Proxmox 上面加一層 Kubernetes
+  containers: boolean // 未來:Proxmox 上的應用改成容器
   load: number // Oracle 負載 %
   cam: Cam
 }
@@ -27,13 +29,13 @@ export const CAMS: Record<Cam, { x0: number; y0: number; x1: number; y1: number 
 
 export interface Step {
   short: string // 下方步驟軸
-  phase: "現況" | "Step 1" | "Step 2" | "成果"
+  phase: "現況" | "Step 1" | "Step 2" | "成果" | "未來"
   title: string
   changes: [sign: "+" | "−" | "~" | "!", text: string][]
   look: Look
 }
 
-const L0: Look = { vm: true, oracle: false, k8s: false, moved: false, pg: false, toPg: false, oraSmall: false, load: 0, cam: "vm" }
+const L0: Look = { vm: true, oracle: false, k8s: false, moved: false, pg: false, toPg: false, oraSmall: false, kube: false, containers: false, load: 0, cam: "vm" }
 const L1: Look = { ...L0, oracle: true, load: 92, cam: "left" }
 const L3: Look = { ...L1, k8s: true, cam: "compute" }
 const L4: Look = { ...L3, moved: true }
@@ -60,6 +62,10 @@ export const STEPS: Step[] = [
     changes: [["−", "只剩 2 支核心系統連 Oracle"], ["−", "Oracle 規模可以縮小"]] },
   { short: "成果", phase: "成果", title: "ESXi、Oracle 的使用都降低了", look: { ...L8, cam: "all" },
     changes: [["−", "ESXi：8 支應用 → 2 支"], ["−", "Oracle：負載 92% → 30%"], ["+", "Plasma 即時同步，既有系統不用改"]] },
+  { short: "加上 Kubernetes", phase: "未來", title: "未來：在 Proxmox 上加一層 Kubernetes", look: { ...L8, kube: true, cam: "all" },
+    changes: [["+", "Kubernetes 疊在 Proxmox 上"], ["~", "應用先照常以 VM 執行"]] },
+  { short: "容器化", phase: "未來", title: "應用程式容器化，跑在 Kubernetes 上", look: { ...L8, kube: true, containers: true, cam: "all" },
+    changes: [["~", "6 支應用程式改成容器"], ["+", "一樣讀 PostgreSQL，Plasma 照常即時同步"]] },
 ]
 
 /** 重播用:第一步之前的空場景 */

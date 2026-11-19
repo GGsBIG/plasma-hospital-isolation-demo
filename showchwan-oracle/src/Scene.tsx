@@ -5,6 +5,7 @@ import plasmaLogo from "./assets/plasma-logo.webp"
 import oracleLogo from "./assets/oracle.svg"
 import pgLogo from "./assets/postgresql.svg"
 import proxmoxLogo from "./assets/proxmox-mark.svg"
+import kubeLogo from "./assets/kubernetes-logo.webp"
 
 /* ================= 效能架構 =================
    手機會卡的原因是「每一格都重畫整張 SVG」。這裡分成三層,讓每一格的工作量降到最低:
@@ -33,6 +34,8 @@ const C = {
   app: ["#effbfd", "#c6e9f0", "#abdae5"], // 虛擬機(玻璃)
   appK: ["#effbfd", "#c6e9f0", "#abdae5"], // 遷移到 Proxmox 的虛擬機(一樣是 VM)
   plasma: ["#ffffff", "#f6e3e1", "#ecc9c5"],
+  kubePlane: ["#e2e9fc", "#bccbf3", "#a3b7ec"], // 未來:Proxmox 上面的 Kubernetes 層
+  ctr: ["#f3f6ff", "#d3ddf8", "#bccbf0"], // 容器
 }
 
 /** 整個場景的範圍(畫面座標)。靜態層就畫這麼大 */
@@ -203,6 +206,13 @@ function Still({ l }: { l: Look }) {
           <FaceLabel x0={K8S.x} text="Proxmox" logo={proxmoxLogo} />
         </Drop>
       )}
+      {/* 未來:在 Proxmox 上面再疊一層 Kubernetes,大小剛好對齊 */}
+      {l.kube && (
+        <Drop>
+          <Box x={K8S.x} y={0} z={Z_TOP} w={K8S.w} d={SLAB_D} h={PLANE_T} c={C.kubePlane} op={0.86} />
+          <FaceLabel x0={K8S.x} z={Z_TOP + PLANE_T} text="Kubernetes" logo={kubeLogo} />
+        </Drop>
+      )}
 
       {/* ---------- 地面連線(流動的小點在動態層) ---------- */}
       {l.oracle && <VmLinkLine moved={l.moved} small={l.oraSmall} />}
@@ -211,7 +221,8 @@ function Still({ l }: { l: Look }) {
       {/* ---------- 應用程式 ---------- */}
       {l.vm && order.map((i) => {
         const [ax, ay] = appAt(i, l.moved)
-        return <App key={APPS[i]} i={i} at={P(ax, ay, Z_TOP)} inK8s={l.moved && i >= CORE} />
+        const onPx = l.moved && i >= CORE
+        return <App key={APPS[i]} i={i} at={P(ax, ay, onPx && l.kube ? Z_TOP + PLANE_T : Z_TOP)} inK8s={onPx} ctr={onPx && l.containers} />
       })}
 
       {/* ---------- 資料層 ---------- */}
@@ -512,7 +523,7 @@ function Drop({ children, delay = 0 }: { children: ReactNode; delay?: number }) 
 }
 
 /* ---------- 應用程式小方塊:換位置時跳過去 ---------- */
-function App({ i, at, inK8s }: { i: number; at: Pt; inK8s: boolean }) {
+function App({ i, at, inK8s, ctr = false }: { i: number; at: Pt; inK8s: boolean; ctr?: boolean }) {
   const ref = useRef<SVGGElement>(null)
   const prev = useRef<Pt | null>(null)
   useLayoutEffect(() => {
@@ -535,10 +546,18 @@ function App({ i, at, inK8s }: { i: number; at: Pt; inK8s: boolean }) {
     <g ref={ref}>
       <Drop delay={0.35 + i * 0.07}>
         <Shadow poly={[P(-h, -h), P(h, -h), P(h, h), P(-h, h)]} />
-        <Box x={-h} y={-h} w={CUBE} d={CUBE} h={CUBE_H} c={inK8s ? C.appK : C.app} op={0.92} />
-        {/* 玻璃的反光 */}
-        <polygon points={pts([P(-h + 6, h, CUBE_H - 6), P(-h + 20, h, CUBE_H - 6), P(-h + 8, h, 8), P(-h + 6, h, 8)])} fill="#fff" opacity={0.55} />
-        <Icon x={-11} y={-CUBE_H - 30} width={22} height={22} strokeWidth={1.8} color="#1f6f86" />
+        <Box x={-h} y={-h} w={CUBE} d={CUBE} h={CUBE_H} c={ctr ? C.ctr : inK8s ? C.appK : C.app} op={ctr ? 1 : 0.92} />
+        {ctr ? (
+          // 容器:兩個側面有貨櫃的直條紋
+          <g stroke="#7f95cf" strokeWidth={1} fill="none">
+            {[0.25, 0.42, 0.59, 0.76].map((f) => <polyline key={`l${f}`} points={pts([P(-h + CUBE * f, h, CUBE_H - 6), P(-h + CUBE * f, h, 6)])} />)}
+            {[0.25, 0.42, 0.59, 0.76].map((f) => <polyline key={`r${f}`} points={pts([P(h, -h + CUBE * f, CUBE_H - 6), P(h, -h + CUBE * f, 6)])} />)}
+          </g>
+        ) : (
+          /* 玻璃的反光 */
+          <polygon points={pts([P(-h + 6, h, CUBE_H - 6), P(-h + 20, h, CUBE_H - 6), P(-h + 8, h, 8), P(-h + 6, h, 8)])} fill="#fff" opacity={0.55} />
+        )}
+        <Icon x={-11} y={-CUBE_H - 30} width={22} height={22} strokeWidth={1.8} color={ctr ? "#2a55b8" : "#1f6f86"} />
         <text className="cube-label" x={0} y={-CUBE_H + 12} textAnchor="middle" fontSize={12} fontWeight={800} fill={INK}>{APPS[i]}</text>
       </Drop>
     </g>
@@ -627,12 +646,13 @@ function PlasmaFace() {
 }
 
 /** 平台前面的字(ESXi / Proxmox):貼在平台的前側面上;手機上太小時改成浮在旁邊的標籤 */
-function FaceLabel({ x0, text, logo }: { x0: number; text: string; logo?: string }) {
+function FaceLabel({ x0, z = Z_TOP, text, logo }: { x0: number; z?: number; text: string; logo?: string }) {
   const ui = useContext(UI)
-  const [X, Y] = P(x0, SLAB_D, Z_TOP) // 前側面的左上角
+  const [X, Y] = P(x0, SLAB_D, z) // 前側面的左上角
   if (ui > 1.5) {
-    const [bx, by] = P(x0, 0, Z_TOP) // 平台後方的角,上面是空的
-    return <Tag x={bx} y={by - 34} text={text} logo={logo} />
+    const [bx, by] = P(x0, 0, z) // 平台後方的角,上面是空的
+    // 疊在上層的平台(Kubernetes)標籤再往上一點,不跟下層的標籤重疊
+    return <Tag x={bx} y={by - 34 - (z - Z_TOP) * 2.6} text={text} logo={logo} />
   }
   const fs = 15
   return (
