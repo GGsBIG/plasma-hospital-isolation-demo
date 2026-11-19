@@ -48,6 +48,10 @@ const HEADS: Head[] = SHOWCHWAN
         key: "showchwan", tab: "秀傳醫院", lines: ["四家分院", "一份彙整資料"],
         lead: <>各分院資料庫 schema 不同，經 Plasma 由 AI 整理成資料產品，總院直接取用彙整。</>,
       },
+      {
+        key: "oracle", tab: "Oracle 減壓", lines: ["Oracle 稽核", "分兩步減壓"],
+        lead: <>應用程式搬上 K8s，再由 Plasma 把 Oracle 即時同步到 PostgreSQL，VMware 與 Oracle 的授權負擔一起降下來。</>,
+      },
       TECH,
     ]
   : [MANUFACTURING, HOSPITAL, TECH, SENTINEL]
@@ -57,6 +61,7 @@ const HOLD = 6500
 const CARDS = SHOWCHWAN
   ? [
       { key: "showchwan", href: "demo/", title: "秀傳醫院" },
+      { key: "oracle", href: "oracle/", title: "Oracle 減壓" },
       { key: "tech", href: "tech/", title: "元件總覽" },
     ]
   : [

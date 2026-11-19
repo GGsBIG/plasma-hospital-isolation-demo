@@ -9,6 +9,7 @@ const DEMO_DIRS: Record<string, string> = {
   manufacturing: resolve(__dirname, "release/demos/manufacturing"),
   hospital: resolve(__dirname, "release/demos/hospital"),
   demo: resolve(__dirname, "release/showchwan/demo"), // 秀傳網站(VITE_SITE=showchwan npx vite)
+  oracle: resolve(__dirname, "release/showchwan/oracle"), // 秀傳 Oracle 減壓故事
   "ui-hospital": resolve(__dirname, "release/demos/ui-hospital"),
   ops: resolve(__dirname, "release/demos/ops"),
   views: resolve(__dirname, "release/demos/views"),

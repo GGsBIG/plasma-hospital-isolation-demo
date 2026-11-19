@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 產生 WordPress 用的靜態 HTML,兩個網站分開放、分開上傳(repo 根目錄的 上傳WordPress/,不進 git):
 #   上傳WordPress/一般客戶/ + 一般客戶.zip  → 入口頁、元件總覽、製造業、醫院、K8s Sentinel……(不含秀傳)
-#   上傳WordPress/秀傳醫院/ + 秀傳醫院.zip  → 秀傳專用首頁、秀傳情境、元件總覽
+#   上傳WordPress/秀傳醫院/ + 秀傳醫院.zip  → 秀傳專用首頁、秀傳情境、Oracle 減壓故事、元件總覽
 # zip 裡直接是網站檔案(沒有外層資料夾):進到 WordPress 上要放的那個資料夾,上傳後解壓即可,
 # 網站全用相對路徑,放在哪個網址底下都能用。hub/release/ 是中間產物(開發伺服器也讀它)。
 set -euo pipefail
@@ -38,6 +38,8 @@ mkdir -p "$OUT/powerbi" && cp -R "$REPO/powerbi/." "$OUT/powerbi/"
 echo "› 秀傳網站:首頁、元件總覽、秀傳情境"
 (cd "$HERE" && VITE_SITE=showchwan npx vite build --outDir "$SC" --emptyOutDir --logLevel warn)
 need "$REPO/showchwan";    (cd "$REPO/showchwan" && npx tsc -b && npx vite build --base ./ --outDir "$SC/demo" --emptyOutDir --logLevel warn)
+echo "› 秀傳網站:Oracle 減壓故事(獨立的另一版)"
+need "$REPO/showchwan-oracle"; (cd "$REPO/showchwan-oracle" && npx tsc -b && npx vite build --base ./ --outDir "$SC/oracle" --emptyOutDir --logLevel warn)
 
 # 所有頁面都不讓搜尋引擎收錄
 for f in "$OUT"/*/index.html "$SC"/*/index.html; do
