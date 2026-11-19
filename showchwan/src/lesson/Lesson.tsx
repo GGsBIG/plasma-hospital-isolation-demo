@@ -72,6 +72,7 @@ export function Lesson({ step, go }: { step: number; go: (n: number) => void }) 
           </div>
           <div className="stage">
             <Scene l={look} paused={paused || hidden} lite={lite} insetTop={narrow ? 0 : 76} insetBottom={narrow ? 40 : 0} />
+            {look.docs && <span className="brain-credit">Brain by Clockwise from the Noun Project</span>}
           </div>
         </section>
 

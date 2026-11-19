@@ -5,6 +5,7 @@ import plasmaLogo from "./assets/plasma-logo.webp"
 import oracleLogo from "./assets/oracle.svg"
 import pgLogo from "./assets/postgresql.svg"
 import msLogo from "./assets/mssql.svg"
+import { BrainNet, BRAIN_RATIO } from "./brainGraph"
 
 /* ================= 效能架構(跟 Oracle 減壓圖解相同) =================
    1. 靜態層(SVG):資料庫、方塊、標籤。只有換步驟時才變,平常不重畫。
@@ -19,7 +20,10 @@ const P = (x: number, y: number, z = 0): Pt => [x - y, (x + y) / 2 - z]
 const pts = (a: Pt[]) => a.map((p) => p.join(",")).join(" ")
 const add = (a: Pt, b: Pt): Pt => [a[0] + b[0], a[1] + b[1]]
 const toD = (a: Pt[]) => "M" + a.map((p) => p.join(" ")).join(" L")
-const path = (g: G[], z = 0) => g.map(([x, y]) => P(x, y, z))
+/** 配置用的投影:整個配置在地面上轉 90°,連線改走「／」(服務在左下、資料庫在右上那個方向)。
+ *  只有位置用 L;方塊、圓柱本身照舊用 P 畫,看起來的角度不變。 */
+const L = (x: number, y: number, z = 0): Pt => P(y, -x, z)
+const path = (g: G[], z = 0) => g.map(([x, y]) => L(x, y, z))
 
 const INK = "#211e1b"
 const ORANGE = "#d9722b"
@@ -39,7 +43,7 @@ const C = {
 }
 
 /** 整個場景的範圍(畫面座標) */
-const WORLD = { x: -700, y: -400, w: 1820, h: 1340 }
+const WORLD = { x: -900, y: -720, w: 2900, h: 1240 }
 
 /* ================= 場景配置(地面座標) ================= */
 const DB_YS = [0, 210, 420] // 三套資料庫排成一列
@@ -51,7 +55,7 @@ const AGENT_AT: G = [760, 210]
 const ROSTER_AT: G = [760, 420]
 const PERSON_AT: G = [980, 210]
 const UNITS: { at: G; name: string }[] = [{ at: [960, 420], name: "護理部" }, { at: [760, 610], name: "人事室" }]
-const DOCS_AT: G = [420, -170]
+const DOCS_AT: G = [250, -300]
 const REP_AT: G = [0, -340] // PostgreSQL 副本
 const DB = { r: 64, h: 96 }
 const ORA_BIG = { r: 76, h: 116 }
@@ -141,11 +145,12 @@ export function Scene({ l, paused, lite = false, insetTop = 0, insetBottom = 0 }
         <Layer.Provider value={{ R, paused, lite }}>
           <div className={`scene-box${ui > 1.5 ? " tiny" : ""}`}>
             <div className="cam" style={{ width: WORLD.w * R, height: WORLD.h * R, transform: `translate3d(${tx}px, ${ty}px, 0) scale(${s / R})` }}>
-              {l.dbs && hot && <Heat at={P(0, DB_YS[0])} r={ORA_BIG.r} />}
+              {l.dbs && hot && <Heat at={L(0, DB_YS[0])} r={ORA_BIG.r} />}
               <svg className="still" width={WORLD.w * R} height={WORLD.h * R} viewBox={`${WORLD.x} ${WORLD.y} ${WORLD.w} ${WORLD.h}`} aria-label="架構示意圖">
                 <Still l={l} />
               </svg>
               <Moving l={l} hot={hot} />
+              {l.docs && <PlasmaBrain l={l} ui={ui} R={R} paused={paused} lite={lite} />}
             </div>
           </div>
         </Layer.Provider>
@@ -155,10 +160,24 @@ export function Scene({ l, paused, lite = false, insetTop = 0, insetBottom = 0 }
   return <div ref={box} className={`scene${paused ? " paused" : ""}${lite ? " lite" : ""}`}>{body}</div>
 }
 
+/* ---------- Plasma 大腦:知識庫上方的 graph ---------- */
+function PlasmaBrain({ l, ui, R, paused, lite }: { l: Look; ui: number; R: number; paused: boolean; lite: boolean }) {
+  const pl = L(...PLASMA)
+  const base: Pt = [pl[0], pl[1] - PL_H - 60]
+  const w = 400 * Math.min(1.45, Math.sqrt(ui))
+  const h = w * BRAIN_RATIO
+  const box = { x0: pl[0] + 90 - w, y0: base[1] - 30 - h, w, h }
+  // 上傳文件那一步:等文件飛進知識庫後才長出來;AI 問答那一步:答案送到 AI Agent
+  const grow = !l.brain && !l.agent
+  const ag = L(...AGENT_AT)
+  const target: Pt | null = l.agent && !l.product ? [ag[0], ag[1] - CUBE_H * 0.6] : null
+  return <BrainNet box={box} base={base} grow={grow} start={grow ? 3.2 : 0} target={target} world={WORLD} R={R} paused={paused} lite={lite} />
+}
+
 /* ================= 靜態層 ================= */
 function Still({ l }: { l: Look }) {
   const roster = l.product ? "product" : l.agent ? "done" : l.confused ? "bad" : null
-  const pl = P(...PLASMA)
+  const pl = L(...PLASMA)
   return (
     <>
       <defs>
@@ -181,7 +200,7 @@ function Still({ l }: { l: Look }) {
       </defs>
       <rect x={WORLD.x} y={WORLD.y} width={WORLD.w} height={WORLD.h} fill="url(#grid)" mask="url(#gridMask)" />
       {/* 機房地板 */}
-      <polygon points={pts([P(-140, -320), P(1100, -320), P(1100, 700), P(-140, 700)])} fill="#f6ead2" fillOpacity={0.55} stroke="#e6d2a3" strokeWidth={1.2} />
+      <polygon points={pts([L(-140, -320), L(1100, -320), L(1100, 700), L(-140, 700)])} fill="#f6ead2" fillOpacity={0.55} stroke="#e6d2a3" strokeWidth={1.2} />
 
       {/* ---------- 地面連線(流動的小點在動態層) ---------- */}
       {l.it && !l.plasma && DB_YS.map((_, i) => <Cable key={`p${i}`} g={dbToPerson(i)} tone="bad" />)}
@@ -199,26 +218,27 @@ function Still({ l }: { l: Look }) {
         </g>
       )}
 
-      {/* ---------- 由後往前畫(x + y 小的在後面) ---------- */}
-      {l.pg && <ReplicaDb />}
-      {l.docs && !l.agent && <Docs flying={!l.brain} />}
-      {l.sql && <Block at={SQL_AT} c={C.ok} icon={Table} label="查詢結果" delay={0.6} />}
-      {l.dbs && <OracleDb small={l.oraSmall} />}
-      {l.dbs && [1, 2].map((i) => <Db key={i} i={i} />)}
-      {l.agent && <Block at={AGENT_AT} c={C.agent} icon={Bot} iconColor="#2a55b8" label="AI Agent" delay={0.3} />}
-      {l.plasma && <PlasmaBox brain={l.docs} lit={l.brain} />}
+      {/* ---------- 由後往前畫(轉向後是 y − x 小的在後面) ---------- */}
       {l.it && <Person />}
+      {l.sql && <Block at={SQL_AT} c={C.ok} icon={Table} label="查詢結果" delay={0.6} />}
+      {l.docs && !l.agent && <Docs flying={!l.brain} />}
+      {l.agent && <Block at={AGENT_AT} c={C.agent} icon={Bot} iconColor="#2a55b8" label="AI Agent" delay={0.3} />}
+      {l.product && <Block at={UNITS[0].at} s={46} h={36} c={C.unit} icon={Users} iconColor="#6b6359" label={UNITS[0].name} delay={0.5} fs={12} />}
+      {l.pg && <ReplicaDb />}
       {roster && (
         <Block key={roster} at={ROSTER_AT} c={roster === "bad" ? C.bad : roster === "done" ? C.ok : C.product}
           icon={roster === "product" ? Package : ClipboardList} iconColor={roster === "bad" ? "#b4382a" : roster === "done" ? GREEN : "#a86a12"}
           label={roster === "product" ? "資料產品" : "名冊"} delay={roster === "bad" ? 0.6 : 0.2} />
       )}
-      {l.product && UNITS.map((u, i) => <Block key={u.name} at={u.at} s={46} h={36} c={C.unit} icon={Users} iconColor="#6b6359" label={u.name} delay={0.5 + i * 0.15} fs={12} />)}
+      {l.plasma && <PlasmaBox brain={l.docs} lit={l.brain} />}
+      {l.product && <Block at={UNITS[1].at} s={46} h={36} c={C.unit} icon={Users} iconColor="#6b6359" label={UNITS[1].name} delay={0.65} fs={12} />}
+      {l.dbs && <OracleDb small={l.oraSmall} />}
+      {l.dbs && [1, 2].map((i) => <Db key={i} i={i} />)}
 
       {/* ---------- 標籤、對話(最上層,不被擋住) ---------- */}
       {l.dbs && <DbLabels l={l} />}
-      {l.pg && <Tag x={P(...REP_AT)[0]} y={P(...REP_AT)[1] + DB.r * 0.7 + 30} text="PostgreSQL 副本" sub="即時同步" size={19} />}
-      {l.plasma && !l.sql && DB_YS.map((y, i) => { const p = P(BUS_X - 50, y); return <Pill key={i} x={p[0]} y={p[1] - 36} text="唯讀" tone="green" size={13} /> })}
+      {l.pg && <Tag x={L(...REP_AT)[0]} y={L(...REP_AT)[1] + DB.r * 0.7 + 30} text="PostgreSQL 副本" sub="即時同步" size={19} />}
+      {l.plasma && !l.sql && DB_YS.map((y, i) => { const p = L(BUS_X - 50, y); return <Pill key={i} x={p[0]} y={p[1] - 36} text="唯讀" tone="green" size={13} /> })}
       {l.sql && !l.docs && <Pill x={pl[0] + 190} y={pl[1] - PL_H - 84} text="SELECT … FROM a_his JOIN a_nursing JOIN a_hr" tone="ink" size={14} mono />}
       {l.brain && !l.agent && (
         <>
@@ -226,19 +246,19 @@ function Still({ l }: { l: Look }) {
           <Pill x={pl[0] + 250} y={pl[1] - PL_H - 76} text="TITLE_CD = 職稱代碼" tone="ink" size={15} />
         </>
       )}
-      {l.agent && !l.product && <Pill x={P(620, PLASMA[1])[0]} y={P(620, PLASMA[1])[1] - 52} text="MCP" tone="ink" size={14} mono />}
+      {l.agent && !l.product && <Pill x={L(620, PLASMA[1])[0]} y={L(620, PLASMA[1])[1] - 52} text="MCP" tone="ink" size={14} mono />}
       <PersonTalk l={l} />
-      {roster === "bad" && <Pill x={P(...ROSTER_AT)[0]} y={P(...ROSTER_AT)[1] - CUBE_H - 70} text="整理 5 天" tone="red" size={14} />}
-      {roster === "done" && <Pill x={P(...ROSTER_AT)[0]} y={P(...ROSTER_AT)[1] - CUBE_H - 70} text="248 位護理師" tone="green" size={14} />}
-      {roster === "product" && !l.reads && !l.pg && <Pill x={P(...ROSTER_AT)[0]} y={P(...ROSTER_AT)[1] - CUBE_H - 70} text="來源更新，跟著更新" tone="green" size={14} />}
-      {l.toPg && !l.oraSmall && <Pill x={P(PLASMA[0], -120)[0] + 90} y={P(PLASMA[0], -120)[1]} text="讀取改走這裡" tone="green" size={14} />}
+      {roster === "bad" && <Pill x={L(...ROSTER_AT)[0]} y={L(...ROSTER_AT)[1] - CUBE_H - 70} text="整理 5 天" tone="red" size={14} />}
+      {roster === "done" && <Pill x={L(...ROSTER_AT)[0]} y={L(...ROSTER_AT)[1] - CUBE_H - 70} text="248 位護理師" tone="green" size={14} />}
+      {roster === "product" && !l.reads && !l.pg && <Pill x={L(...ROSTER_AT)[0]} y={L(...ROSTER_AT)[1] - CUBE_H - 70} text="來源更新，跟著更新" tone="green" size={14} />}
+      {l.toPg && !l.oraSmall && <Pill x={L(PLASMA[0], -120)[0] + 90} y={L(PLASMA[0], -120)[1]} text="讀取改走這裡" tone="green" size={14} />}
     </>
   )
 }
 
 /* ---------- 人:IT 人員 ---------- */
 function Person() {
-  const [x, y] = P(...PERSON_AT)
+  const [x, y] = L(...PERSON_AT)
   return (
     <g transform={`translate(${x} ${y})`}>
       <Drop delay={0.2}>
@@ -252,7 +272,7 @@ function Person() {
   )
 }
 function PersonTalk({ l }: { l: Look }) {
-  const [x, y] = P(...PERSON_AT)
+  const [x, y] = L(...PERSON_AT)
   const at = { x: x - 80, y: y - 136 }
   if (l.it && l.dialect) return <Pill x={at.x} y={at.y} text="三套資料庫，三種語法…" tone="red" size={14} />
   if (l.confused && !l.plasma && l.load === 0) return <Pill x={at.x} y={at.y} text="TITLE_CD、N02 是什麼？" tone="red" size={14} />
@@ -262,7 +282,7 @@ function PersonTalk({ l }: { l: Look }) {
 
 /* ---------- 資料庫 ---------- */
 function Db({ i }: { i: number }) {
-  const [x, y] = P(0, DB_YS[i])
+  const [x, y] = L(0, DB_YS[i])
   const d = DBS[i]
   return (
     <g transform={`translate(${x} ${y})`}>
@@ -275,7 +295,7 @@ function Db({ i }: { i: number }) {
   )
 }
 function ReplicaDb() {
-  const [x, y] = P(...REP_AT)
+  const [x, y] = L(...REP_AT)
   return (
     <g transform={`translate(${x} ${y})`}>
       <Drop>
@@ -289,7 +309,7 @@ function ReplicaDb() {
 function OracleDb({ small }: { small: boolean }) {
   const r = useTween(small ? ORA_SMALL.r : ORA_BIG.r)
   const h = useTween(small ? ORA_SMALL.h : ORA_BIG.h)
-  const [x, y] = P(0, DB_YS[0])
+  const [x, y] = L(0, DB_YS[0])
   return (
     <g transform={`translate(${x} ${y})`}>
       {small && <g className="ghost-g"><Cyl r={ORA_BIG.r} h={ORA_BIG.h} grad="gOra" top="none" dash /></g>}
@@ -313,7 +333,7 @@ function DbLabels({ l }: { l: Look }) {
   return (
     <>
       {DBS.map((d, i) => {
-        const [x, y] = P(0, DB_YS[i])
+        const [x, y] = L(0, DB_YS[i])
         const rr = i === 0 ? r : DB.r
         const hh = i === 0 ? h : DB.h
         return (
@@ -323,14 +343,14 @@ function DbLabels({ l }: { l: Look }) {
           </g>
         )
       })}
-      {l.load > 0 && <LoadPill x={P(0, 0)[0]} y={P(0, 0)[1] - h - r * 0.7 - 34} v={v} />}
+      {l.load > 0 && <LoadPill x={L(0, 0)[0]} y={L(0, 0)[1] - h - r * 0.7 - 34} v={v} />}
     </>
   )
 }
 
 /* ---------- Plasma 方塊(上面可以長出知識庫) ---------- */
 function PlasmaBox({ brain, lit }: { brain: boolean; lit: boolean }) {
-  const [x, y] = P(...PLASMA)
+  const [x, y] = L(...PLASMA)
   const k = 26
   const bh = 34
   return (
@@ -370,8 +390,8 @@ function PlasmaFace() {
 /* ---------- 系統文件:一疊紙,飛進知識庫 ---------- */
 const DOC_NAMES = ["規格書", "資料字典", "職稱代碼表"]
 function Docs({ flying }: { flying: boolean }) {
-  const [x, y] = P(...DOCS_AT)
-  const brain = add(P(...PLASMA, PL_H + 34), [0, 0])
+  const [x, y] = L(...DOCS_AT)
+  const brain = add(L(...PLASMA, PL_H + 34), [0, 0])
   const dx = brain[0] - x
   const dy = brain[1] - y
   const sheet = (z: number) => <Box x={-20} y={-26} z={z} w={40} d={52} h={3} c={C.sheet} sw={0.9} />
@@ -395,7 +415,7 @@ function Docs({ flying }: { flying: boolean }) {
 
 /* ---------- 一般方塊:圖示 + 頂面文字 ---------- */
 function Block({ at, s = CUBE, h = CUBE_H, c, icon: Icon, iconColor = "#1f6f86", label, delay = 0, fs = 14 }: { at: G; s?: number; h?: number; c: string[]; icon: LucideIcon; iconColor?: string; label: string; delay?: number; fs?: number }) {
-  const [x, y] = P(...at)
+  const [x, y] = L(...at)
   const k = s / 2
   return (
     <g transform={`translate(${x} ${y})`}>
@@ -414,14 +434,14 @@ function Block({ at, s = CUBE, h = CUBE_H, c, icon: Icon, iconColor = "#1f6f86",
 function Moving({ l, hot }: { l: Look; hot: boolean }) {
   if (!l.dbs) return null
   const ora = l.oraSmall ? ORA_SMALL : ORA_BIG
-  const occ: Occluder[] = [cylOcc(P(0, 0), ora.r, ora.h), cylOcc(P(0, DB_YS[1]), DB.r, DB.h), cylOcc(P(0, DB_YS[2]), DB.r, DB.h)]
-  if (l.pg) occ.push(cylOcc(P(...REP_AT), DB.r, DB.h))
+  const occ: Occluder[] = [cylOcc(L(0, 0), ora.r, ora.h), cylOcc(L(0, DB_YS[1]), DB.r, DB.h), cylOcc(L(0, DB_YS[2]), DB.r, DB.h)]
+  if (l.pg) occ.push(cylOcc(L(...REP_AT), DB.r, DB.h))
   if (l.plasma) occ.push(boxOcc(PLASMA, PL, PL_H + (l.docs ? 34 : 0)))
   if (l.agent) occ.push(boxOcc(AGENT_AT, CUBE / 2, CUBE_H))
   if (l.sql) occ.push(boxOcc(SQL_AT, CUBE / 2, CUBE_H))
   if (l.confused) occ.push(boxOcc(ROSTER_AT, CUBE / 2, CUBE_H))
   if (l.product) UNITS.forEach((u) => occ.push(boxOcc(u.at, 23, 36)))
-  if (l.it) occ.push(cylOcc(P(...PERSON_AT), 24, 106))
+  if (l.it) occ.push(cylOcc(L(...PERSON_AT), 24, 106))
   const k = `${l.oraSmall}-${l.pg}-${l.agent}-${l.product}-${l.docs}-${hot}`
   const busy = hot || l.reads
   return (
@@ -452,8 +472,8 @@ function cylOcc(c: Pt, r: number, h: number): Occluder {
 }
 /** 方塊的輪廓(地面中心 at、半寬 k、高 h) */
 function boxOcc(at: G, k: number, h: number): Occluder {
-  const [x, y] = at
-  return polyOcc([P(x - k, y - k, h), P(x + k, y - k, h), P(x + k, y - k, 0), P(x + k, y + k, 0), P(x - k, y + k, 0), P(x - k, y + k, h)])
+  const c = L(...at)
+  return polyOcc([P(-k, -k, h), P(k, -k, h), P(k, -k, 0), P(k, k, 0), P(-k, k, 0), P(-k, k, h)].map((q) => add(q, c)))
 }
 function polyOcc(poly: Pt[]): Occluder {
   return ([x, y]) => {
