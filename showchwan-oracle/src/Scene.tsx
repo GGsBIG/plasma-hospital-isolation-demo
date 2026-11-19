@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState
 import { ChartColumn, ChartPie, ClipboardList, FileText, FlaskConical, HeartPulse, Pill as PillIcon, Stethoscope, type LucideIcon } from "lucide-react"
 import { APPS, CAMS, CORE, type Look } from "./steps"
 import plasmaLogo from "./assets/plasma-logo.webp"
+import oracleLogo from "./assets/oracle.svg"
+import k8sLogo from "./assets/kubernetes-logo.webp"
 
 /* ================= 效能架構 =================
    手機會卡的原因是「每一格都重畫整張 SVG」。這裡分成三層,讓每一格的工作量降到最低:
@@ -25,7 +27,7 @@ const GREEN = "#2f7d4f"
 // 每種東西的頂面/左面/右面顏色
 const C = {
   host: ["#f6f7f9", "#e0e4e9", "#c7ced6"], // 實體主機
-  vmPlane: ["#d4ebf8", "#a6cfe9", "#8dbcdd"], // VMware 虛擬化平面(半透明)
+  vmPlane: ["#d4ebf8", "#a6cfe9", "#8dbcdd"], // ESXi 虛擬化平面(半透明)
   k8sPlane: ["#dfe6fb", "#b8c8f1", "#9fb3e8"], // K8s 平面
   app: ["#effbfd", "#c6e9f0", "#abdae5"], // 虛擬機(玻璃)
   appK: ["#f2f5ff", "#d1dbf7", "#b9c8ef"], // 容器
@@ -51,12 +53,12 @@ const PIPE_Z = 26
 const CUBE = 56
 const CUBE_H = 44
 // 實體主機與浮在上面的虛擬化平面(參考 vSphere 架構圖:主機在下、虛擬機在平面上)
-const HOST = { w: 74, d: 60, h: 104, y: 50 }
-const Z_PLANE = 116 // 平面底部高度
-const PLANE_T = 6
+const HOST = { w: 132, d: 112, h: 26, y: 70 } // 扁平的機架式伺服器(像機櫃裡的一層)
+const Z_PLANE = HOST.h + 14 // 平面底部高度
+const PLANE_T = 22 // 平台厚度(前面寫 ESXi / Kubernetes)
 const Z_TOP = Z_PLANE + PLANE_T // 虛擬機/容器站的高度
-const VM_HOSTS = [50, 223, 396] // VMware 主機(縮減後只留第一台)
-const K8S_NODES = [653, 833]
+const VM_HOSTS = [4, 194, 384] // ESXi 主機(縮減後只留第一台)
+const K8S_NODES = [618, 810]
 const ICONS: LucideIcon[] = [ClipboardList, Stethoscope, HeartPulse, FlaskConical, PillIcon, FileText, ChartColumn, ChartPie]
 
 /** 第 i 支應用程式的位置 */
@@ -72,7 +74,7 @@ function linkPts(fromX: number, toX: number, midY: number): Pt[] {
   return [P(fromX, y0), P(fromX, midY), P(toX, midY), P(toX, DB_Y)]
 }
 const vmLink = (vmW: number, oraR: number) => {
-  // VMware 的線在 Oracle 的底面範圍內才轉彎,轉角藏在圓柱後面
+  // ESXi 的線在 Oracle 的底面範圍內才轉彎,轉角藏在圓柱後面
   const cx = vmW / 2
   return linkPts(cx, Math.max(ORA_X - oraR * 0.6, Math.min(ORA_X + oraR * 0.6, cx)), DB_Y - oraR * 0.6)
 }
@@ -190,13 +192,14 @@ function Still({ l }: { l: Look }) {
       {/* 機房地板 */}
       <polygon points={pts([P(-70, -30), P(1010, -30), P(1010, 650), P(-70, 650)])} fill="#f6ead2" fillOpacity={0.55} stroke="#e6d2a3" strokeWidth={1.2} />
 
-      {/* ---------- 應用層:VMware(主機 + 虛擬化平面)、K8s(節點 + 平面) ---------- */}
+      {/* ---------- 應用層:ESXi(主機 + 虛擬化平面)、K8s(節點 + 平面) ---------- */}
       {l.vm && <VmZone moved={l.moved} />}
       {l.k8s && (
         <Drop>
           {K8S_NODES.map((x) => <Host key={x} x={x} k8s />)}
           <Shadow poly={[P(K8S.x, 0, Z_PLANE), P(K8S.x + K8S.w, 0, Z_PLANE), P(K8S.x + K8S.w, SLAB_D, Z_PLANE), P(K8S.x, SLAB_D, Z_PLANE)].map((p) => add(p, [0, Z_PLANE]))} />
           <Box x={K8S.x} y={0} z={Z_PLANE} w={K8S.w} d={SLAB_D} h={PLANE_T} c={C.k8sPlane} op={0.82} />
+          <FaceLabel x0={K8S.x} text="Kubernetes" logo={k8sLogo} />
         </Drop>
       )}
 
@@ -242,8 +245,6 @@ function Still({ l }: { l: Look }) {
       )}
 
       {/* ---------- 標籤(最上層,不被擋住) ---------- */}
-      {l.k8s && <Pill x={P(K8S.x + K8S.w, 0, Z_TOP)[0] + 30} y={P(K8S.x + K8S.w, 0, Z_TOP)[1] - 30} text="Kubernetes" />}
-      {l.vm && <VmLabel moved={l.moved} />}
       {l.oracle && <OracleLabels small={l.oraSmall} load={l.load} />}
       {l.pg && <Pill x={gX} y={gY + PG.r * 0.7 + 30} text="PostgreSQL" />}
     </>
@@ -264,14 +265,10 @@ function VmZone({ moved }: { moved: boolean }) {
         {hosts.map((x, i) => <Host key={i} x={x} />)}
         <Shadow poly={[P(0, 0), P(w, 0), P(w, SLAB_D), P(0, SLAB_D)].map((p) => add(p, [0, -Z_PLANE + Z_PLANE]))} faint />
         <Box x={0} y={0} z={Z_PLANE} w={w} d={SLAB_D} h={PLANE_T} c={C.vmPlane} op={0.82} />
+        <FaceLabel x0={0} text="ESXi" />
       </Drop>
     </>
   )
-}
-function VmLabel({ moved: _ }: { moved: boolean }) {
-  // 放在平面左後方的角落:平面怎麼縮都不會壓到主機或虛擬機
-  const [x, y] = P(0, 0, Z_TOP)
-  return <Pill x={x - 62} y={y - 6} text="VMware" />
 }
 function VmLinkLine({ moved, small }: { moved: boolean; small: boolean }) {
   const w = useTween(moved ? VM_SMALL : VM_BIG)
@@ -288,7 +285,6 @@ function OracleDb({ small }: { small: boolean }) {
       <Drop>
         <ellipse cx={0} cy={12} rx={r * 1.7} ry={r * 0.85} fill="url(#gShadow)" />
         <Cyl r={r} h={h} grad="gOra" top="#fbe4e1" bands={2} leds />
-        <OracleMark y={-h} />
       </Drop>
     </g>
   )
@@ -300,7 +296,7 @@ function OracleLabels({ small, load }: { small: boolean; load: number }) {
   const [oX, oY] = P(ORA_X, DB_Y)
   return (
     <>
-      <Pill x={oX} y={oY + r * 0.7 + 30} text="Oracle" />
+      <Tag x={oX} y={oY + r * 0.7 + 30} text="Oracle" logo={oracleLogo} size={19} />
       <LoadPill x={oX} y={oY - h - r * 0.7 - 34} v={v} />
     </>
   )
@@ -566,9 +562,6 @@ function LoadPill({ x, y, v }: { x: number; y: number; v: number }) {
 }
 
 /* ---------- 資料庫頂面的標誌 ---------- */
-function OracleMark({ y }: { y: number }) {
-  return <rect x={-26} y={y - 9} width={52} height={18} rx={9} fill="none" stroke="#c74634" strokeWidth={3.6} transform={`translate(0 ${-2}) scale(1 0.9)`} />
-}
 function PgMark({ y }: { y: number }) {
   return (
     <g transform={`translate(0 ${y - 2})`} fill="none" stroke="#336791" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
@@ -578,23 +571,26 @@ function PgMark({ y }: { y: number }) {
   )
 }
 
-/* ---------- 實體主機:前面板有硬碟槽、電源燈、散熱孔;側面有通風條 ---------- */
+/* ---------- 實體主機:扁平的機架式伺服器,前面一排硬碟槽、燈號,側面散熱條 ---------- */
 function Host({ x, k8s = false }: { x: number; k8s?: boolean }) {
   const { w, d, h, y } = HOST
   const F = (u: number, v: number) => P(x + u, y + d, v) // 前面板(朝左下)
   const S = (u: number, v: number) => P(x + w, y + u, v) // 側面(朝右下)
-  const slot = (v: number) => pts([F(10, v), F(w - 10, v), F(w - 10, v - 7), F(10, v - 7)])
+  const bays = [8, 22, 36, 50, 64, 78]
   return (
     <g>
       <Shadow poly={[P(x, y), P(x + w, y), P(x + w, y + d), P(x, y + d)]} />
       <Box x={x} y={y} w={w} d={d} h={h} c={C.host} />
-      {/* K8s 節點:前面板上方一條藍色識別條 */}
-      {k8s && <polygon points={pts([F(0, h - 4), F(w, h - 4), F(w, h - 10), F(0, h - 10)])} fill="#4f74d6" />}
-      {[h - 16, h - 27, h - 38].map((v) => <polygon key={v} points={slot(v)} fill="#cfd5dc" stroke="#8d97a3" strokeWidth={0.6} />)}
-      <ellipse cx={F(w - 16, h - 52)[0]} cy={F(w - 16, h - 52)[1]} rx={3.6} ry={3} fill="#4fb06d" stroke={INK} strokeWidth={0.6} />
-      <ellipse cx={F(16, h - 52)[0]} cy={F(16, h - 52)[1]} rx={4.6} ry={4} fill="#eef0f3" stroke="#7c8692" strokeWidth={0.8} />
-      {[14, 20, 26, 32].map((v) => <polyline key={v} points={pts([F(14, v), F(w - 14, v)])} stroke="#9aa3ad" strokeWidth={0.9} fill="none" />)}
-      {[12, 20, 28, 36, 44].map((u) => <polyline key={u} points={pts([S(u, h - 14), S(u, 16)])} stroke="#aab2bb" strokeWidth={0.8} fill="none" />)}
+      {/* 前面兩側的機架耳 */}
+      {[[0, 5], [w - 5, w]].map(([u1, u2]) => <polygon key={u1} points={pts([F(u1, h), F(u2, h), F(u2, 0), F(u1, 0)])} fill="#b9c1ca" />)}
+      {/* 硬碟槽 */}
+      {bays.map((u) => <polygon key={u} points={pts([F(u + 4, h - 6), F(u + 15, h - 6), F(u + 15, 6), F(u + 4, 6)])} fill="#d7dce2" stroke="#8d97a3" strokeWidth={0.6} />)}
+      {bays.map((u) => <polyline key={`l${u}`} points={pts([F(u + 6, h - 9), F(u + 13, h - 9)])} stroke="#7c8692" strokeWidth={0.8} fill="none" />)}
+      {/* 燈號(K8s 節點是藍色) */}
+      <ellipse cx={F(w - 24, h * 0.62)[0]} cy={F(w - 24, h * 0.62)[1]} rx={2.6} ry={2.2} fill={k8s ? "#4f74d6" : "#4fb06d"} stroke={INK} strokeWidth={0.5} />
+      <ellipse cx={F(w - 15, h * 0.62)[0]} cy={F(w - 15, h * 0.62)[1]} rx={2.6} ry={2.2} fill="#4fb06d" stroke={INK} strokeWidth={0.5} />
+      <polyline points={pts([F(w - 28, h * 0.3), F(w - 11, h * 0.3)])} stroke="#9aa3ad" strokeWidth={1} fill="none" />
+      {[0.35, 0.6].map((v) => <polyline key={v} points={pts([S(10, h * v), S(d - 10, h * v)])} stroke="#aab2bb" strokeWidth={0.8} fill="none" />)}
     </g>
   )
 }
@@ -621,6 +617,38 @@ function PlasmaFace() {
     <g>
       {[14, 22, 30, 38, 46, 54, 62].map((u) => <polyline key={u} points={pts([F(u, 12), F(u, 32)])} stroke="#e0aaa4" strokeWidth={1.4} fill="none" strokeLinecap="round" />)}
       <ellipse cx={F(70, 46)[0]} cy={F(70, 46)[1]} rx={3.4} ry={2.8} fill="#e0452f" stroke={INK} strokeWidth={0.6} />
+    </g>
+  )
+}
+
+/** 平台前面的字(ESXi / Kubernetes):貼在平台的前側面上;手機上太小時改成浮在旁邊的標籤 */
+function FaceLabel({ x0, text, logo }: { x0: number; text: string; logo?: string }) {
+  const ui = useContext(UI)
+  const [X, Y] = P(x0, SLAB_D, Z_TOP) // 前側面的左上角
+  if (ui > 1.5) {
+    const [bx, by] = P(x0, 0, Z_TOP) // 平台後方的角,上面是空的
+    return <Tag x={bx} y={by - 34} text={text} logo={logo} />
+  }
+  const fs = 15
+  return (
+    <g transform={`matrix(1 0.5 0 1 ${X} ${Y})`}>
+      {logo && <image href={logo} x={12} y={(PLANE_T - 17) / 2} width={17} height={17} />}
+      <text x={logo ? 35 : 14} y={PLANE_T / 2 + fs * 0.36} fontSize={fs} fontWeight={800} fill={INK} letterSpacing={0.5}>{text}</text>
+    </g>
+  )
+}
+
+/** 沒有底框的標籤:logo + 字,字外圍一圈紙色描邊,在格線上也看得清楚 */
+function Tag({ x, y, text, logo, size = 16 }: { x: number; y: number; text: string; logo?: string; size?: number }) {
+  const ui = useContext(UI)
+  const tw = [...text].reduce((n, ch) => n + (ch.charCodeAt(0) > 255 ? size : size * 0.6), 0)
+  const lw = logo ? size * 1.25 : 0
+  const gap = logo ? size * 0.35 : 0
+  const x0 = -(lw + gap + tw) / 2
+  return (
+    <g transform={`translate(${x} ${y}) scale(${ui})`}>
+      {logo && <image href={logo} x={x0} y={-lw / 2} width={lw} height={lw} />}
+      <text x={x0 + lw + gap} y={size * 0.36} fontSize={size} fontWeight={800} fill={INK} stroke="#fbf8f2" strokeWidth={4} paintOrder="stroke" strokeLinejoin="round">{text}</text>
     </g>
   )
 }
