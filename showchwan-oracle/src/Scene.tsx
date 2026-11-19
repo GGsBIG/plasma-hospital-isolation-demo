@@ -695,7 +695,7 @@ function Micro({ i }: { i: number }) {
       </g>
       {MS_AT.map(([x, y], k) => (
         // 從原本大服務的中心散開
-        <g key={k} className="split" style={{ "--dx": `${-P(x + MS / 2, y + MS / 2)[0]}px`, "--dy": `${-P(x + MS / 2, y + MS / 2)[1]}px`, animationDelay: `${0.15 + (i - CORE) * 0.12 + k * 0.08}s` } as React.CSSProperties}>
+        <g key={k} className="split" style={{ "--dx": `${-P(x + MS / 2, y + MS / 2)[0]}px`, "--dy": `${-P(x + MS / 2, y + MS / 2)[1]}px`, animationDelay: `${1.3 + (i - CORE) * 0.12 + k * 0.08}s` } as React.CSSProperties}>
           <Box x={x} y={y} w={MS} d={MS} h={MS_H} c={C.ctr} />
           <g stroke="#7f95cf" strokeWidth={0.9} fill="none">
             {[0.33, 0.66].map((f) => <polyline key={`l${f}`} points={pts([P(x + MS * f, y + MS, MS_H - 5), P(x + MS * f, y + MS, 5)])} />)}

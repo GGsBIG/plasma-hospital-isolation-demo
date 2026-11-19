@@ -64,10 +64,8 @@ export const STEPS: Step[] = [
     changes: [["−", "只剩 2 支核心系統連 Oracle"], ["−", "Oracle 規模可以縮小"]] },
   { short: "成果", phase: "成果", title: "ESXi、Oracle 的使用都降低了", look: { ...L8, cam: "all" },
     changes: [["−", "ESXi：8 支應用 → 2 支"], ["−", "Oracle：負載 92% → 30%"], ["+", "Plasma 即時同步，既有系統不用改"]] },
-  { short: "加上 Kubernetes", phase: "未來", title: "未來：在 Proxmox 上加一層 Kubernetes", look: { ...L8, kube: true, cam: "all" },
-    changes: [["+", "Kubernetes 疊在 Proxmox 上"], ["~", "應用先照常以 VM 執行"]] },
-  { short: "容器化", phase: "未來", title: "容器化，大服務拆成微服務", look: { ...L8, kube: true, containers: true, micro: true, cam: "kube" },
-    changes: [["~", "每支應用拆成 4 個容器化的小服務，例：藥局 → 處方、庫存、配藥、計價"], ["+", "6 支應用 → 24 個微服務，可以各自更新、各自擴充"], ["+", "一樣讀 PostgreSQL，Plasma 照常即時同步"]] },
+  { short: "容器化", phase: "未來", title: "未來：加上 Kubernetes，大服務拆成微服務", look: { ...L8, kube: true, containers: true, micro: true, cam: "kube" },
+    changes: [["+", "Kubernetes 疊在 Proxmox 上"], ["~", "每支應用拆成 4 個容器化的小服務，例：藥局 → 處方、庫存、配藥、計價"], ["+", "6 支應用 → 24 個微服務，可以各自更新、各自擴充"], ["+", "一樣讀 PostgreSQL，Plasma 照常即時同步"]] },
 ]
 
 /** 重播用:第一步之前的空場景 */
