@@ -24,10 +24,11 @@ const ORANGE = "#d9722b"
 const GREEN = "#2f7d4f"
 // 每種東西的頂面/左面/右面顏色
 const C = {
-  vm: ["#eef1f5", "#d3dbe4", "#bfcad6"],
-  k8s: ["#e6eefc", "#c6d6f4", "#adc2ea"],
-  app: ["#fffdf8", "#efe7d8", "#e0d4bf"],
-  appK: ["#f7f9ff", "#dde6f7", "#c9d6ef"],
+  host: ["#f6f7f9", "#e0e4e9", "#c7ced6"], // 實體主機
+  vmPlane: ["#d4ebf8", "#a6cfe9", "#8dbcdd"], // VMware 虛擬化平面(半透明)
+  k8sPlane: ["#dfe6fb", "#b8c8f1", "#9fb3e8"], // K8s 平面
+  app: ["#effbfd", "#c6e9f0", "#abdae5"], // 虛擬機(玻璃)
+  appK: ["#f2f5ff", "#d1dbf7", "#b9c8ef"], // 容器
   plasma: ["#ffffff", "#f6e3e1", "#ecc9c5"],
 }
 
@@ -36,7 +37,6 @@ const WORLD = { x: -660, y: -200, w: 1780, h: 1000 }
 
 /* ================= 場景配置(地面座標) ================= */
 const SLAB_D = 160 // 平台深度
-const SLAB_H = 14
 const VM_BIG = 520
 const VM_SMALL = 140
 const K8S = { x: 600, w: 360 }
@@ -50,6 +50,13 @@ const PG = { r: 90, h: 118 }
 const PIPE_Z = 26
 const CUBE = 56
 const CUBE_H = 44
+// 實體主機與浮在上面的虛擬化平面(參考 vSphere 架構圖:主機在下、虛擬機在平面上)
+const HOST = { w: 74, d: 60, h: 104, y: 50 }
+const Z_PLANE = 116 // 平面底部高度
+const PLANE_T = 6
+const Z_TOP = Z_PLANE + PLANE_T // 虛擬機/容器站的高度
+const VM_HOSTS = [50, 223, 396] // VMware 主機(縮減後只留第一台)
+const K8S_NODES = [653, 833]
 const ICONS: LucideIcon[] = [ClipboardList, Stethoscope, HeartPulse, FlaskConical, PillIcon, FileText, ChartColumn, ChartPie]
 
 /** 第 i 支應用程式的位置 */
@@ -61,7 +68,8 @@ function appAt(i: number, moved: boolean): [number, number] {
 
 /** 應用層 → 資料層的地面連線(畫面座標的折線) */
 function linkPts(fromX: number, toX: number, midY: number): Pt[] {
-  return [P(fromX, SLAB_D), P(fromX, midY), P(toX, midY), P(toX, DB_Y)]
+  const y0 = HOST.y + HOST.d // 從主機前方的地面出發
+  return [P(fromX, y0), P(fromX, midY), P(toX, midY), P(toX, DB_Y)]
 }
 const vmLink = (vmW: number, oraR: number) => {
   // VMware 的線在 Oracle 的底面範圍內才轉彎,轉角藏在圓柱後面
@@ -175,35 +183,38 @@ function Still({ l }: { l: Look }) {
           <stop offset="0" stopColor="#6b5236" stopOpacity="0.26" />
           <stop offset="1" stopColor="#6b5236" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id="gOra" x1="0" x2="1"><stop offset="0" stopColor="#f2c3bd" /><stop offset="1" stopColor="#d99088" /></linearGradient>
-        <linearGradient id="gPg" x1="0" x2="1"><stop offset="0" stopColor="#c9daf0" /><stop offset="1" stopColor="#93aed3" /></linearGradient>
+        <linearGradient id="gOra" x1="0" x2="1"><stop offset="0" stopColor="#efbab3" /><stop offset=".26" stopColor="#fbe3df" /><stop offset=".5" stopColor="#eab1aa" /><stop offset="1" stopColor="#d4877f" /></linearGradient>
+        <linearGradient id="gPg" x1="0" x2="1"><stop offset="0" stopColor="#c0d4ee" /><stop offset=".26" stopColor="#eaf1fb" /><stop offset=".5" stopColor="#b5cae8" /><stop offset="1" stopColor="#8ca7cf" /></linearGradient>
       </defs>
       <rect x={WORLD.x} y={WORLD.y} width={WORLD.w} height={WORLD.h} fill="url(#grid)" mask="url(#gridMask)" />
+      {/* 機房地板 */}
+      <polygon points={pts([P(-70, -30), P(1010, -30), P(1010, 650), P(-70, 650)])} fill="#f6ead2" fillOpacity={0.55} stroke="#e6d2a3" strokeWidth={1.2} />
 
-      {/* ---------- 應用層:VMware、K8s ---------- */}
-      {l.vm && <VmSlab moved={l.moved} />}
+      {/* ---------- 應用層:VMware(主機 + 虛擬化平面)、K8s(節點 + 平面) ---------- */}
+      {l.vm && <VmZone moved={l.moved} />}
       {l.k8s && (
         <Drop>
-          <Shadow poly={[P(K8S.x, 0), P(K8S.x + K8S.w, 0), P(K8S.x + K8S.w, SLAB_D), P(K8S.x, SLAB_D)]} />
-          <Box x={K8S.x} y={0} w={K8S.w} d={SLAB_D} h={SLAB_H} c={C.k8s} />
+          {K8S_NODES.map((x) => <Host key={x} x={x} k8s />)}
+          <Shadow poly={[P(K8S.x, 0, Z_PLANE), P(K8S.x + K8S.w, 0, Z_PLANE), P(K8S.x + K8S.w, SLAB_D, Z_PLANE), P(K8S.x, SLAB_D, Z_PLANE)].map((p) => add(p, [0, Z_PLANE]))} />
+          <Box x={K8S.x} y={0} z={Z_PLANE} w={K8S.w} d={SLAB_D} h={PLANE_T} c={C.k8sPlane} op={0.82} />
         </Drop>
       )}
 
       {/* ---------- 地面連線(流動的小點在動態層) ---------- */}
       {l.oracle && <VmLinkLine moved={l.moved} small={l.oraSmall} />}
-      {l.oracle && l.k8s && l.moved && <path key={l.toPg ? "pg" : "ora"} className="link" d={toD(k8sLink(l.toPg))} pathLength={1} />}
+      {l.oracle && l.k8s && l.moved && <Cable key={l.toPg ? "pg" : "ora"} d={toD(k8sLink(l.toPg))} />}
 
       {/* ---------- 應用程式 ---------- */}
       {l.vm && order.map((i) => {
         const [ax, ay] = appAt(i, l.moved)
-        return <App key={APPS[i]} i={i} at={P(ax, ay, SLAB_H)} inK8s={l.moved && i >= CORE} />
+        return <App key={APPS[i]} i={i} at={P(ax, ay, Z_TOP)} inK8s={l.moved && i >= CORE} />
       })}
 
       {/* ---------- 資料層 ---------- */}
       {l.pg && (
         <g className="fade-in">
-          <line x1={P(ORA_X, DB_Y, PIPE_Z)[0]} y1={P(ORA_X, DB_Y, PIPE_Z)[1]} x2={P(PG_X, DB_Y, PIPE_Z)[0]} y2={P(PG_X, DB_Y, PIPE_Z)[1]} stroke={INK} strokeWidth={16} strokeLinecap="round" />
-          <line x1={P(ORA_X, DB_Y, PIPE_Z)[0]} y1={P(ORA_X, DB_Y, PIPE_Z)[1]} x2={P(PG_X, DB_Y, PIPE_Z)[0]} y2={P(PG_X, DB_Y, PIPE_Z)[1]} stroke="#fff4f2" strokeWidth={11} strokeLinecap="round" />
+          <line x1={P(ORA_X, DB_Y, PIPE_Z)[0]} y1={P(ORA_X, DB_Y, PIPE_Z)[1]} x2={P(PG_X, DB_Y, PIPE_Z)[0]} y2={P(PG_X, DB_Y, PIPE_Z)[1]} stroke="#c98a83" strokeWidth={15} strokeLinecap="round" />
+          <line x1={P(ORA_X, DB_Y, PIPE_Z)[0]} y1={P(ORA_X, DB_Y, PIPE_Z)[1]} x2={P(PG_X, DB_Y, PIPE_Z)[0]} y2={P(PG_X, DB_Y, PIPE_Z)[1]} stroke="#f9e3df" strokeWidth={8} strokeLinecap="round" />
         </g>
       )}
 
@@ -213,7 +224,8 @@ function Still({ l }: { l: Look }) {
         <g transform={`translate(${P(PLASMA_X, DB_Y)[0]} ${P(PLASMA_X, DB_Y)[1]})`}>
           <Drop delay={0.25}>
             <Shadow poly={[P(-42, -42), P(42, -42), P(42, 42), P(-42, 42)]} />
-            <Box x={-42} y={-42} w={84} d={84} h={58} c={C.plasma} stroke="#b42622" sw={2.2} />
+            <Box x={-42} y={-42} w={84} d={84} h={58} c={C.plasma} stroke="#b42622" sw={1.4} />
+            <PlasmaFace />
             <image href={plasmaLogo} x={-55} y={-146} width={110} height={24} />
           </Drop>
         </g>
@@ -223,14 +235,14 @@ function Still({ l }: { l: Look }) {
         <g transform={`translate(${gX} ${gY})`}>
           <Drop delay={0.1}>
             <ellipse cx={0} cy={12} rx={PG.r * 1.7} ry={PG.r * 0.85} fill="url(#gShadow)" />
-            <Cyl r={PG.r} h={PG.h} grad="gPg" top="#e8f0fa" bands={2} />
+            <Cyl r={PG.r} h={PG.h} grad="gPg" top="#e8f0fa" bands={2} leds />
             <PgMark y={-PG.h} />
           </Drop>
         </g>
       )}
 
       {/* ---------- 標籤(最上層,不被擋住) ---------- */}
-      {l.k8s && <Pill x={P(K8S.x + K8S.w, SLAB_D)[0] + 74} y={P(K8S.x + K8S.w, SLAB_D)[1] - 4} text="Kubernetes" />}
+      {l.k8s && <Pill x={P(K8S.x + K8S.w, 0, Z_TOP)[0] + 30} y={P(K8S.x + K8S.w, 0, Z_TOP)[1] - 30} text="Kubernetes" />}
       {l.vm && <VmLabel moved={l.moved} />}
       {l.oracle && <OracleLabels small={l.oraSmall} load={l.load} />}
       {l.pg && <Pill x={gX} y={gY + PG.r * 0.7 + 30} text="PostgreSQL" />}
@@ -239,26 +251,32 @@ function Still({ l }: { l: Look }) {
 }
 
 /* ---------- 會變大小的物件:各自補間,只重畫自己 ---------- */
-function VmSlab({ moved }: { moved: boolean }) {
+function VmZone({ moved }: { moved: boolean }) {
   const w = useTween(moved ? VM_SMALL : VM_BIG)
+  // 縮減時第一台主機滑到小平台底下,另外兩台拿掉,留下虛線輪廓
+  const t = (VM_BIG - w) / (VM_BIG - VM_SMALL)
+  const hosts = moved ? [VM_HOSTS[0] - 17 * t] : VM_HOSTS
   return (
     <>
-      {moved && <polygon className="ghost" points={pts([P(0, 0, SLAB_H), P(VM_BIG, 0, SLAB_H), P(VM_BIG, SLAB_D, SLAB_H), P(0, SLAB_D, SLAB_H)])} />}
+      {moved && VM_HOSTS.slice(1).map((x) => <HostGhost key={x} x={x} />)}
+      {moved && <polygon className="ghost" points={pts([P(0, 0, Z_TOP), P(VM_BIG, 0, Z_TOP), P(VM_BIG, SLAB_D, Z_TOP), P(0, SLAB_D, Z_TOP)])} />}
       <Drop>
-        <Shadow poly={[P(0, 0), P(w, 0), P(w, SLAB_D), P(0, SLAB_D)]} />
-        <Box x={0} y={0} w={w} d={SLAB_D} h={SLAB_H} c={C.vm} />
+        {hosts.map((x, i) => <Host key={i} x={x} />)}
+        <Shadow poly={[P(0, 0), P(w, 0), P(w, SLAB_D), P(0, SLAB_D)].map((p) => add(p, [0, -Z_PLANE + Z_PLANE]))} faint />
+        <Box x={0} y={0} z={Z_PLANE} w={w} d={SLAB_D} h={PLANE_T} c={C.vmPlane} op={0.82} />
       </Drop>
     </>
   )
 }
-function VmLabel({ moved }: { moved: boolean }) {
-  const w = useTween(moved ? VM_SMALL : VM_BIG)
-  return <Pill x={P(w, SLAB_D)[0] + 48} y={P(w, SLAB_D)[1] + 6} text="VMware" />
+function VmLabel({ moved: _ }: { moved: boolean }) {
+  // 放在平面左後方的角落:平面怎麼縮都不會壓到主機或虛擬機
+  const [x, y] = P(0, 0, Z_TOP)
+  return <Pill x={x - 62} y={y - 6} text="VMware" />
 }
 function VmLinkLine({ moved, small }: { moved: boolean; small: boolean }) {
   const w = useTween(moved ? VM_SMALL : VM_BIG)
   const r = useTween(small ? ORA_SMALL.r : ORA_BIG.r)
-  return <path className="link" d={toD(vmLink(w, r))} pathLength={1} />
+  return <Cable d={toD(vmLink(w, r))} />
 }
 function OracleDb({ small }: { small: boolean }) {
   const r = useTween(small ? ORA_SMALL.r : ORA_BIG.r)
@@ -269,7 +287,7 @@ function OracleDb({ small }: { small: boolean }) {
       {small && <g className="ghost-g"><Cyl r={ORA_BIG.r} h={ORA_BIG.h} grad="gOra" top="none" dash /></g>}
       <Drop>
         <ellipse cx={0} cy={12} rx={r * 1.7} ry={r * 0.85} fill="url(#gShadow)" />
-        <Cyl r={r} h={h} grad="gOra" top="#fbe4e1" bands={2} />
+        <Cyl r={r} h={h} grad="gOra" top="#fbe4e1" bands={2} leds />
         <OracleMark y={-h} />
       </Drop>
     </g>
@@ -421,17 +439,17 @@ function Heat({ at, r }: { at: Pt; r: number }) {
 }
 
 /* ================= 基本形狀 ================= */
-function Box({ x, y, z = 0, w, d, h, c, stroke = INK, sw = 1.9 }: { x: number; y: number; z?: number; w: number; d: number; h: number; c: string[]; stroke?: string; sw?: number }) {
+function Box({ x, y, z = 0, w, d, h, c, stroke = INK, sw = 1.2, op = 1 }: { x: number; y: number; z?: number; w: number; d: number; h: number; c: string[]; stroke?: string; sw?: number; op?: number }) {
   const top = [P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)]
   const left = [P(x, y + d, z + h), P(x + w, y + d, z + h), P(x + w, y + d, z), P(x, y + d, z)]
   const right = [P(x + w, y, z + h), P(x + w, y + d, z + h), P(x + w, y + d, z), P(x + w, y, z)]
   return (
     <g strokeLinejoin="round">
-      <polygon points={pts(left)} fill={c[1]} />
-      <polygon points={pts(right)} fill={c[2]} />
-      <polygon points={pts(top)} fill={c[0]} />
+      <polygon points={pts(left)} fill={c[1]} fillOpacity={op} />
+      <polygon points={pts(right)} fill={c[2]} fillOpacity={op} />
+      <polygon points={pts(top)} fill={c[0]} fillOpacity={op} />
       {/* 頂面前緣的高光 */}
-      <polyline points={pts([P(x, y + d, z + h), P(x + w, y + d, z + h), P(x + w, y, z + h)].map((p) => add(p, [0, 1.6])))} fill="none" stroke="#fff" strokeOpacity={0.8} strokeWidth={1.6} />
+      <polyline points={pts([P(x, y + d, z + h), P(x + w, y + d, z + h), P(x + w, y, z + h)].map((p) => add(p, [0, 1.6])))} fill="none" stroke="#fff" strokeOpacity={0.85} strokeWidth={1.2} />
       <polygon points={pts([P(x, y, z + h), P(x + w, y, z + h), P(x + w, y, z), P(x + w, y + d, z), P(x, y + d, z), P(x, y + d, z + h)])} fill="none" stroke={stroke} strokeWidth={sw} />
       <polyline points={pts([P(x, y + d, z + h), P(x + w, y + d, z + h), P(x + w, y, z + h)])} fill="none" stroke={stroke} strokeWidth={sw * 0.7} />
       <line x1={P(x + w, y + d, z + h)[0]} y1={P(x + w, y + d, z + h)[1]} x2={P(x + w, y + d, z)[0]} y2={P(x + w, y + d, z)[1]} stroke={stroke} strokeWidth={sw * 0.7} />
@@ -440,7 +458,7 @@ function Box({ x, y, z = 0, w, d, h, c, stroke = INK, sw = 1.9 }: { x: number; y
 }
 
 /** 圓柱(資料庫、金幣):中心在地面 (0,0),半徑 r、高 h */
-function Cyl({ r, h, grad, top, bands = 0, sw = 1.9, dash }: { r: number; h: number; grad: string; top: string; bands?: number; sw?: number; dash?: boolean }) {
+function Cyl({ r, h, grad, top, bands = 0, sw = 1.2, dash, leds }: { r: number; h: number; grad: string; top: string; bands?: number; sw?: number; dash?: boolean; leds?: boolean }) {
   const rx = r * Math.SQRT2
   const ry = rx / 2
   const side = `M${-rx} ${-h} L${-rx} 0 A${rx} ${ry} 0 0 0 ${rx} 0 L${rx} ${-h} A${rx} ${ry} 0 0 1 ${-rx} ${-h} Z`
@@ -452,8 +470,15 @@ function Cyl({ r, h, grad, top, bands = 0, sw = 1.9, dash }: { r: number; h: num
         const hb = (h * (i + 1)) / (bands + 1)
         return <path key={i} d={`M${-rx} ${-hb} A${rx} ${ry} 0 0 0 ${rx} ${-hb}`} fill="none" stroke={INK} strokeWidth={sw * 0.6} strokeOpacity={0.55} />
       })}
+      {/* 前面的狀態燈 */}
+      {leds && !dash && [-0.62, -0.5, -0.38].map((k, i) => {
+        const x = rx * k
+        const y = -h * 0.42 + ry * Math.sqrt(1 - k * k)
+        return <circle key={i} cx={x} cy={y} r={3.2} fill={i === 2 ? "#f0b43c" : "#4fb06d"} stroke={INK} strokeWidth={0.6} />
+      })}
       <ellipse cx={0} cy={-h} rx={rx} ry={ry} fill={dash ? "none" : top} {...st} />
-      {!dash && <ellipse cx={0} cy={-h + 2} rx={rx * 0.8} ry={ry * 0.62} fill="#fff" opacity={0.28} />}
+      {!dash && <ellipse cx={0} cy={-h} rx={rx * 0.88} ry={ry * 0.88} fill="none" stroke={INK} strokeOpacity={0.3} strokeWidth={sw * 0.6} />}
+      {!dash && <ellipse cx={-rx * 0.12} cy={-h - ry * 0.1} rx={rx * 0.6} ry={ry * 0.45} fill="#fff" opacity={0.32} />}
     </g>
   )
 }
@@ -467,17 +492,17 @@ function Pill({ x, y, text, tone = "paper", size = 15 }: { x: number; y: number;
   const ui = useContext(UI)
   return (
     <g className="pill" transform={`translate(${x} ${y}) scale(${ui})`}>
-      <rect x={-w / 2} y={-h / 2 + 2.5} width={w} height={h} rx={h / 2} fill={INK} opacity={0.9} />
-      <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={h / 2} fill={fill} stroke={INK} strokeWidth={1.8} />
+      <rect x={-w / 2} y={-h / 2 + 1.6} width={w} height={h} rx={h / 2} fill={INK} opacity={0.75} />
+      <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={h / 2} fill={fill} stroke={INK} strokeWidth={1.1} />
       <text x={0} y={size * 0.36} textAnchor="middle" fontSize={size} fontWeight={800} fill={color}>{text}</text>
     </g>
   )
 }
 
 /** 物件下方的陰影:兩層疊色,看起來柔和,但不用模糊濾鏡 */
-function Shadow({ poly }: { poly: Pt[] }) {
+function Shadow({ poly, faint = false }: { poly: Pt[]; faint?: boolean }) {
   return (
-    <g fill="#6b5236">
+    <g fill="#6b5236" opacity={faint ? 0.6 : 1}>
       <polygon points={pts(poly.map((p) => add(p, [0, 16])))} opacity={0.06} />
       <polygon points={pts(poly.map((p) => add(p, [0, 8])))} opacity={0.08} />
     </g>
@@ -513,8 +538,10 @@ function App({ i, at, inK8s }: { i: number; at: Pt; inK8s: boolean }) {
     <g ref={ref}>
       <Drop delay={0.35 + i * 0.07}>
         <Shadow poly={[P(-h, -h), P(h, -h), P(h, h), P(-h, h)]} />
-        <Box x={-h} y={-h} w={CUBE} d={CUBE} h={CUBE_H} c={inK8s ? C.appK : C.app} />
-        <Icon x={-11} y={-CUBE_H - 30} width={22} height={22} strokeWidth={2.2} color={inK8s ? "#2a55b8" : INK} />
+        <Box x={-h} y={-h} w={CUBE} d={CUBE} h={CUBE_H} c={inK8s ? C.appK : C.app} op={0.92} />
+        {/* 玻璃的反光 */}
+        <polygon points={pts([P(-h + 6, h, CUBE_H - 6), P(-h + 20, h, CUBE_H - 6), P(-h + 8, h, 8), P(-h + 6, h, 8)])} fill="#fff" opacity={0.55} />
+        <Icon x={-11} y={-CUBE_H - 30} width={22} height={22} strokeWidth={1.8} color={inK8s ? "#2a55b8" : "#1f6f86"} />
         <text className="cube-label" x={0} y={-CUBE_H + 12} textAnchor="middle" fontSize={12} fontWeight={800} fill={INK}>{APPS[i]}</text>
       </Drop>
     </g>
@@ -528,8 +555,8 @@ function LoadPill({ x, y, v }: { x: number; y: number; v: number }) {
   const ui = useContext(UI)
   return (
     <g transform={`translate(${x} ${y}) scale(${ui})`} className="pill">
-      <rect x={-70} y={-16 + 2.5} width={140} height={32} rx={16} fill={INK} opacity={0.9} />
-      <rect x={-70} y={-16} width={140} height={32} rx={16} fill="#fffdf8" stroke={INK} strokeWidth={1.8} />
+      <rect x={-70} y={-16 + 1.6} width={140} height={32} rx={16} fill={INK} opacity={0.75} />
+      <rect x={-70} y={-16} width={140} height={32} rx={16} fill="#fffdf8" stroke={INK} strokeWidth={1.1} />
       <circle cx={-52} cy={0} r={6} fill={col} />
       <rect x={-40} y={-5} width={50} height={10} rx={5} fill="#ebe3d4" />
       <rect x={-40} y={-5} width={(50 * v) / 100} height={10} rx={5} fill={col} />
@@ -540,13 +567,60 @@ function LoadPill({ x, y, v }: { x: number; y: number; v: number }) {
 
 /* ---------- 資料庫頂面的標誌 ---------- */
 function OracleMark({ y }: { y: number }) {
-  return <rect x={-26} y={y - 9} width={52} height={18} rx={9} fill="none" stroke="#c74634" strokeWidth={5} transform={`translate(0 ${-2}) scale(1 0.9)`} />
+  return <rect x={-26} y={y - 9} width={52} height={18} rx={9} fill="none" stroke="#c74634" strokeWidth={3.6} transform={`translate(0 ${-2}) scale(1 0.9)`} />
 }
 function PgMark({ y }: { y: number }) {
   return (
-    <g transform={`translate(0 ${y - 2})`} fill="none" stroke="#336791" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
+    <g transform={`translate(0 ${y - 2})`} fill="none" stroke="#336791" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
       <path d="M-18 6 C-26 -10 -16 -20 -4 -14 C2 -20 16 -20 18 -6 C20 6 10 10 4 6 L4 18" />
       <circle cx={-6} cy={-5} r={1.5} fill="#336791" />
+    </g>
+  )
+}
+
+/* ---------- 實體主機:前面板有硬碟槽、電源燈、散熱孔;側面有通風條 ---------- */
+function Host({ x, k8s = false }: { x: number; k8s?: boolean }) {
+  const { w, d, h, y } = HOST
+  const F = (u: number, v: number) => P(x + u, y + d, v) // 前面板(朝左下)
+  const S = (u: number, v: number) => P(x + w, y + u, v) // 側面(朝右下)
+  const slot = (v: number) => pts([F(10, v), F(w - 10, v), F(w - 10, v - 7), F(10, v - 7)])
+  return (
+    <g>
+      <Shadow poly={[P(x, y), P(x + w, y), P(x + w, y + d), P(x, y + d)]} />
+      <Box x={x} y={y} w={w} d={d} h={h} c={C.host} />
+      {/* K8s 節點:前面板上方一條藍色識別條 */}
+      {k8s && <polygon points={pts([F(0, h - 4), F(w, h - 4), F(w, h - 10), F(0, h - 10)])} fill="#4f74d6" />}
+      {[h - 16, h - 27, h - 38].map((v) => <polygon key={v} points={slot(v)} fill="#cfd5dc" stroke="#8d97a3" strokeWidth={0.6} />)}
+      <ellipse cx={F(w - 16, h - 52)[0]} cy={F(w - 16, h - 52)[1]} rx={3.6} ry={3} fill="#4fb06d" stroke={INK} strokeWidth={0.6} />
+      <ellipse cx={F(16, h - 52)[0]} cy={F(16, h - 52)[1]} rx={4.6} ry={4} fill="#eef0f3" stroke="#7c8692" strokeWidth={0.8} />
+      {[14, 20, 26, 32].map((v) => <polyline key={v} points={pts([F(14, v), F(w - 14, v)])} stroke="#9aa3ad" strokeWidth={0.9} fill="none" />)}
+      {[12, 20, 28, 36, 44].map((u) => <polyline key={u} points={pts([S(u, h - 14), S(u, 16)])} stroke="#aab2bb" strokeWidth={0.8} fill="none" />)}
+    </g>
+  )
+}
+/** 縮減後拿掉的主機:只留虛線輪廓 */
+function HostGhost({ x }: { x: number }) {
+  const { w, d, h, y } = HOST
+  return <polygon className="ghost" points={pts([P(x, y, h), P(x + w, y, h), P(x + w, y, 0), P(x + w, y + d, 0), P(x, y + d, 0), P(x, y + d, h)])} />
+}
+
+/** 網路管線:外層較深、中間一條亮線(參考圖裡的機房網路線) */
+function Cable({ d }: { d: string }) {
+  return (
+    <g>
+      <path className="cable" d={d} pathLength={1} />
+      <path className="cable-core" d={d} pathLength={1} />
+    </g>
+  )
+}
+
+/** Plasma 方塊前面的散熱格柵與燈號 */
+function PlasmaFace() {
+  const F = (u: number, v: number) => P(-42 + u, 42, v)
+  return (
+    <g>
+      {[14, 22, 30, 38, 46, 54, 62].map((u) => <polyline key={u} points={pts([F(u, 12), F(u, 32)])} stroke="#e0aaa4" strokeWidth={1.4} fill="none" strokeLinecap="round" />)}
+      <ellipse cx={F(70, 46)[0]} cy={F(70, 46)[1]} rx={3.4} ry={2.8} fill="#e0452f" stroke={INK} strokeWidth={0.6} />
     </g>
   )
 }

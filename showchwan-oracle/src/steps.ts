@@ -17,12 +17,12 @@ export type Cam = "vm" | "left" | "compute" | "busy" | "data" | "all"
 
 /** 鏡頭:每一步要框進畫面的範圍(等角投影後的座標)。實際放大倍率依螢幕大小自動算,手機、桌機都框得剛好 */
 export const CAMS: Record<Cam, { x0: number; y0: number; x1: number; y1: number }> = {
-  vm: { x0: -240, y0: -70, x1: 560, y1: 360 },
-  left: { x0: -440, y0: -70, x1: 560, y1: 560 },
-  compute: { x0: -440, y0: -70, x1: 1050, y1: 580 },
-  busy: { x0: -440, y0: -70, x1: 1050, y1: 580 },
-  data: { x0: -440, y0: 120, x1: 560, y1: 720 },
-  all: { x0: -440, y0: -70, x1: 1050, y1: 720 },
+  vm: { x0: -240, y0: -175, x1: 560, y1: 360 },
+  left: { x0: -470, y0: -175, x1: 560, y1: 560 },
+  compute: { x0: -470, y0: -175, x1: 1120, y1: 580 },
+  busy: { x0: -470, y0: -175, x1: 1120, y1: 580 },
+  data: { x0: -470, y0: 120, x1: 560, y1: 720 },
+  all: { x0: -470, y0: -175, x1: 1120, y1: 720 },
 }
 
 export interface Step {

@@ -25,11 +25,11 @@ button { font: inherit; color: inherit; }
 .body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; padding: 14px 16px 0; }
 
 /* ---------- 舞台 ---------- */
-.stage-card { position: relative; display: flex; flex-direction: column; min-height: 0; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; overflow: hidden; }
+.stage-card { position: relative; display: flex; flex-direction: column; min-height: 0; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .stage-head { position: absolute; z-index: 2; left: 14px; right: 14px; top: 12px; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; pointer-events: none; }
 .stage-head > * { pointer-events: auto; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { min-width: 104px; padding: 7px 12px 8px; background: #fffdf8; border: 1.5px solid var(--line); border-radius: 9px; transition: background-color .5s, border-color .5s; }
+.chip { min-width: 104px; padding: 7px 12px 8px; background: #fffdf8; border: 1px solid var(--line); border-radius: 9px; transition: background-color .5s, border-color .5s; }
 .chip-k { display: block; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--muted); }
 .chip-v { display: block; margin-top: 2px; font: 800 19px/1.1 var(--mono); animation: pop .45s var(--ease); }
 .chip.down { background: var(--green-bg); border-color: #9fcb9c; }
@@ -38,7 +38,7 @@ button { font: inherit; color: inherit; }
 .chip.warn .chip-v { color: var(--warn); }
 @keyframes pop { from { transform: translateY(6px); opacity: 0; } }
 .tools { display: flex; gap: 8px; flex: none; }
-.tool { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; background: #fffdf8; border: 1.5px solid var(--ink); border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 0 var(--ink); transition: transform .12s, box-shadow .12s; }
+.tool { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; background: #fffdf8; border: 1px solid var(--ink); border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 0 var(--ink); transition: transform .12s, box-shadow .12s; }
 .tool:active { transform: translateY(2px); box-shadow: 0 0 0 var(--ink); }
 .tool.on { background: var(--ink); color: #fff; }
 
@@ -61,14 +61,17 @@ button { font: inherit; color: inherit; }
 @keyframes drop { 0% { transform: translateY(-150px); opacity: 0; } 35% { opacity: 1; } 100% { transform: none; } }
 .fade-in { animation: fade .8s ease .2s backwards; }
 @keyframes fade { from { opacity: 0; } }
-.link { fill: none; stroke: var(--ink); stroke-width: 2; stroke-opacity: .55; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .9s ease-out .5s forwards; }
+/* 網路管線:先畫出來,流動的小點跑在上面 */
+.cable, .cable-core { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .9s ease-out .5s forwards; }
+.cable { stroke: #a9a3c3; stroke-width: 10; }
+.cable-core { stroke: #e2dfee; stroke-width: 3.5; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
-.ghost { fill: none; stroke: var(--ink); stroke-width: 2; stroke-dasharray: 8 7; opacity: .45; animation: fade 1s ease .6s backwards; }
+.ghost { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 6 5; opacity: .45; animation: fade 1s ease .6s backwards; }
 .ghost-g { opacity: .45; animation: fade 1s ease .6s backwards; }
 .scene.paused * { animation-play-state: paused !important; }
 
 /* ---------- 右側面板:這一步的標題與畫面上的變化 ---------- */
-.panel { min-height: 0; overflow: auto; display: flex; flex-direction: column; padding: 20px 18px 16px; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; }
+.panel { min-height: 0; overflow: auto; display: flex; flex-direction: column; padding: 20px 18px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
 .panel-title { display: flex; align-items: flex-start; gap: 10px; font-size: 22px; line-height: 1.35; font-weight: 800; animation: pop .5s var(--ease); }
 .panel-n { flex: none; display: grid; place-items: center; width: 30px; height: 30px; margin-top: 1px; border-radius: 50%; background: var(--red); color: #fff; font: 800 14px/1 var(--mono); }
 .changes { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
@@ -77,14 +80,14 @@ button { font: inherit; color: inherit; }
 .chg-add b { background: #ede6da; } .chg-move b { background: #e3ebfb; color: #2a55b8; }
 .chg-down b { background: var(--green-bg); color: var(--green); } .chg-warn b { background: var(--warn-bg); color: var(--warn); }
 .panel-nav { margin-top: auto; padding-top: 18px; display: flex; gap: 8px; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 44px; padding: 0 14px; background: #fffdf8; border: 1.5px solid var(--ink); border-radius: 9px; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--ink); white-space: nowrap; transition: transform .12s, box-shadow .12s; touch-action: manipulation; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 44px; padding: 0 14px; background: #fffdf8; border: 1px solid var(--ink); border-radius: 9px; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 2px 0 var(--ink); white-space: nowrap; transition: transform .12s, box-shadow .12s; touch-action: manipulation; }
 .btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
 .btn:disabled { opacity: .35; cursor: default; }
 .btn.primary { flex: 1; min-width: 0; background: var(--red); color: #fff; justify-content: space-between; }
 .btn.primary span { overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- 下方步驟軸 ---------- */
-.timeline { flex: none; display: flex; gap: 10px; margin: 12px 16px 12px; padding: 8px 14px 10px; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; overflow-x: auto; }
+.timeline { flex: none; display: flex; gap: 10px; margin: 12px 16px 12px; padding: 8px 14px 10px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow-x: auto; }
 .phase { min-width: 0; }
 .phase + .phase { padding-left: 10px; border-left: 1px dashed var(--line); }
 .phase-k { font: 700 11px/1.4 var(--mono); letter-spacing: .06em; color: var(--muted); }
@@ -93,7 +96,7 @@ button { font: inherit; color: inherit; }
 .tl { position: relative; flex: 1; min-width: 72px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 2px 4px; background: none; border: 0; cursor: pointer; }
 .tl::before { content: ""; position: absolute; top: 14px; left: 0; right: 0; height: 2px; background: var(--line); z-index: 0; }
 .tl.done::before, .tl.on::before { background: var(--ink); }
-.tl-dot { position: relative; z-index: 1; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--ink); background: #fffdf8; font: 700 11px/1 var(--mono); transition: background-color .3s, transform .3s; }
+.tl-dot { position: relative; z-index: 1; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--ink); background: #fffdf8; font: 700 11px/1 var(--mono); transition: background-color .3s, transform .3s; }
 .tl.done .tl-dot { background: #e3dccf; }
 .tl.on .tl-dot { background: var(--red); color: #fff; transform: scale(1.15); box-shadow: 0 0 0 4px rgb(180 38 34 / .18); }
 .tl-label { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
