@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from "react"
-import { ArrowLeft, ArrowRight, Check, Clock, Lightbulb, ListOrdered, MonitorPlay, Pause, Play, RotateCcw, TriangleAlert } from "lucide-react"
-import logo from "@/assets/brobridge-logo.png"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { ArrowLeft, ArrowRight, FastForward, MonitorPlay, Pause, Play, RotateCcw } from "lucide-react"
+import logo from "@/assets/brobridge-logo.webp"
 import { Canvas, CAMS } from "./Canvas"
-import { LESSON, METRICS, PAINS } from "./steps"
+import { LESSON, METRICS, type LessonStep } from "./steps"
 import "./lesson.css"
 
+// 跟 Oracle 減壓同一套版面:紅線頁首、場景上的數字晶片、右側只列變化、下方分階段的步驟軸
 type Box = [number, number, number, number]
-const toVb = (c: Box): Box => [c[0], c[1], c[2] - c[0], c[3] - c[1]]
 const lerp = (a: Box, b: Box, k: number): Box => a.map((v, i) => v + (b[i] - v) * k) as Box
+const AUTO_MS = 9000 // 自動播放時每一步停留多久
 
 /** 這一步開始後經過的秒數;暫停時不走 */
 function useClock(key: string, paused: boolean) {
@@ -30,38 +31,103 @@ function useClock(key: string, paused: boolean) {
   return t
 }
 
-/** 換步驟時鏡頭平移縮放過去 */
+/** 換步驟時鏡頭平移縮放過去(補間的是要框進畫面的範圍) */
 function useCamera(step: number) {
-  const [vb, setVb] = useState<Box>(() => toVb(CAMS[step]))
-  const cur = useRef(vb)
+  const [box, setBox] = useState<Box>(() => CAMS[step])
+  const cur = useRef(box)
   useEffect(() => {
     const from = cur.current
-    const to = toVb(CAMS[step])
+    const to = CAMS[step]
     const t0 = performance.now()
     let raf = 0
     const tick = (now: number) => {
-      const k = Math.min(1, (now - t0) / 900)
+      const k = Math.min(1, (now - t0) / 1100)
       const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2
       cur.current = lerp(from, to, e)
-      setVb(cur.current)
+      setBox(cur.current)
       if (k < 1) raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
   }, [step])
-  return vb
+  return box
+}
+
+/** 場景容器的大小 */
+function useSize<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  const [size, setSize] = useState({ w: 0, h: 0 })
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const on = () => setSize({ w: el.clientWidth, h: el.clientHeight })
+    on()
+    const ro = new ResizeObserver(on)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return [ref, size] as const
+}
+
+/** 把要框的範圍放進「扣掉上方晶片、下方按鈕」的區域,回傳整張 SVG 的 viewBox */
+function fit([x0, y0, x1, y1]: Box, W: number, H: number, top: number, bottom: number): Box {
+  const w = x1 - x0, h = y1 - y0
+  if (!W || !H) return [x0, y0, w, h]
+  const pad = 14
+  const aw = W - pad * 2, ah = Math.max(80, H - top - bottom - pad * 2)
+  const s = Math.min(aw / w, ah / h)
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2
+  return [cx - W / 2 / s, cy - (top + pad + ah / 2) / s, W / s, H / s]
+}
+
+function useMedia(q: string) {
+  const [m, setM] = useState(() => window.matchMedia(q).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(q)
+    const on = () => setM(mq.matches)
+    mq.addEventListener("change", on)
+    return () => mq.removeEventListener("change", on)
+  }, [q])
+  return m
+}
+
+/** 分頁切走、畫面捲出視窗(例如首頁的 iframe 關掉)時暫停動畫 */
+function useHidden() {
+  const [hidden, setHidden] = useState(() => document.hidden)
+  useEffect(() => {
+    let tab = document.hidden
+    let off = false
+    const sync = () => setHidden(tab || off)
+    const onVis = () => { tab = document.hidden; sync() }
+    document.addEventListener("visibilitychange", onVis)
+    const io = new IntersectionObserver(([e]) => { off = !e.isIntersecting; sync() })
+    io.observe(document.body)
+    return () => { document.removeEventListener("visibilitychange", onVis); io.disconnect() }
+  }, [])
+  return hidden
 }
 
 export function Lesson({ step, go }: { step: number; go: (i: number) => void }) {
   const [paused, setPaused] = useState(false)
+  const [auto, setAuto] = useState(false)
   const [epoch, setEpoch] = useState(0)
-  const t = useClock(`${step}-${epoch}`, paused)
-  const vb = useCamera(step)
+  const hidden = useHidden()
+  const t = useClock(`${step}-${epoch}`, paused || hidden)
+  const box = useCamera(step)
+  const narrow = useMedia("(max-width: 760px)")
+  const [stageRef, size] = useSize<HTMLDivElement>()
+  const vb = fit(box, size.w, size.h, narrow ? 0 : 76, narrow ? 40 : 0)
   const L = LESSON[step]
+  const next = LESSON[step + 1]
   const N = LESSON.length
   const replay = () => { setPaused(false); setEpoch((e) => e + 1) }
 
   useEffect(() => { setPaused(false) }, [step])
+  useEffect(() => {
+    if (!auto || paused || hidden) return
+    const id = window.setTimeout(() => (step < N - 1 ? go(step + 1) : setAuto(false)), AUTO_MS)
+    return () => window.clearTimeout(id)
+  }, [auto, paused, hidden, step, go, N])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") { e.preventDefault(); go(Math.min(N - 1, step + 1)) }
@@ -73,110 +139,93 @@ export function Lesson({ step, go }: { step: number; go: (i: number) => void }) 
     return () => window.removeEventListener("keydown", onKey)
   }, [step, go, N])
 
-  const tagClass = { 現況: "t-now", 問題: "t-bad", 做法: "t-how", 結果: "t-good", 回顧: "t-recap" }[L.tag]
-
   return (
     <div className="ln">
-      <header className="ln-top">
-        <a href="../#sentinel" target="_top" aria-label="回到 Demo 首頁"><img src={logo} alt="Brobridge" className="ln-logo" /></a>
-        <span className="ln-brand">K8s Sentinel</span>
+      <header className="top">
+        <a href="../#sentinel" target="_top" aria-label="回到 Demo 首頁"><img src={logo} alt="Brobridge" className="top-logo" /></a>
+        <span className="top-title">K8s Sentinel・容器防護</span>
         <span className="ln-flex" />
-        <a className="ln-btn" href={`#/ui/${L.ui + 1}`}><MonitorPlay size={15} />實際操作畫面</a>
+        <a className="top-link" href={`#/ui/${L.ui + 1}`}><MonitorPlay className="i" /><span>實際操作畫面</span></a>
       </header>
 
-      <div className="ln-body">
-        <main className="ln-main">
-          <div className="ln-head">
-            <div>
-              <p className="ln-crumb">K8s Sentinel　/　步驟 {step + 1} / {N}</p>
-              <h1>容器裡的異常，當下就擋</h1>
-              <p className="ln-lead">一家線上購物平台的 K8s 叢集：從看不到，到擋得住、查得到。</p>
+      <div className="body">
+        <section className="stage-card">
+          <div className="stage-head">
+            <div className="chips">
+              {METRICS.map((name, i) => {
+                const m = L.m[i]
+                return (
+                  <div key={name} className={`chip ${m.tone === "good" ? "down" : m.tone === "bad" ? "warn" : ""}`}>
+                    <span className="chip-k">{name}</span>
+                    <span key={m.v} className="chip-v">{m.v}</span>
+                  </div>
+                )
+              })}
             </div>
-            <div className="ln-chips">
-              <span className="chip c-yellow"><Clock size={13} />約 10 分鐘</span>
-              <span className="chip c-violet"><ListOrdered size={13} />{N} 個步驟</span>
+            <div className="tools">
+              <button className="tool" onClick={replay} aria-label="重播"><RotateCcw className="i" /><span>重播</span></button>
+              <button className="tool" onClick={() => setPaused((p) => !p)} aria-label={paused ? "繼續" : "暫停"}>
+                {paused ? <Play className="i" /> : <Pause className="i" />}<span>{paused ? "繼續" : "暫停"}</span>
+              </button>
+              <button className={`tool${auto ? " on" : ""}`} onClick={() => setAuto((a) => !a)} aria-pressed={auto} aria-label="自動播放"><FastForward className="i" /><span>自動播放</span></button>
             </div>
           </div>
-
-          <section className="ln-stage">
-            <div className="ln-metrics">
-              {METRICS.map((name, i) => (
-                <div key={name} className={`metric m-${L.m[i].tone}`}>
-                  <span>{name}</span>
-                  <b key={`${step}-${L.m[i].v}`}>{L.m[i].v}</b>
-                </div>
-              ))}
-              <span className="ln-flex" />
-              <div className="ln-ctl">
-                <button onClick={replay}><RotateCcw size={14} />重播</button>
-                <button onClick={() => setPaused((p) => !p)}>{paused ? <Play size={14} /> : <Pause size={14} />}{paused ? "繼續" : "暫停"}</button>
-              </div>
-            </div>
-            <div className="ln-canvas">
-              <Canvas step={step} t={t} vb={vb} />
-            </div>
-            <div className="ln-legend">
-              <span><i className="lg-req" />一般請求</span>
-              <span><i className="lg-res" />回應</span>
-              <span><i className="lg-bad" />攻擊 / 異常</span>
-              <span><i className="lg-alert" />Sentinel 告警</span>
-              <span><i className="lg-x" />被擋下</span>
-            </div>
-          </section>
-
-          <nav className="ln-steps" aria-label="步驟">
-            <div className="ln-steps-head"><span>這個情境</span><span>步驟 {step + 1} / {N}</span></div>
-            <ol>
-              {LESSON.map((x, i) => (
-                <li key={i} className={i < step ? "done" : i === step ? "cur" : ""}>
-                  <button onClick={() => go(i)} aria-current={i === step ? "step" : undefined}>
-                    <span className="dot">{i + 1}</span>
-                    <span className="lbl">{x.short}</span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          </nav>
-        </main>
-
-        <aside className="ln-side">
-          <div className="ln-card ln-explain" key={step}>
-            <div className="ln-step-row">
-              <span>步驟 {step + 1} / {N}</span>
-              <span className={`tag ${tagClass}`}>{L.tag}</span>
-            </div>
-            <h2>{L.title}</h2>
-            {L.body.map((p) => <p key={p}>{p}</p>)}
-            <div className={`note ${L.note.kind === "watch" ? "watch" : ""}`}>
-              {L.note.kind === "watch" ? <TriangleAlert size={18} /> : <Lightbulb size={18} />}
-              <div><b>{L.note.kind === "watch" ? "要注意" : "重點"}</b><p>{L.note.text}</p></div>
-            </div>
-            <p className="ln-sub">這一步改變了什麼</p>
-            <ul className="changed">
-              {L.changed.map(([k, v]) => <li key={v}><span className={k === "+" ? "add" : k === "~" ? "chg" : "del"}>{k}</span>{v}</li>)}
-            </ul>
-            <span className="ln-flex" />
-            <div className="ln-nav">
-              <button onClick={() => go(step - 1)} disabled={step === 0}><ArrowLeft size={15} />上一步</button>
-              {step < N - 1
-                ? <button className="next" onClick={() => go(step + 1)}>下一步：{LESSON[step + 1].short}<ArrowRight size={15} /></button>
-                : <a className="next" href={`#/ui/1`}>看實際操作畫面<MonitorPlay size={15} /></a>}
-            </div>
-            <p className="ln-keys"><kbd>←</kbd><kbd>→</kbd> 換步驟　<kbd>R</kbd> 重播　<kbd>Space</kbd> 暫停</p>
+          <div className="stage" ref={stageRef}>
+            <Canvas step={step} t={t} vb={vb} />
           </div>
+        </section>
 
-          <div className="ln-card ln-pains">
-            <p className="ln-sub">這套方案解決</p>
-            <ul>
-              {PAINS.map((p) => (
-                <li key={p.text} className={step >= p.at ? "ok" : ""}>
-                  <span className="box">{step >= p.at && <Check size={12} strokeWidth={3} />}</span>{p.text}
-                </li>
-              ))}
-            </ul>
+        <aside className="panel">
+          <h1 key={`t${step}`} className="panel-title"><span className="panel-n">{step + 1}</span>{L.title}</h1>
+          <ul key={`c${step}`} className="changes">
+            {L.changed.map(([sign, text], i) => (
+              <li key={text} className={`chg chg-${sign === "+" ? "add" : sign === "−" ? "down" : sign === "!" ? "warn" : "move"}`} style={{ animationDelay: `${0.3 + i * 0.25}s` }}>
+                <b>{sign}</b>{text}
+              </li>
+            ))}
+          </ul>
+          <div className="panel-nav">
+            <button className="btn" onClick={() => go(step - 1)} disabled={step === 0} aria-label="上一步"><ArrowLeft className="i" /><span className="btn-text">上一步</span></button>
+            {next ? (
+              <button className="btn primary" onClick={() => go(step + 1)}><span>{next.short}</span><ArrowRight className="i" /></button>
+            ) : (
+              <button className="btn primary" onClick={() => go(0)}><span>從頭再看一次</span><RotateCcw className="i" /></button>
+            )}
           </div>
         </aside>
       </div>
+
+      <Timeline step={step} onGo={go} />
     </div>
+  )
+}
+
+/** 下方步驟軸:十個點,依階段分組 */
+function Timeline({ step, onGo }: { step: number; onGo: (n: number) => void }) {
+  const phases = LESSON.reduce<{ name: LessonStep["phase"]; from: number; n: number }[]>((a, s, i) => {
+    const last = a[a.length - 1]
+    if (last && last.name === s.phase) last.n++
+    else a.push({ name: s.phase, from: i, n: 1 })
+    return a
+  }, [])
+  return (
+    <nav className="timeline" aria-label="步驟">
+      {phases.map((p) => (
+        <div key={p.name} className={`phase${step >= p.from && step < p.from + p.n ? " cur" : ""}`} style={{ flexGrow: p.n }}>
+          <p className="phase-k">{p.name}</p>
+          <div className="phase-steps">
+            {LESSON.slice(p.from, p.from + p.n).map((s, j) => {
+              const i = p.from + j
+              return (
+                <button key={i} onClick={() => onGo(i)} className={`tl${i === step ? " on" : i < step ? " done" : ""}`} aria-current={i === step ? "step" : undefined}>
+                  <span className="tl-dot">{i + 1}</span>
+                  <span className="tl-label">{s.short}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </nav>
   )
 }

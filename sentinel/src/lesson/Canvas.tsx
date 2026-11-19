@@ -12,7 +12,7 @@ const MUTED = "#a69d90"
 const RED = "#c8412f"
 const GREEN = "#4f8a3c"
 const VIOLET = "#7b5fb4"
-const FONT = '"JetBrains Mono", "Noto Sans TC", ui-monospace, monospace'
+const FONT = "ui-sans-serif, system-ui, -apple-system, \"PingFang TC\", \"Noto Sans TC\", \"Microsoft JhengHei\", sans-serif"
 
 // 頂面、左面、右面、底邊
 const TONE = {
@@ -409,7 +409,7 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
           <path d="M0 10 L20 0 L40 10 L20 20 Z" fill="none" stroke="#e3d9cb" strokeWidth={0.8} />
         </pattern>
       </defs>
-      <rect x={-400} y={-300} width={2000} height={1400} fill="url(#iso-grid)" />
+      <rect x={-1400} y={-1200} width={4000} height={3200} fill="url(#iso-grid)" />
 
       {/* K8s 叢集範圍;Sentinel 上線後地板染一點紫 */}
       <polygon points={poly([300, 350], [620, 190], [940, 350], [620, 510])} fill={sentinel ? "#efe6fb" : "#f6efe4"} fillOpacity={sentinel ? 0.7 : 0.6} stroke={INK} strokeOpacity={0.55} strokeWidth={1.1} strokeDasharray="7 6" />

@@ -1,5 +1,6 @@
 // 圖解版:十個步驟,一步一個畫面。文字只是輔助,主角是右邊會動的圖。
 export type Tag = "現況" | "問題" | "做法" | "結果" | "回顧"
+export type Phase = "現況" | "Step 1 看得見" | "Step 2 擋得住" | "Step 3 修弱點" | "成果"
 export type Tone = "bad" | "good" | "warn" | "none"
 
 export interface Metric { v: string; tone: Tone }
@@ -10,7 +11,8 @@ export interface LessonStep {
   title: string
   body: string[]
   note: { kind: "idea" | "watch"; text: string }
-  changed: [("+" | "~" | "−"), string][]
+  phase: Phase
+  changed: [("+" | "~" | "−" | "!"), string][]
   /** 上方五個指標:容器內可見度、異常程式、外連可疑主機、模式、上線中的 Critical 弱點 */
   m: [Metric, Metric, Metric, Metric, Metric]
   ui: number // 對應「實際操作畫面」的第幾個情境(0 起算)
@@ -18,7 +20,7 @@ export interface LessonStep {
 
 const n = (v: string, tone: Tone = "none"): Metric => ({ v, tone })
 
-export const METRICS = ["容器裡在跑什麼", "異常程式", "連往可疑主機", "防護模式", "上線中的 Critical"]
+export const METRICS = ["容器裡", "異常程式", "可疑連線", "防護模式", "上線的 Critical"]
 
 export const PAINS: { text: string; at: number }[] = [
   { text: "容器裡在跑什麼，看得到", at: 2 },
@@ -37,7 +39,8 @@ export const LESSON: LessonStep[] = [
       "防火牆、帳號權限、映像檔掃描都做了，看起來很安全。",
     ],
     note: { kind: "idea", text: "這些防護都守在門口，管的是誰能進來，看不到容器裡正在跑什麼程式。" },
-    changed: [["+", "4 個服務跑在 K8s"], ["+", "防火牆放行一般請求"]],
+    phase: "現況",
+    changed: [["+", "4 個服務跑在 K8s"], ["+", "防火牆、權限、映像檔掃描都做了"], ["!", "容器裡在跑什麼，沒人看得到"]],
     m: [n("看不到", "warn"), n("—"), n("—"), n("—"), n("不清楚", "warn")],
     ui: 0,
   },
@@ -48,7 +51,8 @@ export const LESSON: LessonStep[] = [
       "請求看起來和一般顧客一樣，防火牆照常放行。CPU 衝到 97%，還不停連到外部礦池。",
     ],
     note: { kind: "watch", text: "沒有人在看容器裡面，通常要等帳單或效能出問題才會發現。" },
-    changed: [["+", "xmrig 在 payment-api 裡執行"], ["~", "CPU 30% → 97%"], ["+", "持續連到外部可疑主機"]],
+    phase: "現況",
+    changed: [["!", "攻擊者在 payment-api 啟動 xmrig"], ["!", "CPU 30% → 97%"], ["!", "一直連到外部可疑主機"], ["!", "防火牆照常放行，沒人發現"]],
     m: [n("看不到", "bad"), n("xmrig 執行中", "bad"), n("持續外連", "bad"), n("—"), n("不清楚", "warn")],
     ui: 0,
   },
@@ -59,7 +63,8 @@ export const LESSON: LessonStep[] = [
       "不用改程式碼，也不用在容器裡另外裝東西。",
     ],
     note: { kind: "idea", text: "所有容器共用同一個 kernel。在這裡看，任何容器都躲不掉。" },
-    changed: [["+", "看得到每個 Pod 執行的程式"], ["+", "看得到每條連線"]],
+    phase: "Step 1 看得見",
+    changed: [["+", "Sentinel 用 eBPF 從 kernel 看每個容器"], ["+", "每支程式、每條連線都看得到"], ["~", "不用改程式，容器裡也不用裝東西"]],
     m: [n("看得到", "good"), n("—"), n("—"), n("Monitoring"), n("不清楚", "warn")],
     ui: 1,
   },
@@ -70,7 +75,8 @@ export const LESSON: LessonStep[] = [
       "payment-api 平常只跑 payment-server 和 healthcheck，Sentinel 直接把它變成白名單。",
     ],
     note: { kind: "idea", text: "先用 Monitoring 模式：只記錄、不攔截。確認白名單沒問題，再打開攔截。" },
-    changed: [["+", "白名單自動產生"], ["~", "模式：Monitoring（只記錄）"]],
+    phase: "Step 1 看得見",
+    changed: [["+", "觀察 24～48 小時，學會平常跑哪些程式"], ["+", "payment-api 白名單：payment-server、healthcheck"], ["~", "Monitoring：先記錄、不攔截"]],
     m: [n("看得到", "good"), n("—"), n("—"), n("Monitoring"), n("不清楚", "warn")],
     ui: 1,
   },
@@ -81,7 +87,8 @@ export const LESSON: LessonStep[] = [
       "值班人員同時收到 Slack 告警：哪個 Pod、哪支程式、從哪裡啟動。",
     ],
     note: { kind: "idea", text: "攔截發生在 kernel，不用等人看到告警才處理。" },
-    changed: [["~", "Monitoring → Protect"], ["−", "xmrig 一啟動就被終止"], ["+", "Slack 告警"]],
+    phase: "Step 2 擋得住",
+    changed: [["~", "Monitoring → Protect"], ["−", "xmrig 一啟動，就在 kernel 被終止"], ["+", "值班人員同時收到 Slack 告警"]],
     m: [n("看得到", "good"), n("已終止", "good"), n("—"), n("Protect", "good"), n("不清楚", "warn")],
     ui: 2,
   },
@@ -92,7 +99,8 @@ export const LESSON: LessonStep[] = [
       "另一個副本繼續服務顧客，資安人員進去蒐證，查完一鍵解除。",
     ],
     note: { kind: "watch", text: "直接刪 Pod，證據也跟著消失。隔離讓你先止血，再慢慢查。" },
-    changed: [["+", "Pod 已隔離"], ["~", "流量改走另一個副本"], ["+", "證據保留"]],
+    phase: "Step 2 擋得住",
+    changed: [["+", "一鍵隔離 Pod，網路全部切斷"], ["~", "顧客改走另一個副本，服務不中斷"], ["+", "程式、記憶體都留著，可以蒐證"]],
     m: [n("看得到", "good"), n("已隔離", "good"), n("已切斷", "good"), n("Protect", "good"), n("不清楚", "warn")],
     ui: 3,
   },
@@ -103,7 +111,8 @@ export const LESSON: LessonStep[] = [
       "替 payment-api 建網路白名單：只收 storefront 的請求、只能連 orders-db。其他連線一律丟棄。",
     ],
     note: { kind: "idea", text: "就算有程式漏網，也連不出去、碰不到其他服務。" },
-    changed: [["+", "網路白名單 payment-api-allow"], ["−", "連往可疑主機的封包被丟棄"]],
+    phase: "Step 2 擋得住",
+    changed: [["!", "另一個副本也在連可疑主機"], ["+", "網路白名單：只收 storefront、只連 orders-db"], ["−", "其他連線一律丟棄"]],
     m: [n("看得到", "good"), n("已隔離", "good"), n("已阻擋", "good"), n("Protect", "good"), n("不清楚", "warn")],
     ui: 4,
   },
@@ -114,7 +123,8 @@ export const LESSON: LessonStep[] = [
       "Sentinel 把「對外暴露」和「Critical」一起看：storefront 直接面對顧客，又有 3 個 Critical，排第一。",
     ],
     note: { kind: "idea", text: "先修對外暴露、而且已有修補版本的弱點，效益最高。" },
-    changed: [["+", "1,284 筆弱點"], ["+", "storefront 排第一優先"]],
+    phase: "Step 3 修弱點",
+    changed: [["!", "掃描報告 1,284 筆弱點"], ["+", "對外暴露 × Critical 一起排序"], ["+", "storefront 排第一：3 個 Critical"]],
     m: [n("看得到", "good"), n("已隔離", "good"), n("已阻擋", "good"), n("Protect", "good"), n("3 個", "bad")],
     ui: 5,
   },
@@ -125,7 +135,8 @@ export const LESSON: LessonStep[] = [
       "還有 Critical 的新版本，部署時直接被 K8s 拒絕；修好的版本才能上線。",
     ],
     note: { kind: "idea", text: "門檻在部署當下自動檢查，不靠人記得去翻報告。" },
-    changed: [["+", "部署門檻：Critical = 0"], ["−", "2.4.0 被拒絕"], ["+", "2.4.1 上線"]],
+    phase: "Step 3 修弱點",
+    changed: [["+", "部署門檻：Critical 一個都不行"], ["−", "還有 Critical 的版本，部署被拒絕"], ["+", "修好的版本才能上線"]],
     m: [n("看得到", "good"), n("已隔離", "good"), n("已阻擋", "good"), n("Protect", "good"), n("0 個", "good")],
     ui: 5,
   },
@@ -136,7 +147,8 @@ export const LESSON: LessonStep[] = [
       "從看不到，到擋得住、隔得開、查得到。",
     ],
     note: { kind: "idea", text: "看見 → 學習 → 攔截 → 隔離 → 管網路 → 擋弱點，全部在同一個畫面完成。" },
-    changed: [["+", "Audit Log"], ["+", "匯出 CSV"]],
+    phase: "成果",
+    changed: [["+", "每個操作都記在 Audit Log"], ["+", "一鍵匯出 CSV 交給稽核"], ["~", "看得到、擋得住、隔得開、查得到"]],
     m: [n("看得到", "good"), n("已隔離", "good"), n("已阻擋", "good"), n("Protect", "good"), n("0 個", "good")],
     ui: 6,
   },
