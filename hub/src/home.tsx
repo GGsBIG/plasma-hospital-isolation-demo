@@ -49,8 +49,8 @@ const HEADS: Head[] = SHOWCHWAN
         lead: <>各分院資料庫 schema 不同，經 Plasma 由 AI 整理成資料產品，總院直接取用彙整。</>,
       },
       {
-        key: "oracle", tab: "Oracle 減壓", lines: ["Oracle 稽核", "分兩步減壓"],
-        lead: <>應用程式搬上 K8s，再由 Plasma 把 Oracle 即時同步到 PostgreSQL，VMware 與 Oracle 的授權負擔一起降下來。</>,
+        key: "oracle", tab: "Oracle 減壓", lines: ["降低 VMware", "降低 Oracle"],
+        lead: <>應用程式搬上 K8s，再由 Plasma 把 Oracle 即時同步到 PostgreSQL，VMware 與 Oracle 的使用一起降下來。</>,
       },
       TECH,
     ]

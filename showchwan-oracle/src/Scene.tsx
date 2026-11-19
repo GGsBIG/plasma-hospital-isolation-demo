@@ -5,10 +5,10 @@ import plasmaLogo from "./assets/plasma-logo.webp"
 
 /* ================= 效能架構 =================
    手機會卡的原因是「每一格都重畫整張 SVG」。這裡分成三層,讓每一格的工作量降到最低:
-   1. 靜態層(SVG):平台、方塊、資料庫、金幣、標籤。只有換步驟時才變,平常不重畫。
+   1. 靜態層(SVG):平台、方塊、資料庫、標籤。只有換步驟時才變,平常不重畫。
    2. 鏡頭:移動、縮放的是包住整個場景的 HTML 圖層(will-change: transform),
       交給 GPU 直接縮放已經畫好的圖,過場時不重畫 SVG。
-   3. 動態層(HTML):流動的小點、放大鏡、Oracle 的紅光。只用 transform/opacity 做動畫,
+   3. 動態層(HTML):流動的小點、Oracle 的紅光。只用 transform/opacity 做動畫,
       瀏覽器在合成層處理,主程式忙的時候也照樣順。
    另外:不用 SVG 模糊濾鏡(陰影改用疊色、紅光用漸層);大小變化只重畫那一個物件。 */
 
@@ -51,8 +51,6 @@ const PIPE_Z = 26
 const CUBE = 56
 const CUBE_H = 44
 const ICONS: LucideIcon[] = [ClipboardList, Stethoscope, HeartPulse, FlaskConical, PillIcon, FileText, ChartColumn, ChartPie]
-const VM_COINS_AT = P(-80, 70)
-const ORA_COINS_AT = P(100, DB_Y + 100)
 
 /** 第 i 支應用程式的位置 */
 function appAt(i: number, moved: boolean): [number, number] {
@@ -179,8 +177,6 @@ function Still({ l }: { l: Look }) {
         </radialGradient>
         <linearGradient id="gOra" x1="0" x2="1"><stop offset="0" stopColor="#f2c3bd" /><stop offset="1" stopColor="#d99088" /></linearGradient>
         <linearGradient id="gPg" x1="0" x2="1"><stop offset="0" stopColor="#c9daf0" /><stop offset="1" stopColor="#93aed3" /></linearGradient>
-        <linearGradient id="gCoin" x1="0" x2="1"><stop offset="0" stopColor="#f3cf6e" /><stop offset="1" stopColor="#d6a032" /></linearGradient>
-        <linearGradient id="gFine" x1="0" x2="1"><stop offset="0" stopColor="#f0a49c" /><stop offset="1" stopColor="#cf5c52" /></linearGradient>
       </defs>
       <rect x={WORLD.x} y={WORLD.y} width={WORLD.w} height={WORLD.h} fill="url(#grid)" mask="url(#gridMask)" />
 
@@ -231,19 +227,6 @@ function Still({ l }: { l: Look }) {
             <PgMark y={-PG.h} />
           </Drop>
         </g>
-      )}
-
-      {/* ---------- 授權費:金幣堆 ---------- */}
-      {l.vm && <Coins at={VM_COINS_AT} n={l.vmCoins} fine={l.audit} />}
-      {l.oracle && <Coins at={ORA_COINS_AT} n={l.oraCoins} fine={l.audit} />}
-      {l.pg && <Coins at={P(905, DB_Y - 80)} n={0} free />}
-
-      {/* ---------- 稽核的警示(放大鏡在動態層) ---------- */}
-      {l.audit && (
-        <>
-          <g className="alert" transform={`translate(${VM_COINS_AT[0] + 34} ${VM_COINS_AT[1] - 116})`}><Alert /></g>
-          <g className="alert" style={{ animationDelay: "0.3s" }} transform={`translate(${ORA_COINS_AT[0] + 34} ${ORA_COINS_AT[1] - 116})`}><Alert /></g>
-        </>
       )}
 
       {/* ---------- 標籤(最上層,不被擋住) ---------- */}
@@ -324,7 +307,6 @@ function Moving({ l, ora, hot }: { l: Look; ora: { r: number; h: number }; hot: 
       <Dots key={`vm-${l.moved}-${l.oraSmall}-${l.pg}-${hot}`} path={vm} occ={occ} color={hot ? ORANGE : GREEN} heavy={hot} />
       {l.k8s && l.moved && <Dots key={`k8s-${l.toPg}-${l.oraSmall}-${l.pg}`} path={k8s} occ={occ} color={l.toPg ? GREEN : ORANGE} heavy={!l.toPg} />}
       {l.pg && <Dots key={`sync-${l.oraSmall}`} path={pipe} occ={occ} color="#b42622" square />}
-      {l.audit && <Lens stops={[add(VM_COINS_AT, [0, -110]), [P(ORA_X, DB_Y)[0], P(ORA_X, DB_Y)[1] - ora.h - 40], add(ORA_COINS_AT, [0, -110])]} />}
     </>
   )
 }
@@ -426,41 +408,6 @@ function Dots({ path, occ, color, heavy = false, square = false }: { path: Pt[];
       {Array.from({ length: total }, (_, i) => (
         <i key={i} className={`dot${square ? " sq" : ""}`} style={{ width: size, height: square ? size * 0.8 : size, marginLeft: -size / 2, marginTop: -size / 2, background: color, borderWidth: 1.5 * R }} />
       ))}
-    </div>
-  )
-}
-
-/** 稽核的放大鏡:在 VMware 金幣、Oracle、Oracle 金幣之間來回 */
-function Lens({ stops }: { stops: Pt[] }) {
-  const { R, paused } = useContext(Layer)
-  const ref = useRef<HTMLDivElement>(null)
-  const key = `${R}|${stops.map((p) => p.join(",")).join("|")}`
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const loop = [...stops, stops[0]]
-    const lens = loop.map((p, i) => (i === 0 ? 0 : Math.hypot(p[0] - loop[i - 1][0], p[1] - loop[i - 1][1])))
-    const total = lens.reduce((x, y) => x + y, 0)
-    let acc = 0
-    const frames = loop.map((p, i) => {
-      acc += lens[i]
-      return { offset: acc / total, transform: `translate3d(${(p[0] - WORLD.x) * R}px, ${(p[1] - WORLD.y) * R}px, 0)` }
-    })
-    const a = el.animate(frames, { duration: 5000, iterations: Infinity, easing: "ease-in-out" })
-    return () => a.cancel()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key])
-  useEffect(() => {
-    ref.current?.getAnimations().forEach((x) => (paused ? x.pause() : x.play()))
-  }, [paused, key])
-  const s = 84 * R
-  return (
-    <div ref={ref} className="lens" style={{ width: s, height: s, marginLeft: -s / 2, marginTop: -s / 2 }}>
-      <svg viewBox="-42 -42 84 84" width={s} height={s} aria-hidden>
-        <line x1={20} y1={20} x2={38} y2={38} stroke={INK} strokeWidth={10} strokeLinecap="round" />
-        <circle r={26} fill="#fff" fillOpacity={0.6} stroke={INK} strokeWidth={5} />
-        <path d="M-13 -8 A16 16 0 0 1 -3 -16" fill="none" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" />
-      </svg>
     </div>
   )
 }
@@ -574,32 +521,6 @@ function App({ i, at, inK8s }: { i: number; at: Pt; inK8s: boolean }) {
   )
 }
 
-/* ---------- 金幣堆:每一枚代表一份授權費(示意) ---------- */
-const MAX_COINS = 8
-function Coins({ at, n, fine = false, free = false }: { at: Pt; n: number; fine?: boolean; free?: boolean }) {
-  const FINES = 3
-  return (
-    <g transform={`translate(${at[0]} ${at[1]})`}>
-      <Drop delay={0.5}>
-        <ellipse cx={0} cy={6} rx={38} ry={18} fill="url(#gShadow)" />
-        {free && <g className="ghost-g"><Cyl r={20} h={8} grad="gCoin" top="none" dash /></g>}
-        {Array.from({ length: MAX_COINS + FINES }, (_, k) => {
-          const isFine = k >= MAX_COINS
-          const on = isFine ? fine && k - MAX_COINS < FINES : k < n
-          const z = isFine ? (n + (k - MAX_COINS)) * 9 : k * 9
-          return (
-            <g key={k} transform={`translate(0 ${-z})`}>
-              <g className={`coin${on ? " on" : ""}${isFine ? " fine" : ""}`} style={{ transitionDelay: on ? `${(isFine ? k - MAX_COINS : k) * 0.06}s` : `${(MAX_COINS - k) * 0.04}s` }}>
-                <Cyl r={20} h={8} grad={isFine ? "gFine" : "gCoin"} top={isFine ? "#f8c9c4" : "#fbe5a6"} sw={1.6} />
-              </g>
-            </g>
-          )
-        })}
-      </Drop>
-    </g>
-  )
-}
-
 /* ---------- 負載表 ---------- */
 function LoadPill({ x, y, v }: { x: number; y: number; v: number }) {
   const hot = v > 60
@@ -613,15 +534,6 @@ function LoadPill({ x, y, v }: { x: number; y: number; v: number }) {
       <rect x={-40} y={-5} width={50} height={10} rx={5} fill="#ebe3d4" />
       <rect x={-40} y={-5} width={(50 * v) / 100} height={10} rx={5} fill={col} />
       <text x={44} y={6} textAnchor="middle" fontSize={17} fontWeight={800} fill={col} className="mono">{v}%</text>
-    </g>
-  )
-}
-
-function Alert() {
-  return (
-    <g>
-      <circle r={17} fill="#b42622" stroke={INK} strokeWidth={2} />
-      <text y={7} textAnchor="middle" fontSize={22} fontWeight={900} fill="#fff">!</text>
     </g>
   )
 }

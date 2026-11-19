@@ -60,7 +60,7 @@ export function App() {
     <div className="app">
       <header className="top">
         <a href={HOME.href} target="_top" aria-label={HOME.label}><img src={logo} alt="Brobridge" className="top-logo" /></a>
-        <span className="top-title">秀傳醫院・Oracle 授權減壓</span>
+        <span className="top-title">秀傳醫院・Oracle 減壓</span>
       </header>
 
       <div className="body">
@@ -156,13 +156,14 @@ function useNarrow() {
   return n
 }
 
-/** 上方的數字:兩邊的授權金幣與 Oracle 負載,變小時轉綠、出問題時轉紅 */
+/** 上方的數字:VMware 與 Oracle 的使用量,降下來時轉綠、太忙時轉紅 */
 function Chips({ l }: { l: Look }) {
+  const onVm = l.moved ? 2 : 8
+  const onOra = l.toPg ? 2 : 8
   const items: { k: string; v: string; tone: "" | "down" | "warn" }[] = [
-    { k: "VMware 授權", v: l.vm ? `×${l.vmCoins}` : "—", tone: l.audit ? "warn" : l.vm && l.vmCoins < 8 ? "down" : "" },
-    { k: "Oracle 授權", v: l.oracle ? `×${l.oraCoins}` : "—", tone: l.audit ? "warn" : l.oracle && l.oraCoins < 8 ? "down" : "" },
+    { k: "VMware 上的應用", v: l.vm ? `${onVm} 支` : "—", tone: l.vm && l.moved ? "down" : "" },
+    { k: "連 Oracle 的應用", v: l.oracle ? `${onOra} 支` : "—", tone: l.oracle && l.toPg ? "down" : "" },
     { k: "Oracle 負載", v: l.oracle ? `${l.load}%` : "—", tone: l.oracle ? (l.load > 60 ? "warn" : "down") : "" },
-    { k: "授權合計", v: l.vm ? `×${l.vmCoins + l.oraCoins}` : "—", tone: l.oracle && l.vmCoins + l.oraCoins < 16 ? "down" : "" },
   ]
   return (
     <div className="chips">
