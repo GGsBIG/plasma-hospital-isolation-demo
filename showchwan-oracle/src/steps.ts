@@ -11,11 +11,12 @@ export interface Look {
   oraSmall: boolean // Oracle 縮小
   kube: boolean // 未來:Proxmox 上面加一層 Kubernetes
   containers: boolean // 未來:Proxmox 上的應用改成容器
+  micro: boolean // 未來:每個大服務拆成微服務
   load: number // Oracle 負載 %
   cam: Cam
 }
 
-export type Cam = "vm" | "left" | "compute" | "busy" | "data" | "all"
+export type Cam = "vm" | "left" | "compute" | "busy" | "data" | "all" | "kube"
 
 /** 鏡頭:每一步要框進畫面的範圍(等角投影後的座標)。實際放大倍率依螢幕大小自動算,手機、桌機都框得剛好 */
 export const CAMS: Record<Cam, { x0: number; y0: number; x1: number; y1: number }> = {
@@ -24,6 +25,7 @@ export const CAMS: Record<Cam, { x0: number; y0: number; x1: number; y1: number 
   compute: { x0: -470, y0: -120, x1: 1120, y1: 580 },
   busy: { x0: -470, y0: -120, x1: 1120, y1: 580 },
   data: { x0: -470, y0: 140, x1: 680, y1: 790 },
+  kube: { x0: 380, y0: 90, x1: 1080, y1: 610 }, // 推近看 Kubernetes 上的微服務
   all: { x0: -470, y0: -120, x1: 1120, y1: 720 },
 }
 
@@ -35,7 +37,7 @@ export interface Step {
   look: Look
 }
 
-const L0: Look = { vm: true, oracle: false, k8s: false, moved: false, pg: false, toPg: false, oraSmall: false, kube: false, containers: false, load: 0, cam: "vm" }
+const L0: Look = { vm: true, oracle: false, k8s: false, moved: false, pg: false, toPg: false, oraSmall: false, kube: false, containers: false, micro: false, load: 0, cam: "vm" }
 const L1: Look = { ...L0, oracle: true, load: 92, cam: "left" }
 const L3: Look = { ...L1, k8s: true, cam: "compute" }
 const L4: Look = { ...L3, moved: true }
@@ -65,7 +67,9 @@ export const STEPS: Step[] = [
   { short: "加上 Kubernetes", phase: "未來", title: "未來：在 Proxmox 上加一層 Kubernetes", look: { ...L8, kube: true, cam: "all" },
     changes: [["+", "Kubernetes 疊在 Proxmox 上"], ["~", "應用先照常以 VM 執行"]] },
   { short: "容器化", phase: "未來", title: "應用程式容器化，跑在 Kubernetes 上", look: { ...L8, kube: true, containers: true, cam: "all" },
-    changes: [["~", "6 支應用程式改成容器"], ["+", "一樣讀 PostgreSQL，Plasma 照常即時同步"]] },
+    changes: [["~", "6 支應用程式包成容器"], ["!", "每支還是一個大服務，改一點就要整包重新部署"]] },
+  { short: "拆成微服務", phase: "未來", title: "大服務拆成微服務", look: { ...L8, kube: true, containers: true, micro: true, cam: "kube" },
+    changes: [["~", "每支應用拆成 4 個小服務，例：藥局 → 處方、庫存、配藥、計價"], ["+", "6 支應用 → 24 個微服務，可以各自更新、各自擴充"], ["+", "一樣讀 PostgreSQL，Plasma 照常即時同步"]] },
 ]
 
 /** 重播用:第一步之前的空場景 */

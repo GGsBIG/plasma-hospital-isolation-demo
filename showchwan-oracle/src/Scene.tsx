@@ -222,7 +222,7 @@ function Still({ l }: { l: Look }) {
       {l.vm && order.map((i) => {
         const [ax, ay] = appAt(i, l.moved)
         const onPx = l.moved && i >= CORE
-        return <App key={APPS[i]} i={i} at={P(ax, ay, onPx && l.kube ? Z_TOP + PLANE_T : Z_TOP)} inK8s={onPx} ctr={onPx && l.containers} />
+        return <App key={APPS[i]} i={i} at={P(ax, ay, onPx && l.kube ? Z_TOP + PLANE_T : Z_TOP)} inK8s={onPx} ctr={onPx && l.containers} micro={onPx && l.micro} />
       })}
 
       {/* ---------- 資料層 ---------- */}
@@ -523,7 +523,7 @@ function Drop({ children, delay = 0 }: { children: ReactNode; delay?: number }) 
 }
 
 /* ---------- 應用程式小方塊:換位置時跳過去 ---------- */
-function App({ i, at, inK8s, ctr = false }: { i: number; at: Pt; inK8s: boolean; ctr?: boolean }) {
+function App({ i, at, inK8s, ctr = false, micro = false }: { i: number; at: Pt; inK8s: boolean; ctr?: boolean; micro?: boolean }) {
   const ref = useRef<SVGGElement>(null)
   const prev = useRef<Pt | null>(null)
   useLayoutEffect(() => {
@@ -542,6 +542,7 @@ function App({ i, at, inK8s, ctr = false }: { i: number; at: Pt; inK8s: boolean;
   }, [at[0], at[1], i])
   const Icon = ICONS[i]
   const h = CUBE / 2
+  if (micro) return <g ref={ref}><Micro i={i} /></g>
   return (
     <g ref={ref}>
       <Drop delay={0.35 + i * 0.07}>
@@ -674,6 +675,36 @@ function Tag({ x, y, text, logo, size = 16 }: { x: number; y: number; text: stri
     <g transform={`translate(${x} ${y}) scale(${ui})`}>
       {logo && <image href={logo} x={x0} y={-lw / 2} width={lw} height={lw} />}
       <text x={x0 + lw + gap} y={size * 0.36} fontSize={size} fontWeight={800} fill={INK} stroke="#fbf8f2" strokeWidth={4} paintOrder="stroke" strokeLinejoin="round">{text}</text>
+    </g>
+  )
+}
+
+/* ---------- 微服務:一個大服務拆成 4 個小容器,中間有服務之間的連線 ---------- */
+const MS = 24 // 小容器的邊長
+const MS_H = 26
+const MS_AT: [number, number][] = [[-26, -26], [2, -26], [-26, 2], [2, 2]] // 由後往前
+function Micro({ i }: { i: number }) {
+  const Icon = ICONS[i]
+  const c = (k: number) => P(MS_AT[k][0] + MS / 2, MS_AT[k][1] + MS / 2, 0)
+  return (
+    <g>
+      <Shadow poly={[P(-28, -28), P(28, -28), P(28, 28), P(-28, 28)]} />
+      {/* 服務之間互相呼叫的連線 */}
+      <g className="mesh" stroke="#5b78c9" strokeWidth={1.2} strokeDasharray="3 3" fill="none">
+        {[[0, 1], [0, 2], [1, 3], [2, 3], [0, 3]].map(([a, b]) => <line key={`${a}${b}`} x1={c(a)[0]} y1={c(a)[1]} x2={c(b)[0]} y2={c(b)[1]} />)}
+      </g>
+      {MS_AT.map(([x, y], k) => (
+        // 從原本大服務的中心散開
+        <g key={k} className="split" style={{ "--dx": `${-P(x + MS / 2, y + MS / 2)[0]}px`, "--dy": `${-P(x + MS / 2, y + MS / 2)[1]}px`, animationDelay: `${0.15 + (i - CORE) * 0.12 + k * 0.08}s` } as React.CSSProperties}>
+          <Box x={x} y={y} w={MS} d={MS} h={MS_H} c={C.ctr} />
+          <g stroke="#7f95cf" strokeWidth={0.9} fill="none">
+            {[0.33, 0.66].map((f) => <polyline key={`l${f}`} points={pts([P(x + MS * f, y + MS, MS_H - 5), P(x + MS * f, y + MS, 5)])} />)}
+            {[0.33, 0.66].map((f) => <polyline key={`r${f}`} points={pts([P(x + MS, y + MS * f, MS_H - 5), P(x + MS, y + MS * f, 5)])} />)}
+          </g>
+        </g>
+      ))}
+      <Icon x={-10} y={-MS_H - 58} width={20} height={20} strokeWidth={1.8} color="#2a55b8" />
+      <text className="cube-label" x={0} y={-MS_H - 24} textAnchor="middle" fontSize={12} fontWeight={800} fill={INK} stroke="#fbf8f2" strokeWidth={3} paintOrder="stroke">{APPS[i]}</text>
     </g>
   )
 }
