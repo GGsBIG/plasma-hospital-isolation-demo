@@ -139,15 +139,49 @@ function Block({ at, tone, label, sub, icon: Icon, a = BLOCK_A, h = BLOCK_H, dim
     <g opacity={dim ? 0.55 : 1}>
       {glow && <ellipse cx={x} cy={y + 4} rx={a * 1.7} ry={a * 0.9} fill={`url(#${glow})`} />}
       {/* 底下一圈較深的邊,做出厚度 */}
-      <polygon points={poly([x + a, y], [x + a, y + 6], [x, y + b + 6], [x - a, y + 6], [x - a, y], [x, y + b])} fill={lip} stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
+      <polygon points={poly([x + a, y], [x + a, y + 6], [x, y + b + 6], [x - a, y + 6], [x - a, y], [x, y + b])} fill={lip} stroke={INK} strokeWidth={1.3} strokeLinejoin="round" />
       <polygon points={poly([x - a, y - h], [x, y - h + b], [x, y + b], [x - a, y])} fill={left} />
       <polygon points={poly([x, y - h + b], [x + a, y - h], [x + a, y], [x, y + b])} fill={right} />
       <polygon points={poly([x, y - h - b], [x + a, y - h], [x, y - h + b], [x - a, y - h])} fill={top} />
       <path d={`M${x - a} ${y - h} L${x} ${y - h + b} L${x + a} ${y - h} M${x} ${y - h + b} L${x} ${y + b}`} stroke={INK} strokeOpacity={0.35} strokeWidth={1.2} fill="none" />
-      <polygon points={sil} fill="none" stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
-      {Icon && <Icon x={x - 13} y={y - h - 14} width={26} height={26} stroke={INK} strokeWidth={2} />}
+      <BlockDetail x={x} y={y} a={a} h={h} />
+      <polygon points={sil} fill="none" stroke={INK} strokeWidth={1.4} strokeLinejoin="round" />
+      {Icon && <Icon x={x - 13} y={y - h - 14} width={26} height={26} stroke={INK} strokeWidth={1.7} />}
       <text x={x} y={y - h / 2 + 12} textAnchor="middle" fontFamily={FONT} fontWeight={700} fontSize={label.length > 10 ? 15 : 17} fill={INK}>{label}</text>
       {sub && <text x={x} y={y - h / 2 + 30} textAnchor="middle" fontFamily={FONT} fontSize={12.5} fill={INK} opacity={0.75}>{sub}</text>}
+    </g>
+  )
+}
+
+/** Pod 方塊的細節:前面板(左側面)下方散熱槽與燈號、右側面通風條、頂面前緣高光 */
+function BlockDetail({ x, y, a, h }: { x: number; y: number; a: number; h: number }) {
+  const b = a / 2
+  const L = (f: number, v: number): V => [x - a + a * f, y - h + b * f + v] // 左側面:f 沿上緣,v 往下
+  const R = (f: number, v: number): V => [x + a * f, y - h + b - b * f + v] // 右側面
+  return (
+    <g>
+      <path d={`M${x - a} ${y - h + 1.2} L${x} ${y - h + b + 1.2} L${x + a} ${y - h + 1.2}`} fill="none" stroke="#fff" strokeOpacity={0.85} strokeWidth={1.2} />
+      {[h - 16, h - 11].map((v) => <path key={v} d={d([L(0.14, v), L(0.62, v)])} stroke={INK} strokeOpacity={0.3} strokeWidth={1.1} strokeLinecap="round" />)}
+      <circle cx={L(0.82, h - 13)[0]} cy={L(0.82, h - 13)[1]} r={2.2} fill="#4f8a3c" stroke={INK} strokeWidth={0.6} />
+      {[0.2, 0.35, 0.5, 0.65, 0.8].map((f) => <path key={f} d={d([R(f, h * 0.62), R(f, h - 8)])} stroke={INK} strokeOpacity={0.18} strokeWidth={1} />)}
+    </g>
+  )
+}
+
+/** 資料庫圓柱的細節:左側高光、右側陰影、狀態燈 */
+function CylDetail({ x, y, r, h }: { x: number; y: number; r: number; h: number }) {
+  const ry = r / 2
+  const yAt = (dx: number) => ry * Math.sqrt(Math.max(0, 1 - (dx / r) ** 2))
+  const strip = (k1: number, k2: number) => {
+    const x1 = x + r * k1
+    const x2 = x + r * k2
+    return `M${x1} ${y - h + yAt(r * k1)} L${x2} ${y - h + yAt(r * k2)} L${x2} ${y + yAt(r * k2)} L${x1} ${y + yAt(r * k1)} Z`
+  }
+  return (
+    <g>
+      <path d={strip(-0.62, -0.32)} fill="#fff" opacity={0.5} />
+      <path d={strip(0.5, 0.98)} fill={INK} opacity={0.07} />
+      {[-0.55, -0.4, -0.25].map((k, i) => <circle key={k} cx={x + r * k} cy={y - h * 0.22 + yAt(r * k)} r={2.2} fill={i === 2 ? "#e6a23c" : "#4f8a3c"} stroke={INK} strokeWidth={0.6} />)}
     </g>
   )
 }
@@ -158,11 +192,13 @@ function Cylinder({ at, tone, label, icon: Icon, r = 56, h = 62 }: { at: V; tone
   const ry = r / 2
   return (
     <g>
-      <path d={`M${x - r} ${y} L${x - r} ${y + 6} A${r} ${ry} 0 0 0 ${x + r} ${y + 6} L${x + r} ${y} Z`} fill={lip} stroke={INK} strokeWidth={2.4} />
-      <path d={`M${x - r} ${y - h} L${x - r} ${y} A${r} ${ry} 0 0 0 ${x + r} ${y} L${x + r} ${y - h} Z`} fill={left} stroke={INK} strokeWidth={2.6} strokeLinejoin="round" />
+      <path d={`M${x - r} ${y} L${x - r} ${y + 6} A${r} ${ry} 0 0 0 ${x + r} ${y + 6} L${x + r} ${y} Z`} fill={lip} stroke={INK} strokeWidth={1.3} />
+      <path d={`M${x - r} ${y - h} L${x - r} ${y} A${r} ${ry} 0 0 0 ${x + r} ${y} L${x + r} ${y - h} Z`} fill={left} stroke={INK} strokeWidth={1.4} strokeLinejoin="round" />
+      <CylDetail x={x} y={y} r={r} h={h} />
       <path d={`M${x - r} ${y - h / 2} A${r} ${ry} 0 0 0 ${x + r} ${y - h / 2}`} fill="none" stroke={INK} strokeOpacity={0.3} strokeWidth={1.2} />
-      <ellipse cx={x} cy={y - h} rx={r} ry={ry} fill={top} stroke={INK} strokeWidth={2.6} />
-      {Icon && <Icon x={x - 12} y={y - h - 12} width={24} height={24} stroke={INK} strokeWidth={2} />}
+      <ellipse cx={x} cy={y - h} rx={r} ry={ry} fill={top} stroke={INK} strokeWidth={1.4} />
+      <ellipse cx={x} cy={y - h} rx={r * 0.8} ry={ry * 0.8} fill="none" stroke={INK} strokeOpacity={0.25} strokeWidth={1} />
+      {Icon && <Icon x={x - 12} y={y - h - 12} width={24} height={24} stroke={INK} strokeWidth={1.7} />}
       <text x={x} y={y - h / 2 + 18} textAnchor="middle" fontFamily={FONT} fontWeight={700} fontSize={16} fill={INK}>{label}</text>
     </g>
   )
@@ -176,9 +212,12 @@ function Slab({ at, a, tone = "gray", children }: { at: V; a: number; tone?: Ton
   const [top, left, right] = TONE[tone]
   return (
     <g>
-      <polygon points={poly([x - a, y], [x, y + b], [x, y + b + th], [x - a, y + th])} fill={left} stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
-      <polygon points={poly([x, y + b], [x + a, y], [x + a, y + th], [x, y + b + th])} fill={right} stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
-      <polygon points={poly([x, y - b], [x + a, y], [x, y + b], [x - a, y])} fill={top} stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
+      <polygon points={poly([x - a, y], [x, y + b], [x, y + b + th], [x - a, y + th])} fill={left} stroke={INK} strokeWidth={1.2} strokeLinejoin="round" />
+      <polygon points={poly([x, y + b], [x + a, y], [x + a, y + th], [x, y + b + th])} fill={right} stroke={INK} strokeWidth={1.2} strokeLinejoin="round" />
+      <polygon points={poly([x, y - b], [x + a, y], [x, y + b], [x - a, y])} fill={top} stroke={INK} strokeWidth={1.2} strokeLinejoin="round" />
+      <polygon points={poly([x, y - b * 0.84], [x + a * 0.84, y], [x, y + b * 0.84], [x - a * 0.84, y])} fill="none" stroke={INK} strokeOpacity={0.2} strokeWidth={1} />
+      {[0.12, 0.2, 0.28].map((f) => <path key={f} d={`M${x - a + a * f} ${y + b * f + th * 0.5} l${a * 0.05} ${b * 0.05}`} stroke={INK} strokeOpacity={0.4} strokeWidth={1.4} strokeLinecap="round" />)}
+      <circle cx={x - a * 0.14} cy={y + b * 0.86 + th * 0.5} r={1.8} fill="#4f8a3c" />
       {children}
     </g>
   )
@@ -190,9 +229,9 @@ function Person({ at, fill, s = 1, bad = false }: { at: V; fill: string; s?: num
   return (
     <g transform={`translate(${x} ${y}) scale(${s})`}>
       <ellipse cx={0} cy={0} rx={9} ry={4} fill={INK} opacity={0.12} />
-      <rect x={-7.5} y={-24} width={15} height={24} rx={7.5} fill={bad ? "#e06650" : fill} stroke={INK} strokeWidth={2} />
-      <circle cx={0} cy={-31} r={6.5} fill={bad ? "#e06650" : "#fffaf2"} stroke={INK} strokeWidth={2} />
-      {bad && <path d="M-3.2 -32.5 l2 1.2 M3.2 -32.5 l-2 1.2" stroke={INK} strokeWidth={1.6} strokeLinecap="round" />}
+      <rect x={-7.5} y={-24} width={15} height={24} rx={7.5} fill={bad ? "#e06650" : fill} stroke={INK} strokeWidth={1.15} />
+      <circle cx={0} cy={-31} r={6.5} fill={bad ? "#e06650" : "#fffaf2"} stroke={INK} strokeWidth={1.15} />
+      {bad && <path d="M-3.2 -32.5 l2 1.2 M3.2 -32.5 l-2 1.2" stroke={INK} strokeWidth={1} strokeLinecap="round" />}
     </g>
   )
 }
@@ -201,9 +240,12 @@ function LaptopShape({ at, screen = "#dccdf2" }: { at: V; screen?: string }) {
   const [x, y] = at
   return (
     <g strokeLinejoin="round">
-      <polygon points={poly([x - 30, y - 4], [x, y + 11], [x + 30, y - 4], [x, y - 19])} fill="#f6f1ea" stroke={INK} strokeWidth={2.2} />
-      <polygon points={poly([x - 30, y - 4], [x, y - 19], [x, y - 61], [x - 30, y - 46])} fill="#fffaf2" stroke={INK} strokeWidth={2.2} />
+      <polygon points={poly([x - 30, y - 4], [x, y + 11], [x + 30, y - 4], [x, y - 19])} fill="#f6f1ea" stroke={INK} strokeWidth={1.2} />
+      <polygon points={poly([x - 30, y - 4], [x, y - 19], [x, y - 61], [x - 30, y - 46])} fill="#fffaf2" stroke={INK} strokeWidth={1.2} />
       <polygon points={poly([x - 25, y - 10], [x - 4, y - 21], [x - 4, y - 55], [x - 25, y - 44])} fill={screen} />
+      {/* 鍵盤紋路與觸控板 */}
+      {[0, 1, 2].map((i) => <path key={i} d={`M${x - 18 + i * 4} ${y - 4 + i * 2} L${x + 4 + i * 4} ${y - 15 + i * 2}`} stroke={INK} strokeOpacity={0.3} strokeWidth={1} />)}
+      <polygon points={poly([x + 6, y + 2], [x + 14, y - 2], [x + 20, y + 1], [x + 12, y + 5])} fill="none" stroke={INK} strokeOpacity={0.35} strokeWidth={0.9} />
     </g>
   )
 }
@@ -224,8 +266,8 @@ function Pill({ at, text, icon: Icon, tone = "paper", fs = 13, anchor = "middle"
   return (
     <g opacity={opacity}>
       <rect x={x0 + 2} y={y0 + 3} width={w} height={h} rx={h / 2} fill={INK} />
-      <rect x={x0} y={y0} width={w} height={h} rx={h / 2} fill={fill} stroke={INK} strokeWidth={2} />
-      {Icon && <Icon x={x0 + 10} y={at[1] - fs / 2 - 1} width={fs + 2} height={fs + 2} stroke={color} strokeWidth={2.2} />}
+      <rect x={x0} y={y0} width={w} height={h} rx={h / 2} fill={fill} stroke={INK} strokeWidth={1.15} />
+      {Icon && <Icon x={x0 + 10} y={at[1] - fs / 2 - 1} width={fs + 2} height={fs + 2} stroke={color} strokeWidth={1.7} />}
       <text x={x0 + 11 + iw} y={at[1] + fs * 0.36} fontFamily={FONT} fontSize={fs} fontWeight={600} fill={color}>{text}</text>
     </g>
   )
@@ -238,7 +280,7 @@ function Gauge({ at, pct }: { at: V; pct: number }) {
   return (
     <g>
       <rect x={x - 54} y={y - 12} width={110} height={26} rx={13} fill={INK} />
-      <rect x={x - 56} y={y - 15} width={110} height={26} rx={13} fill="#fbf6ee" stroke={INK} strokeWidth={2} />
+      <rect x={x - 56} y={y - 15} width={110} height={26} rx={13} fill="#fbf6ee" stroke={INK} strokeWidth={1.15} />
       <text x={x - 44} y={y + 3} fontFamily={FONT} fontSize={10} fontWeight={700} fill={INK}>CPU</text>
       <rect x={x - 18} y={y - 6} width={36} height={8} rx={4} fill="#e6ddd0" />
       <rect x={x - 18} y={y - 6} width={36 * pct / 100} height={8} rx={4} fill={hot ? RED : GREEN} />
@@ -249,7 +291,7 @@ function Gauge({ at, pct }: { at: V; pct: number }) {
 
 type EdgeTone = "ink" | "muted" | "red" | "violet"
 const EDGE_COLOR: Record<EdgeTone, string> = { ink: INK, muted: MUTED, red: RED, violet: VIOLET }
-function Edge({ p, tone = "ink", dash, arrow = true, s = 46, e = 52, w = 2.2, opacity = 1 }: { p: V[]; tone?: EdgeTone; dash?: string; arrow?: boolean; s?: number; e?: number; w?: number; opacity?: number }) {
+function Edge({ p, tone = "ink", dash, arrow = true, s = 46, e = 52, w = 1.6, opacity = 1 }: { p: V[]; tone?: EdgeTone; dash?: string; arrow?: boolean; s?: number; e?: number; w?: number; opacity?: number }) {
   return <path d={d(trim(p, s, e))} fill="none" stroke={EDGE_COLOR[tone]} strokeWidth={w} strokeDasharray={dash} strokeLinejoin="round" strokeLinecap="round" markerEnd={arrow ? `url(#arrow-${tone})` : undefined} opacity={opacity} />
 }
 
@@ -277,8 +319,8 @@ function XMark({ at, r = 11, opacity = 1 }: { at: V; r?: number; opacity?: numbe
   const [x, y] = at
   return (
     <g opacity={opacity}>
-      <circle cx={x} cy={y} r={r} fill={RED} stroke={INK} strokeWidth={2} />
-      <path d={`M${x - r * 0.4} ${y - r * 0.4} L${x + r * 0.4} ${y + r * 0.4} M${x + r * 0.4} ${y - r * 0.4} L${x - r * 0.4} ${y + r * 0.4}`} stroke="#fff" strokeWidth={2.4} strokeLinecap="round" />
+      <circle cx={x} cy={y} r={r} fill={RED} stroke={INK} strokeWidth={1.15} />
+      <path d={`M${x - r * 0.4} ${y - r * 0.4} L${x + r * 0.4} ${y + r * 0.4} M${x + r * 0.4} ${y - r * 0.4} L${x - r * 0.4} ${y + r * 0.4}`} stroke="#fff" strokeWidth={1.3} strokeLinecap="round" />
     </g>
   )
 }
@@ -289,7 +331,7 @@ function GroundTag({ at, text, angle = -26.57, color = INK }: { at: V; text: str
   const w = tw(text, fs) + 26
   return (
     <g transform={`translate(${at[0]} ${at[1]}) rotate(${angle}) skewX(${angle < 0 ? 0 : 0})`}>
-      <rect x={-w / 2} y={-13} width={w} height={26} fill="none" stroke={color} strokeWidth={1.6} strokeDasharray="5 4" rx={3} />
+      <rect x={-w / 2} y={-13} width={w} height={26} fill="none" stroke={color} strokeWidth={1} strokeDasharray="5 4" rx={3} />
       <text x={0} y={4.5} textAnchor="middle" fontFamily={FONT} fontSize={fs} fontWeight={700} letterSpacing={2} fill={color}>{text}</text>
     </g>
   )
@@ -303,9 +345,9 @@ function ImageBox({ at, label, bad }: { at: V; label: string; bad: boolean }) {
   const [top, left, right] = TONE[bad ? "red" : "green"]
   return (
     <g>
-      <polygon points={poly([x - a, y - h], [x, y - h + a / 2], [x, y + a / 2], [x - a, y])} fill={left} stroke={INK} strokeWidth={2} strokeLinejoin="round" />
-      <polygon points={poly([x, y - h + a / 2], [x + a, y - h], [x + a, y], [x, y + a / 2])} fill={right} stroke={INK} strokeWidth={2} strokeLinejoin="round" />
-      <polygon points={poly([x, y - h - a / 2], [x + a, y - h], [x, y - h + a / 2], [x - a, y - h])} fill={top} stroke={INK} strokeWidth={2} strokeLinejoin="round" />
+      <polygon points={poly([x - a, y - h], [x, y - h + a / 2], [x, y + a / 2], [x - a, y])} fill={left} stroke={INK} strokeWidth={1.15} strokeLinejoin="round" />
+      <polygon points={poly([x, y - h + a / 2], [x + a, y - h], [x + a, y], [x, y + a / 2])} fill={right} stroke={INK} strokeWidth={1.15} strokeLinejoin="round" />
+      <polygon points={poly([x, y - h - a / 2], [x + a, y - h], [x, y - h + a / 2], [x - a, y - h])} fill={top} stroke={INK} strokeWidth={1.15} strokeLinejoin="round" />
       <Pill at={[x, y - h - 26]} text={label} tone={bad ? "red" : "green"} fs={11} />
     </g>
   )
@@ -370,7 +412,7 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
       <rect x={-400} y={-300} width={2000} height={1400} fill="url(#iso-grid)" />
 
       {/* K8s 叢集範圍;Sentinel 上線後地板染一點紫 */}
-      <polygon points={poly([300, 350], [620, 190], [940, 350], [620, 510])} fill={sentinel ? "#efe6fb" : "#f6efe4"} fillOpacity={sentinel ? 0.7 : 0.6} stroke={INK} strokeOpacity={0.55} strokeWidth={1.8} strokeDasharray="7 6" />
+      <polygon points={poly([300, 350], [620, 190], [940, 350], [620, 510])} fill={sentinel ? "#efe6fb" : "#f6efe4"} fillOpacity={sentinel ? 0.7 : 0.6} stroke={INK} strokeOpacity={0.55} strokeWidth={1.1} strokeDasharray="7 6" />
       <GroundTag at={[440, 468]} text="K8S 叢集 · SHOP" angle={26.57} />
       {sentinel && <GroundTag at={[812, 470]} text="KERNEL · eBPF" angle={-26.57} color={VIOLET} />}
 
@@ -383,13 +425,13 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
       {(s1Miner || (s === 1 && t > 3)) && <Edge p={P.pay1Sus} tone="red" dash="7 5" e={56} />}
       {s === 6 && <Edge p={upto(trim(P.pay2Sus, 46, 56), 0.55)} tone="red" dash="7 5" s={0} e={14} arrow={false} />}
       {sentinel && (["store", "pay1", "pay2", "db"] as const).map((k) => (
-        <path key={k} d={d(trim([AT.sen, AT[k]], 50, 40))} stroke={VIOLET} strokeWidth={1.8} strokeDasharray="3 6" strokeLinecap="round" fill="none" opacity={s === 2 ? ramp(t, 0.6, 1.4) : 0.75} />
+        <path key={k} d={d(trim([AT.sen, AT[k]], 50, 40))} stroke={VIOLET} strokeWidth={1.1} strokeDasharray="3 6" strokeLinecap="round" fill="none" opacity={s === 2 ? ramp(t, 0.6, 1.4) : 0.75} />
       ))}
       {showOncall && <Edge p={P.senOncall} tone="violet" e={40} />}
       {gate && <Edge p={P.devGate} s={50} e={50} />}
       {gate && <Edge p={P.gateStore} s={50} e={56} />}
       {audit && <Edge p={P.senAudit} tone="violet" e={48} />}
-      {showInv && <path d={d([AT.inv, AT.pay1])} stroke={VIOLET} strokeWidth={2} strokeDasharray="4 5" fill="none" opacity={s === 5 ? ramp(t, 1.6, 2.2) : 1} />}
+      {showInv && <path d={d([AT.inv, AT.pay1])} stroke={VIOLET} strokeWidth={1.15} strokeDasharray="4 5" fill="none" opacity={s === 5 ? ramp(t, 1.6, 2.2) : 1} />}
 
       {/* ---------- 流動的小點 ---------- */}
       <Dots p={P.custStore} t={t} n={3} s={60} e={50} />
@@ -399,7 +441,7 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
       <Dots p={P.pay2Db} t={t} n={2} s={52} e={60} phase={0.2} />
       <Dots p={[...P.pay2Db].reverse()} t={t} n={1} kind="res" s={60} e={52} phase={1.6} />
       {s === 1 && t > 3.6 && <Dots p={P.pay1Sus} t={t} n={4} period={1.4} kind="bad" e={56} />}
-      {attackOn && (() => { const [x, y] = along(trim(attackPath, 14, 52), attackT / 2.3); return <circle cx={x} cy={y} r={7.5} fill="#e2553f" stroke={INK} strokeWidth={2} /> })()}
+      {attackOn && (() => { const [x, y] = along(trim(attackPath, 14, 52), attackT / 2.3); return <circle cx={x} cy={y} r={7.5} fill="#e2553f" stroke={INK} strokeWidth={1.15} /> })()}
       {s === 6 && <Dots p={P.pay2Sus} t={t} n={3} period={1.8} kind="bad" e={56} stop={0.55} />}
       {s4Alert && <Dots p={P.senOncall} t={t} n={1} period={1.6} kind="alert" e={40} />}
       {audit && <Dots p={P.senAudit} t={t} n={2} period={2} kind="alert" e={48} />}
@@ -409,15 +451,15 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
       {showInv && (
         <g opacity={s === 5 ? ramp(t, 1.6, 2.2) : 1}>
           <Person at={AT.inv} fill="#dccdf2" s={1.25} />
-          <Search x={AT.inv[0] + 8} y={AT.inv[1] - 58} width={22} height={22} stroke={INK} strokeWidth={2.4} />
+          <Search x={AT.inv[0] + 8} y={AT.inv[1] - 58} width={22} height={22} stroke={INK} strokeWidth={1.7} />
           <Pill at={[AT.inv[0] - 6, AT.inv[1] - 78]} text="資安人員蒐證" tone="violet" fs={12} />
         </g>
       )}
       <Block at={AT.pay1} tone={pay1Hot ? "red" : pay1Locked ? "gray" : "blue"} label="payment-api" sub="Pod 1" icon={CreditCard} glow={pay1Hot ? "glow-red" : undefined} dim={pay1Locked} />
       {pay1Locked && (
         <g opacity={lockK} transform={`translate(${AT.pay1[0] + 46} ${AT.pay1[1] - 92})`}>
-          <circle r={19} fill="#fbf6ee" stroke={INK} strokeWidth={2.4} />
-          <Lock x={-11} y={-12} width={22} height={22} stroke={INK} strokeWidth={2.4} />
+          <circle r={19} fill="#fbf6ee" stroke={INK} strokeWidth={1.3} />
+          <Lock x={-11} y={-12} width={22} height={22} stroke={INK} strokeWidth={1.7} />
         </g>
       )}
       <Block at={AT.store} tone={storeTone} label="storefront" sub="網站前台" icon={ShoppingCart} glow={firstK > 0 ? "glow-red" : undefined} />
@@ -425,8 +467,8 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
 
       {/* 防火牆 */}
       <g>
-        <polygon points={poly([AT.fw[0] - 42, AT.fw[1] - 21 - 56], [AT.fw[0] + 42, AT.fw[1] + 21 - 56], [AT.fw[0] + 42, AT.fw[1] + 21], [AT.fw[0] - 42, AT.fw[1] - 21])} fill="#f0b07c" stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
-        <polygon points={poly([AT.fw[0] - 42, AT.fw[1] - 77], [AT.fw[0] - 34, AT.fw[1] - 81], [AT.fw[0] + 50, AT.fw[1] - 39], [AT.fw[0] + 42, AT.fw[1] - 35])} fill="#fde8d2" stroke={INK} strokeWidth={2.2} strokeLinejoin="round" />
+        <polygon points={poly([AT.fw[0] - 42, AT.fw[1] - 21 - 56], [AT.fw[0] + 42, AT.fw[1] + 21 - 56], [AT.fw[0] + 42, AT.fw[1] + 21], [AT.fw[0] - 42, AT.fw[1] - 21])} fill="#f0b07c" stroke={INK} strokeWidth={1.3} strokeLinejoin="round" />
+        <polygon points={poly([AT.fw[0] - 42, AT.fw[1] - 77], [AT.fw[0] - 34, AT.fw[1] - 81], [AT.fw[0] + 50, AT.fw[1] - 39], [AT.fw[0] + 42, AT.fw[1] - 35])} fill="#fde8d2" stroke={INK} strokeWidth={1.2} strokeLinejoin="round" />
         {[0, 1, 2].map((i) => <path key={i} d={`M${AT.fw[0] - 42} ${AT.fw[1] - 21 - 14 * (i + 1)} l84 42`} stroke={INK} strokeOpacity={0.35} strokeWidth={1.2} />)}
         <Pill at={[AT.fw[0] - 10, AT.fw[1] - 104]} text="防火牆 ✓" icon={BrickWall} fs={12} />
       </g>
@@ -492,9 +534,9 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
           <Pill at={[AT.pay1[0] + 4, AT.pay1[1] - 120]} text="白名單" icon={ShieldCheck} tone="green" fs={13} opacity={ramp(t, 1.2, 1.8)} />
           {/* 觀察 48 小時的時鐘 */}
           <g transform={`translate(${AT.sen[0] + 108} ${AT.sen[1] - 70})`}>
-            <circle r={24} fill="#fbf6ee" stroke={INK} strokeWidth={2.4} />
-            <path d={`M0 0 L0 -15`} stroke={INK} strokeWidth={2.4} strokeLinecap="round" transform={`rotate(${Math.min(t, 2.4) * 600})`} />
-            <path d={`M0 0 L10 0`} stroke={INK} strokeWidth={2.4} strokeLinecap="round" transform={`rotate(${Math.min(t, 2.4) * 50})`} />
+            <circle r={24} fill="#fbf6ee" stroke={INK} strokeWidth={1.3} />
+            <path d={`M0 0 L0 -15`} stroke={INK} strokeWidth={1.3} strokeLinecap="round" transform={`rotate(${Math.min(t, 2.4) * 600})`} />
+            <path d={`M0 0 L10 0`} stroke={INK} strokeWidth={1.3} strokeLinecap="round" transform={`rotate(${Math.min(t, 2.4) * 50})`} />
             <circle r={2.6} fill={INK} />
             <Pill at={[0, 40]} text={`觀察 ${Math.round(48 * clamp01(t / 2.4))} 小時`} fs={11} />
           </g>
@@ -551,8 +593,8 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
       {/* 稽核紀錄 */}
       {audit && (
         <g transform={`translate(${AT.audit[0]} ${AT.audit[1]})`}>
-          {[2, 1, 0].map((k) => <rect key={k} x={-58 + k * 6} y={-96 - k * 6} width={116} height={132} rx={6} fill="#fbf6ee" stroke={INK} strokeWidth={2.2} />)}
-          <FileText x={-50} y={-90} width={20} height={20} stroke={INK} strokeWidth={2} />
+          {[2, 1, 0].map((k) => <rect key={k} x={-58 + k * 6} y={-96 - k * 6} width={116} height={132} rx={6} fill="#fbf6ee" stroke={INK} strokeWidth={1.2} />)}
+          <FileText x={-50} y={-90} width={20} height={20} stroke={INK} strokeWidth={1.7} />
           <text x={-26} y={-74} fontFamily={FONT} fontSize={12} fontWeight={700} fill={INK}>Audit Log</text>
           {["建立政策", "切換 Protect", "隔離 Pod", "網路白名單", "部署門檻"].map((r, i) => (
             <g key={r} opacity={ramp(t, 0.4 + i * 0.4, 0.7 + i * 0.4)}>

@@ -278,7 +278,7 @@ export const Scenario = memo(function Scenario({ step, epoch, isMain }: { step: 
               const d = edgePath(f.pos, f.kind, to.pos, to.kind)
               return (
                 <g key={`${step}-${epoch}-${e.from}-${e.to}`} className="scn-fade">
-                  {e.tone !== "red" && <path d={d} className="scn-edge base" />}
+                  {e.tone !== "red" && <><path d={d} className="scn-edge cable" /><path d={d} className="scn-edge core" /></>}
                 </g>
               )
             })}

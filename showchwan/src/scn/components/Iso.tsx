@@ -34,6 +34,8 @@ function Box({ cx, cy, w, h, top = C.top, line = C.line }: {
       <polygon points={pts(cx - w, y, cx, y + w / 2, cx, cy + w / 2, cx - w, cy)} style={{ fill: C.left }} />
       <polygon points={pts(cx, y + w / 2, cx + w, y, cx + w, cy, cx, cy + w / 2)} style={{ fill: C.right }} />
       <polygon points={pts(cx, y - w / 2, cx + w, y, cx, y + w / 2, cx - w, y)} style={{ fill: top }} />
+      {/* 頂面前緣的高光 */}
+      <polyline points={pts(cx - w, y + 1, cx, y + w / 2 + 1, cx + w, y + 1)} fill="none" stroke="#fff" strokeOpacity={0.85} strokeWidth={1} />
     </g>
   )
 }
@@ -41,15 +43,96 @@ function Box({ cx, cy, w, h, top = C.top, line = C.line }: {
 function Cylinder({ cx, cy, r, h, hot }: { cx: number; cy: number; r: number; h: number; hot: boolean }) {
   const ry = r / 2
   const stroke = hot ? C.hot : C.line
+  // 圓柱側面上 x 位置的上下緣(用來畫高光、陰影條與燈號)
+  const yAt = (dx: number) => ry * Math.sqrt(Math.max(0, 1 - (dx / r) ** 2))
+  const strip = (k1: number, k2: number) => {
+    const x1 = cx + r * k1
+    const x2 = cx + r * k2
+    return `M ${x1} ${cy - h + yAt(r * k1)} L ${x2} ${cy - h + yAt(r * k2)} L ${x2} ${cy + yAt(r * k2)} L ${x1} ${cy + yAt(r * k1)} Z`
+  }
   return (
     <g style={{ stroke }} strokeWidth={1}>
       <path
         d={`M ${cx - r} ${cy - h} L ${cx - r} ${cy} A ${r} ${ry} 0 0 0 ${cx + r} ${cy} L ${cx + r} ${cy - h} Z`}
         style={{ fill: C.left }}
       />
-      <path d={`M ${cx - r} ${cy - h / 2} A ${r} ${ry} 0 0 0 ${cx + r} ${cy - h / 2}`} fill="none" />
+      {/* 左側高光、右側陰影:看起來是圓的 */}
+      <path d={strip(-0.62, -0.3)} fill="#fff" opacity={0.55} stroke="none" />
+      <path d={strip(0.45, 0.98)} style={{ fill: C.right }} opacity={0.75} stroke="none" />
+      <path d={`M ${cx - r} ${cy - h / 2} A ${r} ${ry} 0 0 0 ${cx + r} ${cy - h / 2}`} fill="none" strokeOpacity={0.6} />
+      {/* 狀態燈 */}
+      {[-0.5, -0.25].map((k, i) => (
+        <circle key={i} cx={cx + r * k} cy={cy - h * 0.25 + yAt(r * k)} r={1.3} fill={hot ? "#e0452f" : "#4fb06d"} stroke="none" />
+      ))}
       <ellipse cx={cx} cy={cy - h} rx={r} ry={ry} style={{ fill: hot ? "var(--iso-cyl-top-hot)" : "var(--iso-cyl-top)" }} />
+      <ellipse cx={cx} cy={cy - h} rx={r * 0.74} ry={ry * 0.74} fill="none" strokeOpacity={0.3} strokeWidth={0.7} />
     </g>
+  )
+}
+
+// 平台底座:頂面內緣一圈、左側面散熱槽與燈號、右側面一條分隔線
+function Base({ a, t, line }: { a: number; t: number; line: string }) {
+  const b = a / 2
+  const L = (f: number, v: number) => [-a + a * f, b * f + v] as const // 左側面:f 沿上緣 0..1,v 往下
+  const R = (f: number, v: number) => [a * f, b - b * f + v] as const // 右側面
+  const k = 0.84
+  return (
+    <>
+      <Box cx={0} cy={t} w={a} h={t} line={line} />
+      <polygon points={pts(0, -b * k, a * k, 0, 0, b * k, -a * k, 0)} fill="none" style={{ stroke: C.line }} strokeOpacity={0.25} strokeWidth={0.8} />
+      {[0.1, 0.19, 0.28].map((f) => {
+        const [x1, y1] = L(f, t * 0.52)
+        const [x2, y2] = L(f + 0.055, t * 0.52)
+        return <line key={f} x1={x1} y1={y1} x2={x2} y2={y2} style={{ stroke: C.line }} strokeOpacity={0.45} strokeWidth={1.6} strokeLinecap="round" />
+      })}
+      <circle cx={L(0.86, t * 0.52)[0]} cy={L(0.86, t * 0.52)[1]} r={1.7} fill="#4fb06d" />
+      <line x1={R(0.08, t * 0.5)[0]} y1={R(0.08, t * 0.5)[1]} x2={R(0.92, t * 0.5)[0]} y2={R(0.92, t * 0.5)[1]} style={{ stroke: C.line }} strokeOpacity={0.2} strokeWidth={0.8} />
+    </>
+  )
+}
+
+// 玻璃方塊(虛擬機/Pod):半透明的淡色面 + 左側面一道反光
+const GLASS = { top: "#effbfd", left: "#c6e9f0", right: "#abdae5" }
+function GlassBox({ cx, cy, w, h }: { cx: number; cy: number; w: number; h: number }) {
+  const y = cy - h
+  return (
+    <g style={{ stroke: C.line }} strokeWidth={1} strokeLinejoin="round">
+      <polygon points={pts(cx - w, y, cx, y + w / 2, cx, cy + w / 2, cx - w, cy)} fill={GLASS.left} fillOpacity={0.92} />
+      <polygon points={pts(cx, y + w / 2, cx + w, y, cx + w, cy, cx, cy + w / 2)} fill={GLASS.right} fillOpacity={0.92} />
+      <polygon points={pts(cx, y - w / 2, cx + w, y, cx, y + w / 2, cx - w, y)} fill={GLASS.top} fillOpacity={0.95} />
+      <polygon points={pts(cx - w * 0.82, y + w * 0.09 + 2, cx - w * 0.6, y + w * 0.2 + 2, cx - w * 0.6, cy + w * 0.2 - 2, cx - w * 0.82, cy + w * 0.09 - 2)} fill="#fff" opacity={0.6} stroke="none" />
+      <polyline points={pts(cx - w, y + 1, cx, y + w / 2 + 1, cx + w, y + 1)} fill="none" stroke="#fff" strokeOpacity={0.9} strokeWidth={1} />
+    </g>
+  )
+}
+
+// 小型機架主機:前面板三條硬碟槽、一顆燈
+function MiniServer({ cx, cy, w, h, hot }: { cx: number; cy: number; w: number; h: number; hot: boolean }) {
+  const y = cy - h
+  const F = (f: number, v: number) => [cx - w + w * f, y + (w / 2) * f + v] as const // 左側面(前面板)
+  return (
+    <g>
+      <Box cx={cx} cy={cy} w={w} h={h} line={hot ? C.hot : C.line} />
+      {[0.22, 0.42, 0.62].map((v) => {
+        const [x1, y1] = F(0.15, h * v)
+        const [x2, y2] = F(0.75, h * v)
+        return <line key={v} x1={x1} y1={y1} x2={x2} y2={y2} style={{ stroke: C.line }} strokeOpacity={0.5} strokeWidth={1.2} strokeLinecap="round" />
+      })}
+      <circle cx={F(0.85, h * 0.8)[0]} cy={F(0.85, h * 0.8)[1]} r={1.3} fill={hot ? "#e0452f" : "#4fb06d"} />
+    </g>
+  )
+}
+
+// 核心立方體(Plasma / Sentinel)的稜線高光與燈號
+function CoreDetail({ w, h }: { w: number; h: number }) {
+  const { m, len } = faceMatrix("left", w, h)
+  return (
+    <>
+      <polyline points={pts(-w, -h + 1.2, 0, -h + w / 2 + 1.2, w, -h + 1.2)} fill="none" stroke="#fff" strokeOpacity={0.9} strokeWidth={1.4} />
+      <g transform={m}>
+        {[0.78, 0.84, 0.9].map((f, i) => <circle key={f} cx={len * f} cy={h * 0.9} r={1.6} fill={i === 2 ? "#f0b43c" : "#4fb06d"} />)}
+      </g>
+    </>
   )
 }
 
@@ -157,18 +240,12 @@ function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: bool
         )
       }
       const spots = [p(-s, -s), p(s, -s * 0.2), p(-s * 0.4, s)]
-      return <>{spots.map(([x, y], i) => <Box key={i} cx={x} cy={y} w={11} h={13} />)}</>
+      return <>{spots.map(([x, y], i) => <GlassBox key={i} cx={x} cy={y} w={11} h={14} />)}</>
     }
     case "downstream": {
-      const spots = [p(-s, -s), p(s, -s), p(-s, s), p(s, s)]
-      return (
-        <>
-          {spots.map(([x, y], i) => (
-            <ellipse key={i} cx={x} cy={y} rx={7} ry={3.5} strokeWidth={1}
-              style={{ fill: "var(--iso-pad)", stroke: hot ? C.hot : C.line }} />
-          ))}
-        </>
-      )
+      // 下游主機/映像檔倉庫:兩台小型機架主機
+      const spots = [p(-s * 0.7, -s * 0.4), p(s * 0.7, s * 0.4)]
+      return <>{spots.map(([x, y], i) => <MiniServer key={i} cx={x} cy={y} w={12} h={22} hot={hot} />)}</>
     }
     case "file": {
       const f = FILE_STYLE[variant ?? "txt"] ?? FILE_STYLE.txt
@@ -224,6 +301,7 @@ function Decor({ kind, a, hot, variant }: { kind: NodeKind; a: number; hot: bool
           <Box cx={0} cy={0} w={w} h={lift} top={C.raised} />
           <FaceLogo side="left" w={w} h={lift} />
           <FaceLogo side="right" w={w} h={lift} />
+          <CoreDetail w={w} h={lift} />
           <g transform={`matrix(1 0.5 -1 0.5 0 ${-lift})`}>
             <circle r={22} fill="none" style={{ stroke: "var(--iso-ring-track)" }} strokeWidth={2} vectorEffect="non-scaling-stroke" />
             <circle r={3.2} style={{ fill: "var(--iso-ring)" }} />
@@ -259,7 +337,7 @@ export function Platform({ kind, hot = false, variant, down = false, bare = fals
       )}
       <g className={down ? "iso-down" : undefined}>
         {/* bare:疊在別的平台上(合體的知識庫),不畫底座,只有上面的立方體 */}
-        {!bare && <Box cx={0} cy={t} w={a} h={t} line={hot ? C.hot : C.line} />}
+        {!bare && <Base a={a} t={t} line={hot ? C.hot : C.line} />}
         {/* 裝飾以未縮放尺寸繪製,再整組放大 */}
         <g transform={`scale(${k})`}>
           <Decor kind={kind} a={a / k} hot={hot} variant={variant} />
