@@ -27,7 +27,7 @@ export interface Note {
 
 /** 物件在這一步的狀態 */
 export interface Put {
-  at: [number, number] // 地面座標 (x 往右下, y 往左下)
+  at: [number, number] // 地面座標 (x 往左下, y 往右下)
   load?: number // 資料庫負載 %
   down?: boolean // 停機
   dim?: boolean // 配角,淡化

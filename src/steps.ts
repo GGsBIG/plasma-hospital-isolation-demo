@@ -52,7 +52,7 @@ export const NODES: Record<string, NodeDef> = {
 }
 
 /* ================= 版面(地面座標) =================
-   x 往右下:既有系統 → 資料庫 → Plasma → 應用 → 院外;y 往左下:同一欄由上往下排 */
+   x 往左下(畫面上右上 → 左下):既有系統 → 資料庫 → Plasma → 應用 → 院外;y 往右下:同一欄由上往下排 */
 const X = { sys: -400, db: 0, mid: 430, app: 860, ext: 1230 }
 const ROW5 = [-360, -180, 0, 180, 360]
 const ROW4 = [-270, -90, 90, 270]
@@ -127,7 +127,7 @@ const S4: Look = {
   ],
   chips: [c("6 個", "warn"), c("96%", "warn"), NONE],
 }
-S4.put.bi = { ...S4.put.bi, note: { tone: "bad", dx: -170, title: "同一需求：取前 10 筆", lines: ["Oracle　WHERE ROWNUM <= 10", "MS SQL　SELECT TOP 10", "MySQL／PG　LIMIT 10", "Informix　SELECT FIRST 10"] } }
+S4.put.bi = { ...S4.put.bi, note: { tone: "bad", dx: 170, title: "同一需求：取前 10 筆", lines: ["Oracle　WHERE ROWNUM <= 10", "MS SQL　SELECT TOP 10", "MySQL／PG　LIMIT 10", "Informix　SELECT FIRST 10"] } }
 const S5: Look = {
   put: {
     ...dbs(NORMAL), plasma: { ...PLASMA, note: { tone: "ok", title: "同一需求：取前 10 筆", lines: ["Plasma　SELECT … LIMIT 10", "一種 SQL 查詢 5 套資料庫"] } }, ...apps(),
@@ -189,7 +189,7 @@ const S9: Look = {
   chips: [c("0 個"), c("35%", "down"), c("即時", "down")],
 }
 
-// FHIR 對外交換:FHIR Server 在應用欄中間,院外的診所、藥局再往右一欄
+// FHIR 對外交換:FHIR Server 在應用欄中間,院外的診所、藥局再往外一欄
 const EXT = { extClinic: at(X.ext, -180), pharmacy: at(X.ext, 180) }
 const S10: Look = {
   put: {
@@ -285,7 +285,7 @@ const S17: Look = {
 const S18: Look = {
   put: {
     ...dbs(null, { dim: true }), plasma: { ...PLASMA, tag: tag("ok", "MCP") }, kb: { ...KB },
-    agent: { at: AI_AT, tag: tag("ok", "幾分鐘拿到結果"), note: { tone: "ok", dx: -110, title: "本月住院計費彙總（依科別）", lines: ["list_tables → describe_columns → query", "全程在院內地端執行，資料不出院"] } },
+    agent: { at: AI_AT, tag: tag("ok", "幾分鐘拿到結果"), note: { tone: "ok", dx: -80, title: "本月住院計費彙總（依科別）", lines: ["list_tables → describe_columns → query", "全程在院內地端執行，資料不出院"] } },
   },
   links: viaPlasma(["agent"]),
   brain: true,

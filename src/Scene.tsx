@@ -10,9 +10,10 @@ import plasmaLogo from "./assets/plasma-logo.webp"
    4. 標籤層(SVG):名稱、狀態標籤、小卡,疊在小點上面,小點不會蓋住字。 */
 
 /* ================= 等角投影 =================
-   地面座標 (x, y, z):x 往右下、y 往左下、z 往上。畫面座標 = (x − y, (x + y) / 2 − z) */
+   地面座標 (x, y, z):x 往左下、y 往右下、z 往上。畫面座標 = (y − x, (x + y) / 2 − z)
+   (畫面上資料流是右上 ↔ 左下;光從左邊來,所以 x 端那面(在左)較亮、y 端那面(在右)較暗) */
 type Pt = [number, number]
-const P = (x: number, y: number, z = 0): Pt => [x - y, (x + y) / 2 - z]
+const P = (x: number, y: number, z = 0): Pt => [y - x, (x + y) / 2 - z]
 const pts = (a: Pt[]) => a.map((p) => p.join(",")).join(" ")
 const add = (a: Pt, b: Pt): Pt => [a[0] + b[0], a[1] + b[1]]
 
@@ -503,13 +504,14 @@ function Heat({ at }: { at: Pt }) {
 /* ================= 基本形狀 ================= */
 function BoxShape({ x, y, z = 0, w, d, h, c, stroke = INK, sw = 1.2, op = 1, dash }: { x: number; y: number; z?: number; w: number; d: number; h: number; c: string[]; stroke?: string; sw?: number; op?: number; dash?: boolean }) {
   const top = [P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)]
+  // left / right 指的是地面座標的 y 端 / x 端;投影後 y 端那面在右、x 端那面在左
   const left = [P(x, y + d, z + h), P(x + w, y + d, z + h), P(x + w, y + d, z), P(x, y + d, z)]
   const right = [P(x + w, y, z + h), P(x + w, y + d, z + h), P(x + w, y + d, z), P(x + w, y, z)]
   const da = dash ? "7 5" : undefined
   return (
     <g strokeLinejoin="round">
-      <polygon points={pts(left)} fill={c[1]} fillOpacity={op} />
-      <polygon points={pts(right)} fill={c[2]} fillOpacity={op} />
+      <polygon points={pts(left)} fill={c[2]} fillOpacity={op} />
+      <polygon points={pts(right)} fill={c[1]} fillOpacity={op} />
       <polygon points={pts(top)} fill={c[0]} fillOpacity={op} />
       {!dash && <polyline points={pts([P(x, y + d, z + h), P(x + w, y + d, z + h), P(x + w, y, z + h)].map((p) => add(p, [0, 1.6])))} fill="none" stroke="#fff" strokeOpacity={0.85} strokeWidth={1.2} />}
       <polygon points={pts([P(x, y, z + h), P(x + w, y, z + h), P(x + w, y, z), P(x + w, y + d, z), P(x, y + d, z), P(x, y + d, z + h)])} fill="none" stroke={stroke} strokeWidth={sw} strokeDasharray={da} />
@@ -597,16 +599,16 @@ type NodeDef = import("./model").NodeDef
 /** 大樓:據點、部門 */
 function Site({ icon: Icon }: { icon?: NodeDef["icon"] }) {
   const { s, h } = SITE
-  const F = (u: number, v: number) => P(-s + u, s, v) // 前左面
-  const S = (u: number, v: number) => P(s, -s + u, v) // 前右面
+  const F = (u: number, v: number) => P(-s + u, s, v) // 前右面(較暗)
+  const S = (u: number, v: number) => P(s, -s + u, v) // 前左面(較亮)
   const rows = [h - 18, h - 38, h - 58]
   const cols = [14, 34, 54, 74]
   return (
     <g>
       <Shadow poly={square(s)} />
       <BoxShape x={-s} y={-s} w={2 * s} d={2 * s} h={h} c={C.site} />
-      {rows.map((v) => cols.map((u) => <polygon key={`f${v}-${u}`} points={pts([F(u, v), F(u + 10, v), F(u + 10, v - 10), F(u, v - 10)])} fill="#bcd7ea" stroke="#7e95a8" strokeWidth={0.6} />))}
-      {rows.map((v) => cols.map((u) => <polygon key={`s${v}-${u}`} points={pts([S(u, v), S(u + 10, v), S(u + 10, v - 10), S(u, v - 10)])} fill="#a9c6dc" stroke="#7e95a8" strokeWidth={0.6} />))}
+      {rows.map((v) => cols.map((u) => <polygon key={`f${v}-${u}`} points={pts([F(u, v), F(u + 10, v), F(u + 10, v - 10), F(u, v - 10)])} fill="#a9c6dc" stroke="#7e95a8" strokeWidth={0.6} />))}
+      {rows.map((v) => cols.map((u) => <polygon key={`s${v}-${u}`} points={pts([S(u, v), S(u + 10, v), S(u + 10, v - 10), S(u, v - 10)])} fill="#bcd7ea" stroke="#7e95a8" strokeWidth={0.6} />))}
       {Icon && <Icon x={-14} y={-h - 14} width={28} height={28} strokeWidth={1.8} color={ICON_COLOR.site} />}
     </g>
   )
@@ -624,11 +626,11 @@ function Person({ down }: { down?: boolean }) {
   )
 }
 
-/** Plasma 方塊:logo 貼在前側面上,下面一排散熱格柵,側面一顆燈 */
+/** Plasma 方塊:logo 貼在前左面(x 端那面,字由左往右讀),下面一排散熱格柵,前右面一顆燈 */
 function PlasmaBox() {
   const { s, h } = PLASMA
-  const [X, Y] = P(-s, s, h)
-  const S = (u: number, v: number) => P(s, -s + u, v)
+  const [X, Y] = P(s, -s, h)
+  const S = (u: number, v: number) => P(-s + u, s, v)
   return (
     <g>
       <Shadow poly={square(s)} />
