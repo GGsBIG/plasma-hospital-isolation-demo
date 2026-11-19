@@ -72,8 +72,8 @@ function AppFrame({ s }: { s: DemoState }) {
   )
 }
 
-export function App() {
-  const { s, cur, paused, play, togglePause } = useDemo()
+export function App({ start = 0, back = "#/" }: { start?: number; back?: string }) {
+  const { s, cur, paused, play, togglePause } = useDemo(start)
   // 主畫面:"app" = Sentinel 操作在大畫面、情境圖在右下角;"scn" 反過來
   const [main, setMain] = useState<"app" | "scn">("app")
   const swap = () => setMain((m) => (m === "app" ? "scn" : "app"))
@@ -89,6 +89,7 @@ export function App() {
       <header className="sc-top">
         <a href="../#sentinel" target="_top" aria-label="回到 Demo 首頁"><img src={logo} alt="Brobridge" className="h-4 w-auto md:h-[18px]" /></a>
         <span className="flex-1" />
+        <a className="sc-swap" href={back}>回到圖解</a>
         {!solo && <button className="sc-swap" onClick={swap} aria-label={`主畫面改看${label(main === "app" ? "scn" : "app")}`}>
           <ArrowLeftRight className="h-4 w-4" />
           對調畫面
