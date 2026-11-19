@@ -91,8 +91,11 @@ const ramp = (t: number, a: number, b: number) => ease((t - a) / (b - a))
 /** 文字寬度估算:中日韓字一格,英數 0.6 格(等寬字) */
 const tw = (s: string, fs: number) => [...s].reduce((w, ch) => w + (/[⺀-￯]/.test(ch) ? fs : fs * 0.62), 0)
 
-/* ================= 場景配置 ================= */
-const AT = {
+/* ================= 場景配置 =================
+   原本的配置寫在 AT0(流程由左下往右上);整個配置在地面上轉 180°(F),
+   流程改成跟 Oracle 減壓一樣由右上往左下。元件本身不轉,只換位置。 */
+const F = (p: V): V => [1240 - p[0], 860 - p[1]]
+const AT0 = {
   cust: [150, 470] as V,
   fw: [270, 410] as V,
   store: [420, 350] as V,
@@ -102,30 +105,32 @@ const AT = {
   sus: [1040, 300] as V,
   sen: [620, 590] as V,
   oncall: [850, 600] as V,
-  inv: [470, 175] as V,
+  inv: [340, 180] as V,
   gate: [330, 600] as V,
   dev: [120, 690] as V,
   audit: [1040, 540] as V,
 }
+const AT = Object.fromEntries(Object.entries(AT0).map(([k, v]) => [k, F(v)])) as typeof AT0
 const BLOCK_H = 62
 const BLOCK_A = 58
 
-const P = {
-  custStore: elbow(AT.cust, AT.store),
-  storePay1: [AT.store, AT.pay1] as V[],
-  storePay2: [AT.store, AT.pay2] as V[],
-  pay1Db: [AT.pay1, AT.db] as V[],
-  pay2Db: [AT.pay2, AT.db] as V[],
-  pay1Sus: elbow(AT.pay1, AT.sus, UR, DR),
-  pay2Sus: elbow(AT.pay2, AT.sus, DR, UR),
-  senOncall: elbow(AT.sen, AT.oncall, DR, UR),
-  senAudit: elbow(AT.sen, AT.audit, UR, DR),
-  devGate: elbow(AT.dev, AT.gate, UR, DR),
-  gateStore: elbow(AT.gate, AT.store, UR, UP),
+const P0 = {
+  custStore: elbow(AT0.cust, AT0.store),
+  storePay1: [AT0.store, AT0.pay1] as V[],
+  storePay2: [AT0.store, AT0.pay2] as V[],
+  pay1Db: [AT0.pay1, AT0.db] as V[],
+  pay2Db: [AT0.pay2, AT0.db] as V[],
+  pay1Sus: elbow(AT0.pay1, AT0.sus, UR, DR),
+  pay2Sus: elbow(AT0.pay2, AT0.sus, DR, UR),
+  senOncall: elbow(AT0.sen, AT0.oncall, DR, UR),
+  senAudit: elbow(AT0.sen, AT0.audit, UR, DR),
+  devGate: elbow(AT0.dev, AT0.gate, UR, DR),
+  gateStore: elbow(AT0.gate, AT0.store, UR, UP),
 }
+const P = Object.fromEntries(Object.entries(P0).map(([k, v]) => [k, v.map(F)])) as typeof P0
 // 攻擊者那一個人的位置(混在顧客平台上)
 const ATTACKER: V = [AT.cust[0] + 46, AT.cust[1] - 4]
-const attackPath: V[] = [ATTACKER, ...elbow(ATTACKER, AT.store).slice(1), AT.pay1]
+const attackPath: V[] = [ATTACKER, ...elbow(F(ATTACKER), AT0.store).slice(1).map(F), AT.pay1]
 
 /* ================= 基本圖形 ================= */
 function Block({ at, tone, label, sub, icon: Icon, a = BLOCK_A, h = BLOCK_H, dim = false, glow }: {
@@ -412,9 +417,9 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
       <rect x={-1400} y={-1200} width={4000} height={3200} fill="url(#iso-grid)" />
 
       {/* K8s 叢集範圍;Sentinel 上線後地板染一點紫 */}
-      <polygon points={poly([300, 350], [620, 190], [940, 350], [620, 510])} fill={sentinel ? "#efe6fb" : "#f6efe4"} fillOpacity={sentinel ? 0.7 : 0.6} stroke={INK} strokeOpacity={0.55} strokeWidth={1.1} strokeDasharray="7 6" />
-      <GroundTag at={[440, 468]} text="K8S 叢集 · SHOP" angle={26.57} />
-      {sentinel && <GroundTag at={[812, 470]} text="KERNEL · eBPF" angle={-26.57} color={VIOLET} />}
+      <polygon points={poly(...([[300, 350], [620, 190], [940, 350], [620, 510]] as V[]).map(F))} fill={sentinel ? "#efe6fb" : "#f6efe4"} fillOpacity={sentinel ? 0.7 : 0.6} stroke={INK} strokeOpacity={0.55} strokeWidth={1.1} strokeDasharray="7 6" />
+      <GroundTag at={[752, 634]} text="K8S 叢集 · SHOP" angle={-26.57} />
+      {sentinel && <GroundTag at={[400, 598]} text="KERNEL · eBPF" angle={26.57} color={VIOLET} />}
 
       {/* ---------- 連線 ---------- */}
       <Edge p={P.custStore} s={60} e={50} />
@@ -447,43 +452,14 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
       {audit && <Dots p={P.senAudit} t={t} n={2} period={2} kind="alert" e={48} />}
 
       {/* ---------- 物件(由後往前畫) ---------- */}
-      {[1, 5, 6, 9].includes(s) && <Block at={AT.sus} tone="red" label="可疑主機" sub="礦池" icon={Pickaxe} a={50} h={52} dim={s !== 1 && s !== 6} />}
-      {showInv && (
-        <g opacity={s === 5 ? ramp(t, 1.6, 2.2) : 1}>
-          <Person at={AT.inv} fill="#dccdf2" s={1.25} />
-          <Search x={AT.inv[0] + 8} y={AT.inv[1] - 58} width={22} height={22} stroke={INK} strokeWidth={1.7} />
-          <Pill at={[AT.inv[0] - 6, AT.inv[1] - 78]} text="資安人員蒐證" tone="violet" fs={12} />
+      {/* 部署門檻:開發者 → 門檻 → 叢集 */}
+      {gate && (
+        <g>
+          <Slab at={AT.dev} a={56}><LaptopShape at={[AT.dev[0] + 4, AT.dev[1] + 2]} /></Slab>
+          <Pill at={[AT.dev[0], AT.dev[1] + 50]} text="開發團隊" fs={12} />
+          <Block at={AT.gate} tone="orange" label="部署門檻" sub="Critical=0" icon={ShieldCheck} a={56} h={54} />
         </g>
       )}
-      <Block at={AT.pay1} tone={pay1Hot ? "red" : pay1Locked ? "gray" : "blue"} label="payment-api" sub="Pod 1" icon={CreditCard} glow={pay1Hot ? "glow-red" : undefined} dim={pay1Locked} />
-      {pay1Locked && (
-        <g opacity={lockK} transform={`translate(${AT.pay1[0] + 46} ${AT.pay1[1] - 92})`}>
-          <circle r={19} fill="#fbf6ee" stroke={INK} strokeWidth={1.3} />
-          <Lock x={-11} y={-12} width={22} height={22} stroke={INK} strokeWidth={1.7} />
-        </g>
-      )}
-      <Block at={AT.store} tone={storeTone} label="storefront" sub="網站前台" icon={ShoppingCart} glow={firstK > 0 ? "glow-red" : undefined} />
-      <Cylinder at={AT.db} tone="green" label="orders-db" icon={Database} />
-
-      {/* 防火牆 */}
-      <g>
-        <polygon points={poly([AT.fw[0] - 42, AT.fw[1] - 21 - 56], [AT.fw[0] + 42, AT.fw[1] + 21 - 56], [AT.fw[0] + 42, AT.fw[1] + 21], [AT.fw[0] - 42, AT.fw[1] - 21])} fill="#f0b07c" stroke={INK} strokeWidth={1.3} strokeLinejoin="round" />
-        <polygon points={poly([AT.fw[0] - 42, AT.fw[1] - 77], [AT.fw[0] - 34, AT.fw[1] - 81], [AT.fw[0] + 50, AT.fw[1] - 39], [AT.fw[0] + 42, AT.fw[1] - 35])} fill="#fde8d2" stroke={INK} strokeWidth={1.2} strokeLinejoin="round" />
-        {[0, 1, 2].map((i) => <path key={i} d={`M${AT.fw[0] - 42} ${AT.fw[1] - 21 - 14 * (i + 1)} l84 42`} stroke={INK} strokeOpacity={0.35} strokeWidth={1.2} />)}
-        <Pill at={[AT.fw[0] - 10, AT.fw[1] - 104]} text="防火牆 ✓" icon={BrickWall} fs={12} />
-      </g>
-
-      <Block at={AT.pay2} tone="blue" label="payment-api" sub="Pod 2" icon={CreditCard} />
-
-      {/* 顧客(攻擊者混在裡面) */}
-      <Slab at={AT.cust} a={100}>
-        {[[-46, -4], [-18, -18], [10, -4], [-18, 12], [16, 22], [-48, 22], [42, 10]].map(([dx, dy], i) => (
-          <Person key={i} at={[AT.cust[0] + dx, AT.cust[1] + dy]} fill={PEOPLE[i % PEOPLE.length]} />
-        ))}
-        <Person at={ATTACKER} fill="#fff" bad={s === 1 || s === 4} />
-      </Slab>
-      <Pill at={[AT.cust[0] - 60, AT.cust[1] - 62]} text="顧客" fs={13} />
-
       {/* Sentinel 與值班人員 */}
       {sentinel && (
         <g opacity={s === 2 ? ramp(t, 0, 0.6) : 1}>
@@ -497,14 +473,40 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
         </g>
       )}
 
-      {/* 部署門檻:開發者 → 門檻 → 叢集 */}
-      {gate && (
-        <g>
-          <Slab at={AT.dev} a={56}><LaptopShape at={[AT.dev[0] + 4, AT.dev[1] + 2]} /></Slab>
-          <Pill at={[AT.dev[0], AT.dev[1] + 50]} text="開發團隊" fs={12} />
-          <Block at={AT.gate} tone="orange" label="部署門檻" sub="Critical=0" icon={ShieldCheck} a={56} h={54} />
+      {/* 顧客(攻擊者混在裡面) */}
+      <Slab at={AT.cust} a={100}>
+        {[[-46, -4], [-18, -18], [10, -4], [-18, 12], [16, 22], [-48, 22], [42, 10]].map(([dx, dy], i) => (
+          <Person key={i} at={[AT.cust[0] + dx, AT.cust[1] + dy]} fill={PEOPLE[i % PEOPLE.length]} />
+        ))}
+        <Person at={ATTACKER} fill="#fff" bad={s === 1 || s === 4} />
+      </Slab>
+      <Pill at={[AT.cust[0] + 74, AT.cust[1] - 50]} text="顧客" fs={13} />
+      <Block at={AT.pay2} tone="blue" label="payment-api" sub="Pod 2" icon={CreditCard} />
+      {/* 防火牆 */}
+      <g>
+        <polygon points={poly([AT.fw[0] - 42, AT.fw[1] - 21 - 56], [AT.fw[0] + 42, AT.fw[1] + 21 - 56], [AT.fw[0] + 42, AT.fw[1] + 21], [AT.fw[0] - 42, AT.fw[1] - 21])} fill="#f0b07c" stroke={INK} strokeWidth={1.3} strokeLinejoin="round" />
+        <polygon points={poly([AT.fw[0] - 42, AT.fw[1] - 77], [AT.fw[0] - 34, AT.fw[1] - 81], [AT.fw[0] + 50, AT.fw[1] - 39], [AT.fw[0] + 42, AT.fw[1] - 35])} fill="#fde8d2" stroke={INK} strokeWidth={1.2} strokeLinejoin="round" />
+        {[0, 1, 2].map((i) => <path key={i} d={`M${AT.fw[0] - 42} ${AT.fw[1] - 21 - 14 * (i + 1)} l84 42`} stroke={INK} strokeOpacity={0.35} strokeWidth={1.2} />)}
+        <Pill at={[AT.fw[0] - 10, AT.fw[1] - 104]} text="防火牆 ✓" icon={BrickWall} fs={12} />
+      </g>
+      <Block at={AT.store} tone={storeTone} label="storefront" sub="網站前台" icon={ShoppingCart} glow={firstK > 0 ? "glow-red" : undefined} />
+      <Cylinder at={AT.db} tone="green" label="orders-db" icon={Database} />
+      {[1, 5, 6, 9].includes(s) && <Block at={AT.sus} tone="red" label="可疑主機" sub="礦池" icon={Pickaxe} a={50} h={52} dim={s !== 1 && s !== 6} />}
+      <Block at={AT.pay1} tone={pay1Hot ? "red" : pay1Locked ? "gray" : "blue"} label="payment-api" sub="Pod 1" icon={CreditCard} glow={pay1Hot ? "glow-red" : undefined} dim={pay1Locked} />
+      {pay1Locked && (
+        <g opacity={lockK} transform={`translate(${AT.pay1[0] + 46} ${AT.pay1[1] - 92})`}>
+          <circle r={19} fill="#fbf6ee" stroke={INK} strokeWidth={1.3} />
+          <Lock x={-11} y={-12} width={22} height={22} stroke={INK} strokeWidth={1.7} />
         </g>
       )}
+      {showInv && (
+        <g opacity={s === 5 ? ramp(t, 1.6, 2.2) : 1}>
+          <Person at={AT.inv} fill="#dccdf2" s={1.25} />
+          <Search x={AT.inv[0] + 8} y={AT.inv[1] - 58} width={22} height={22} stroke={INK} strokeWidth={1.7} />
+          <Pill at={[AT.inv[0] - 6, AT.inv[1] - 78]} text="資安人員蒐證" tone="violet" fs={12} />
+        </g>
+      )}
+
       {s === 8 && (() => {
         const stopAt = along(trim(P.devGate, 30, 132), badF)
         const hit = t > 1.85
@@ -525,8 +527,8 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
       {/* 行程清單:Sentinel 看得到每個 Pod 在跑什麼 */}
       {sentinel && !pay1Locked && s < 7 && (
         <g opacity={s === 2 ? ramp(t, 1.2, 1.8) : 1}>
-          <Pill at={[AT.pay1[0] - 132, AT.pay1[1] - 92]} text={learned ? "✓ payment-server" : "payment-server"} tone={learned ? "green" : "paper"} fs={11} />
-          <Pill at={[AT.pay1[0] - 132, AT.pay1[1] - 62]} text={learned ? "✓ healthcheck" : "healthcheck"} tone={learned ? "green" : "paper"} fs={11} />
+          <Pill at={[AT.pay1[0] - 80, AT.pay1[1] + 66]} text={learned ? "✓ payment-server" : "payment-server"} tone={learned ? "green" : "paper"} fs={11} />
+          <Pill at={[AT.pay1[0] - 80, AT.pay1[1] + 96]} text={learned ? "✓ healthcheck" : "healthcheck"} tone={learned ? "green" : "paper"} fs={11} />
         </g>
       )}
       {s === 3 && (
@@ -545,7 +547,7 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
       {s1Miner && (
         <g>
           <Pill at={[AT.pay1[0] + 4, AT.pay1[1] - 120]} text="xmrig" icon={Pickaxe} tone="red" fs={14} />
-          <Gauge at={[AT.pay1[0] + 120, AT.pay1[1] - 112]} pct={s1Cpu} />
+          <Gauge at={[AT.pay1[0] + 2, AT.pay1[1] + 58]} pct={s1Cpu} />
         </g>
       )}
       {s === 1 && t > 3.6 && <Pill at={[AT.sus[0], AT.sus[1] + 58]} text="203.0.113.50" tone="red" fs={12} />}
@@ -585,7 +587,7 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
           <Pill at={[AT.pay2[0] + 76, AT.pay2[1] - 66]} text="1 High" fs={12} opacity={badgeK(1)} />
           <Pill at={[AT.db[0] + 4, AT.db[1] - 104]} text="2 Medium" fs={12} opacity={badgeK(2)} />
           {s === 7 && <Pill at={[AT.store[0] - 4, AT.store[1] - 138]} text="#1 先修：對外暴露" tone="ink" fs={12} opacity={firstK} />}
-          {s === 7 && <Pill at={[860, 170]} text={`掃描結果 ${counter.toLocaleString()} 筆弱點`} icon={Package} fs={14} />}
+          {s === 7 && <Pill at={[400, 330]} text={`掃描結果 ${counter.toLocaleString()} 筆弱點`} icon={Package} fs={14} />}
           {s === 7 && <Pill at={[AT.fw[0] + 30, AT.fw[1] + 26]} anchor="start" text="對外暴露" tone="red" fs={11} opacity={firstK} />}
         </g>
       )}
@@ -607,21 +609,21 @@ export function Canvas({ step, t, vb }: { step: number; t: number; vb: [number, 
       )}
 
       {/* 第 1 步的提示:門口有人顧,裡面沒人看 */}
-      {s === 0 && <Pill at={[620, 150]} text="容器裡在跑什麼？" icon={Laptop} fs={13} opacity={ramp(t, 1.2, 1.8)} />}
+      {s === 0 && <Pill at={[620, 300]} text="容器裡在跑什麼？" icon={Laptop} fs={13} opacity={ramp(t, 1.2, 1.8)} />}
     </svg>
   )
 }
 
 /** 各步驟的鏡頭範圍 [x0, y0, x1, y1] */
 export const CAMS: [number, number, number, number][] = [
-  [40, 130, 990, 560],
-  [40, 110, 1110, 560],
-  [40, 100, 1000, 660],
-  [40, 100, 1000, 660],
-  [40, 74, 1000, 660],
-  [40, 76, 1000, 660],
-  [40, 76, 1110, 660],
-  [40, 130, 1000, 640],
-  [40, 140, 1000, 760],
-  [40, 76, 1110, 760],
+  [250, 280, 1210, 700],
+  [40, 280, 1210, 720],
+  [250, 170, 1210, 740],
+  [250, 170, 1210, 740],
+  [250, 150, 1210, 740],
+  [40, 150, 1210, 740],
+  [40, 150, 1210, 740],
+  [250, 170, 1210, 700],
+  [250, 90, 1210, 700],
+  [40, 90, 1210, 720],
 ]
