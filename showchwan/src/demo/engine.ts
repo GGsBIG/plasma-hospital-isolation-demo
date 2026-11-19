@@ -7,7 +7,7 @@ const q = (sel: string) => document.querySelector<HTMLElement>(`[data-t="${sel}"
 const PACE = 1.2 // 整體放慢倍率
 
 /** 一次播一個情境:先把畫面快轉到這個情境開始前的狀態,再正常速度播放這個情境,播完停住 */
-export function useDemo() {
+export function useDemo(start = 0) {
   const [s, setS] = useState<DemoState>(() => structuredClone(initialState))
   const ref = useRef<DemoState>(s)
   ref.current = s
@@ -105,7 +105,7 @@ export function useDemo() {
 
   const togglePause = useCallback(() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current) }, [])
 
-  useEffect(() => { play(0) }, [play])
+  useEffect(() => { play(start) }, [play, start])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
